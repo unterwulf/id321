@@ -1,0 +1,21 @@
+#ifndef OUTPUT_H
+#define OUTPUT_H
+
+#include <inttypes.h>
+
+typedef enum {
+    OS_DEBUG = 0x8,
+    OS_INFO  = 0x4,
+    OS_WARN  = 0x2,
+    OS_ERROR = 0x1,
+    PARSE_DEBUG = 0x80,
+    PARSE_INFO  = 0x40,
+    PARSE_WARN  = 0x20,
+    OS_OUT = 0x10
+} output_severity;
+
+void init_output(uint16_t mask);
+void print(output_severity sev, const char* format, ...);
+void print_utf8(const uint8_t* str);
+
+#endif /* OUTPUT_H */

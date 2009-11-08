@@ -1,0 +1,77 @@
+id3tool [-g] [-v12 -f FORMAT_STRING] file
+id3tool -s [-v] KEY=value file
+id3tool -r [-v12] file
+
+Dump all id3 tags:
+
+    id3tool best.mp3
+
+Dump any id3v1 tag (enhanced, id3v1.2, id3v1.1, id3v1):
+
+    id3tool -1 best.mp3
+
+Dump enhanced id3v1 tag only (if there is a regular id3v1 tag only
+nothing will be dumped):
+
+    id3tool -1e best.mp3
+
+Print tags as a formatted string. As only one value for each field can
+be printed id3v2 tag has higher priority when tag version is not
+specified and alias used. For id3v2 tags you can specify the frame id
+(e.g. %TIT2 for song title).
+
+    id3tool -f "%n - %t" best.mp3
+
+Dump frame in binary format:
+
+    id3tool -F TIT2
+
+Synchronize id3v1 tag data with id3v2 tag data. Original data will be
+lost even if there is no corresponding frame in id3v2 tag. If minor
+version is specified and existent tag has another minor version, it
+will be converted to the specified one, otherwise existent minor
+version will be preserved. If the file has no id3v1 tag, it will be
+created having the specified minor version or id3v1.1 by default.
+
+    id3tool -s -1 best.mp3
+
+Synchronize id3v2 tag data with id3v1 tag data. The same as above.
+id3v2.4 is default for id3v2.
+
+    id3tool -s -2 best.mp3
+
+Delete all tags:
+
+    id3tool -d best.mp3
+
+Delete all id3v1 tags:
+
+    id3tool -d -1 best.mp3
+
+Delete id3v1 enhanced tag. Notice that id3v1 enhanced tag is considered
+as including id3v1 tag, so general id3v1 tag will be removed as well.
+In order to remove only enhanced part use -m -11 command instead.
+
+    id3tool -d -1e best.mp3
+
+Modify tag. If no version is specified and there are both v1 and v2 tags
+in the file, both v1 and v2 tags will be modified. If there is no tags
+in the file and no version is specified an id3v2.4 tag will be prepended
+at the very begining of the file. If version is specified the only tag
+of this version will be modified. Moreover, if also minor version is
+specified existent tag will be converted to this minor version.
+
+    id3tool -m -t Title -a Artist -n 1 -c Comment -y 2009 best.mp3
+    id3tool -m -24 -F TIT2=Title -F TPE1=Artist best.mp3
+
+Convert tag minor version.
+
+    id3tool -m -11 best.mp3
+
+Padding size of id3v2 tag.
+
+If value has plus sign at the very begining it is relative value,
+i.e. the tag size will be minimal size needed to store all tag's data
+plus the specified value. Otherwise it is absolute value, i.e. the
+maximum size the tag can be. If it is insufficient to store all tag's
+data error message will be printed.

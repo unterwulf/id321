@@ -1,0 +1,148 @@
+For MP3 software Developers:
+
+ID3v1.2 informal format
+
+To begin with this v1.2 Tag is an informal standard used in a particular software that can be used by any software
+developer that chooses to.
+
+ID3v1.2 is not sanctioned or otherwise by ID3 organisation.
+
+ID3v1.2 purpose is to add small improvements to ID3v1.1 informal standard without breaking the ID3v1 informal standard
+The ID3v1.2 tag will not cause any issues in legacy decoders/players (old ones)
+
+
+* The improvements in v1.2 over ID3v1.1 are as follows:
+
+Tag entries Artist, Album/Title and Trackname are increased from 30 characters to 60 characters
+Comment is increased from 30 characters (28 with track position set in v1.1 tag) to 43 characters long.
+A new entry is created called Sub genre (it is not a byte index value as in v1.1) it is a text string value the user
+may decide upon. Sub genre entry is 20 characters long.
+
+
+* Purpose
+
+v1.2 does not conflict with other standards and is simply a simple patch to v1.1 to resolve tagging's two most often read
+complaints heard in the mp3 community of the v1 standard being: the main tag entries are too short and they want
+to use their own genre entry not the internal indexed ones.
+Being these are the two most common complaints they can be resolved within ID3v1 by using this v1.2 patch to it.
+
+v1.2 deals with those two common complaints not with any other consideration that is lesser
+to seldom requested by the majority of MP3 users
+Any requirements beyond that, users may be offered ID3v2 which entails a more comprehensive but enlarged
+tagging that is not compatible with ID3v1 at all, also requiring prompting of a user to decide between one or both
+types as v1.2 does not.
+
+As people insist CDDB or FreeDB is used to fill in Tags as a "must have" for software, what does not come off the CD
+lookups does not get put into mp3 files in most cases, this and other reasons excludes lyrics and binaries and other
+parts from ever seeing much light in mp3 tags, in the past or in the future.
+
+v1.2 is provided so the two most popular issues can be resolved in v1.1 to the majority of mp3 software users
+satisfaction without users having to decide on v1 and or v2 that is not cross compatible or backward compatible.
+And with the least amount of agony to developer as possible to satisfy users common complaint of v1 tagging.
+
+All files can be arbitrarily tagged with v1.2 without needing to prompt a user to decide as v1.2 tags will always show
+in v1 software.
+The effect of some v1 programs displaying the track position of v1.1 in comment was never a major issue and this is as
+likely to not cause any undue aggravation to a program user.
+
+
+* The structure of the ID3v1.2 tag creation programatically is as follows:
+
+It retains the original ID3v1.1 128Byte long tag as is with no modifications to that part.
+
+A program tagger allows insertion of more than original ID3v1.1 lengths into program editing fields.
+Taking the first part of the strings Artist, Album and Trackname at 30 characters (v1 limit) and then 
+insert those into the existing v1.1 tag variables of the program.
+Then take the remainder of the string less the 30 removed for the v1.1 part of the tag and insert
+the remainder into the v1.2 part variables of the program.
+The v1.2 part is placed before the v1.1 part physically in the audio file and is also 128Bytes long as is the v1 Tag
+thus the total size os 256Bytes.
+
+The ID3v1.2 part of the tag is the same format and size as the v1.1 layout as above but with these exceptions.
+The v1.2 part has no extra field for year and has no byte set to indicate genre, these entries are unchanged from v1.1
+Not having these in the v1.2 part leaves 5 characters of string space that is used toward the Subgenre string entry in 
+ID3v1.2 part.
+Artist, Album/Title, Trackname are the same in v1.2 part as in v1.1 part at 30 characters long they simply hold the
+string that exists after the first 30 that are stored in v1.1 part to make 60 total.
+Comment in v1.2 part is reduced to 15 from 30 and has no track position in the comment v1.2 part, the 15 left over is
+also used for the Subgenre text entry so it becomes 20 characters long in total.
+Comment in the v1.2 part at 15 characters plus 28 from the v1.1 part (less two for track position) makes the
+43 characters for comment total.
+
+The string used to delimit v1.1 tag is "TAG" as before
+The string used to delimit or indicate the position of is "EXT" (for extended)
+So the first string entry in ID3v1.2 is EXT 
+followed by the v1.2 parts at 128bytes long
+then TAG followed by the v1.1 parts at 128bytes long also total.
+
+This ensures all v1.1 players will read v1.1 tag as always without breaking the player even though v1.2 is used.
+
+The 128bytes of the v1.1 part are in the same position as before at the end of the file after the v1.2 part, as the tag
+is read from the end of the file backwards to the string TAG in all players so they will all read the v1.1 part as is,
+those modified for v1.2 look the same distance again further back in the file for the string EXT.
+
+This is a sample of an ID3v1.2 Tag string as found in a file.
+Each entry is fixed length(), year is 4, comment includes track position
+
+EXTexttrackname(30)              exartist(30)                  exalbum/title(30)             excomment(15)  SubGenre(20)        TAGtrackname(30)                 artist(30)                    album/title(30)               yearcomment(28)                  1
+
+To build the string
+
+Put EXT
+Put last half of trackname
+Put last half of artist
+Put last half of album
+Put last 15 characters of comment
+Put sub genre text
+Put TAG (remainder as normal for v1.1) 
+Put first half of trackname
+Put first half of artist
+Put first half of album
+Put year
+Put first part of comment
+Put track pos (in 29 and 30 of comment)
+Put genre byte
+
+The entire v1.2 Tag should be exactly twice the size of the v1.1 tag and is placed in the same way at the end
+of the file.
+
+
+* Where to put the tag
+
+The v1.2 tag can be inserted on the end of an MP3 file as with ID3v1.1 however there are some considerations.
+For Player, Rippers and Tagger there is no real issue as a Player and Tagger will read from the TAG delimiting only
+and should not edit behind that area in any case according to any commonly used standard so it should be safe,
+otherwise a v1.1 tagger will modify only the first 30 of the three main tag entries used and that may cause a
+problem redisplayed in a v1.2 program but only if the entries are in fact originally longer than 30 for the main
+three anyway.
+
+In mp3 direct editor programs that scan an fix mp3 frame fault and tag faults etc depending on where the tag is
+placed they will report a fault in the file, either in the last frame as it is larger or in the last frame
+as half of the tag is inserted inside the last frame boundary.
+In any case the program should ignore the EXT entry as it does with the TAG entry when analysing MP3 frames
+and file and or display the v1.2 tag.
+
+
+* Issues
+
+As you will no doubt realise if a v1.1 supporting player, tagger opens a file tagged with v1.2 it will not display
+the EXT section. This will result in cropped output, this is only if the entries are in fact longer than
+60 (43 for comment).
+The other aspect is the non display if sub genre in this case but is not an issue.
+It will however still display the 30 which in most or many cases is all that is entered.
+
+Implementation by other software developers would lessen this effect of course and it is designed with this very
+much in mind and in such a way as not to cause any particularly ungood effects, not to consume more than a short
+amount of time to implement in a software and using your own existing v1.1 code copied and pasted with some
+minor modifications.
+Yes it could be better but it would take longer, it would be more complex and that in the past has not been good for
+uniform implementations in all programs in tagging to the same format. To get v1.2 format wrong would be difficult
+for any mp3 software developer.
+
+
+
+Feel free to distribute this document.
+
+www.mp3software.com.au/ID3v12.txt
+© Copyright BirdCage Software © 2002-2003
+The creator retains copyright to this document only and makes no other claims.

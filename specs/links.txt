@@ -1,0 +1,2 @@
+ID3v1.2 spec:
+    http://www.birdcagesoft.com/ID3v12.txt
