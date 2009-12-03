@@ -9,35 +9,40 @@
 #include "output.h"
 #include "framelist.h"
 
-void print_id3v1_tag(struct id3v1_tag *tag)
+static print_id3v1_tag_field(const char *name, const char *value)
+{
+    printf("%s: ", name);
+    lprint(g_config.options & ID3T_FORCE_ENCODING
+            ? g_config.encoding
+            : "ISO8859-1",
+            value);
+    printf("\n");
+}
+
+static void print_id3v1_tag(const struct id3v1_tag *tag)
 {
     const char *genre_str = get_id3v1_genre_str(tag->genre);
 
-    print(OS_OUT,
-            "Title: %s\n"
-            "Artist: %s\n"
-            "Album: %s\n"
-            "Year: %s\n"
-            "Comment: %s\n"
-            "Genre: (%u)%s",
-            tag->title, tag->artist, tag->album, tag->year,
-            tag->comment, tag->genre, genre_str ? genre_str : "");
+    print_id3v1_tag_field("Title", tag->title);
+    print_id3v1_tag_field("Artist", tag->artist);
+    print_id3v1_tag_field("Album", tag->album);
+    print_id3v1_tag_field("Year", tag->year);
+    print_id3v1_tag_field("Comment", tag->comment);
+    printf("Genre: (%u) %s\n", tag->genre, genre_str ? genre_str : "");
 
     if (tag->version != 0)
-        print(OS_OUT, "Track: %u", tag->track);
+        printf("Track no.: %u", tag->track);
 
     if (tag->version == ID3V1E_MINOR)
     {
-        print(OS_OUT,
-                "Genre2: %.30s\n"
-                "Start time: %.6s\n"
-                "End time: %.6s\n"
-                "Speed: %u",
-                tag->genre2, tag->starttime, tag->endtime, tag->speed);
+        print_id3v1_tag_field("Genre2", tag->genre2);
+        print_id3v1_tag_field("Start time", tag->starttime);
+        print_id3v1_tag_field("End time", tag->endtime);
+        printf("Speed: %u", tag->speed);
     }
 }
 
-void print_id3v2_tag(struct id3v2_tag *tag)
+static void print_id3v2_tag(const struct id3v2_tag *tag)
 {
     struct id3v2_frame_list *frame = tag->first_frame;
 
@@ -50,7 +55,7 @@ void print_id3v2_tag(struct id3v2_tag *tag)
          */
 
         if (frame->frame.id[0] == 'T')
-            print_utf8(frame->frame.data);
+            lprint("UTF-8", frame->frame.data);
         else
             printf("[some data] ;)");
         printf("\n");
@@ -104,7 +109,7 @@ int print_tag(struct id3v2_tag *tag)
                 frame = find_frame(tag->first_frame, frame_id);
 
                 if (frame != NULL)
-                    print_utf8(frame->data);
+                    lprint("UTF-8", frame->data);
             }
         }
 
@@ -209,9 +214,7 @@ int get_tags()
     }
 
     if (g_config.fmtstr != NULL && is_tag2_read)
-    {
         print_tag(&tag2);
-    }
 
     close(fd);
 }

@@ -15,7 +15,7 @@ typedef enum {
 } output_severity;
 
 void init_output(uint16_t mask);
-void print(output_severity sev, const char* format, ...);
-void print_utf8(const uint8_t* str);
+void print(output_severity sev, const char *format, ...);
+void lprint(const char *fromcode, const char *str);
 
 #endif /* OUTPUT_H */
