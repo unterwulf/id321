@@ -1,0 +1,137 @@
+.\"
+.\" Copyright (c) 2009 Vitaly Sinilin <vs@kp4.ru>
+.\"
+.TH id321 1 "3 December 2009" id321
+.SH NAME
+id321 \- id3 tags manipulation utility
+.SH SYNOPSIS
+.B id321
+[-g] [-1|-2] [-v] [-e ENCODING] [-f FORMAT|-F FRAME] file
+.br
+.B id321
+-m [-1|-2] [-v] KEY=value file
+.br
+.B id321
+-s [-1|-2] [-v] file
+.br
+.B id321
+-d [-1|-2] [-v] file
+.br
+.SH DESCRIPTION
+.TP
+.BI -1 " [1|2|3|e]
+Perform the action on id3v1 tags only. If the minor version is not specified,
+the scope of the action is any id3v1 tag.
+.TP
+.BI -2 " [2|3|4]
+Perform the action on id3v2 tags only. If the minor version is not specified,
+the scope of the action is any id3v2 tag.
+.TP
+.B -d
+Delete tags.
+.TP
+.BI -e " ENCODING
+Force tag's data encoding. Has no sense with
+.B -F
+option. Note, this option results in non-standard tags.
+.TP
+.BI -f " FORMAT
+Print tags using printf-like format string. Only useful with
+.B -g
+option.
+.TP
+.BI -F " FRAME|t|a|y|g|n|A
+Dump specified tag's frame/field as a binary data. This action has
+a little sense for id3v1 tags, but it still can be used to retrieve
+raw tag's field value regardless current locale. Only useful with
+.B -g
+option.
+.TP
+.B -g
+Dump tags. It is the default action. Without
+.BR -f " or " -F
+option whole tags of specified version will be dumped as a list of
+frames/fields with their text values.
+.TP
+.B -v
+Be verbose.
+.TP
+.B -m
+Modify tags.
+.SH EXAMPLES
+Dump all id3 tags:
+.IP
+.B id321 best.mp3
+.LP
+Dump any id3v1 tag (enhanced, id3v1.3, id3v1.2, id3v1.1, id3v1):
+.IP
+.B id321 -1 best.mp3
+.LP
+Dump enhanced id3v1 tag only (if there is a regular id3v1 tag only
+nothing will be dumped):
+.IP
+.B id321 -1e best.mp3
+.LP
+Print tags as a formatted string. As only one value for each field can
+be printed id3v2 tag has higher priority when tag version is not
+specified and alias used. For id3v2 tags you can specify the frame id
+(e.g. %TIT2 for song title).
+.IP
+.B id321 -f """%n - %t""" best.mp3
+.LP
+Dump frame in binary format:
+.IP
+.B id321 -F TIT2
+.LP
+Synchronize id3v1 tag data with id3v2 tag data. Original data will be
+lost even if there is no corresponding frame in id3v2 tag. If minor
+version is specified and existent tag has another minor version, it
+will be converted to the specified one, otherwise existent minor
+version will be preserved. If the file has no id3v1 tag, it will be
+created having the specified minor version or id3v1.1 by default.
+.IP
+.B id321 -s -1 best.mp3
+.LP
+Synchronize id3v2 tag data with id3v1 tag data. The same as above.
+id3v2.4 is default for id3v2.
+.IP
+.B id321 -s -2 best.mp3
+.LP
+Delete all tags:
+.IP
+.B id321 -d best.mp3
+.LP
+Delete all id3v1 tags:
+.IP
+.B id321 -d -1 best.mp3
+.LP
+Delete id3v1 enhanced tag. Notice that id3v1 enhanced tag is considered
+as including id3v1 tag, so general id3v1 tag will be removed as well.
+In order to remove only enhanced part use -m -11 command instead.
+.IP
+.B id321 -d -1e best.mp3
+.LP
+Modify tag. If no version is specified and there are both v1 and v2 tags
+in the file, both v1 and v2 tags will be modified. If there is no tags
+in the file and no version is specified an id3v2.4 tag will be prepended
+at the very begining of the file. If version is specified the only tag
+of this version will be modified. Moreover, if also minor version is
+specified existent tag will be converted to this minor version.
+.IP
+.B id321 -m -t Title -a Artist -n 1 -c Comment -y 2009 best.mp3
+.br
+.B id321 -m -24 -F TIT2=Title -F TPE1=Artist best.mp3
+.LP
+Convert tag minor version.
+.IP
+.B id321 -m -11 best.mp3
+.LP
+Padding size of id3v2 tag.
+
+If value has plus sign at the very begining it is relative value,
+i.e. the tag size will be minimal size needed to store all tag's data
+plus the specified value. Otherwise it is absolute value, i.e. the
+maximum size the tag can be. If it is insufficient to store all tag's
+data error message will be printed.
+.SH AUTHOR
+Written by Vitaly Sinilin <vs@kp4.ru>

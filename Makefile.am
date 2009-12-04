@@ -1,5 +1,7 @@
 SUBDIRS = . src
-EXTRA_DIST = include build docs specs
+EXTRA_DIST = include docs specs
+
+dist_man1_MANS = id321.1
 
 autoclean: distclean
 	find -name Makefile.in -exec rm -r {} \;
