@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include "id3v2.h"
 

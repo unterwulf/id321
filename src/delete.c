@@ -1,6 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <fcntl.h>
 #include <errno.h>
 #include "params.h"

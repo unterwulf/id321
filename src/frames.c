@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <iconv.h>
 #include <errno.h>

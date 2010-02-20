@@ -1,7 +1,7 @@
 #ifndef ID3V2_H
 #define ID3V2_H
 
-#include <stdint.h>
+#include <inttypes.h>
 
 typedef uint32_t ss_uint32_t;
 
