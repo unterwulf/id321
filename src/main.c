@@ -8,7 +8,7 @@ extern int delete_tags(const char *filename);
 
 char *program_name;
 
-static int dummy()
+static int dummy(const char *filename)
 {
     print(OS_ERROR, "sorry, this has not been implemented yet");
     exit(EXIT_FAILURE);
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 {
     struct {
         id3_action_t id;
-        int (* handler)();
+        int (* handler)(const char *);
     }
     modes[] =
     {

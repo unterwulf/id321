@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iconv.h>
 #include "output.h"
 
 /*
@@ -35,11 +36,11 @@ const char *locale_encoding()
 {
     static char *enc = NULL;
 
-    if (enc == NULL)
+    if (!enc)
     {
         enc = getenv("LANG");
 
-        if (enc != NULL && (enc = strchr(enc, '.')) != NULL)
+        if (enc && (enc = strchr(enc, '.')) != NULL)
             enc++;
         else
             enc = "ISO-8859-1";
@@ -59,4 +60,18 @@ char *xstrdup(const char *s)
     }
 
     return dup;
+}
+
+iconv_t xiconv_open(const char *tocode, const char *fromcode)
+{
+    iconv_t cd = iconv_open(tocode, fromcode);
+
+    if (cd == (iconv_t)-1)
+    {
+        print(OS_ERROR, "unable to convert string from `%s' to `%s'",
+                fromcode, tocode);
+        exit(EXIT_FAILURE);
+    }
+
+    return cd;
 }

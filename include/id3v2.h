@@ -1,7 +1,7 @@
 #ifndef ID3V2_H
 #define ID3V2_H
 
-#include <stdint.h>
+#include <inttypes.h>
 
 typedef uint32_t ss_uint32_t;
 
@@ -13,8 +13,8 @@ struct id3v2_header {
 };
 
 struct id3v2_ext_header {
-    uint32_t  size; // can never have a size of fewer then six bytes
-    uint8_t   number; // 01
+    uint32_t  size;   /* can never has a size of fewer than six bytes */
+    uint8_t   number; /* 01 */
     uint8_t   flags;
 };
 
@@ -27,8 +27,8 @@ struct id3v2_frame {
 };
 
 struct id3v2_frame_list {
-    struct id3v2_frame        frame;
-    struct id3v2_frame_list  *next;
+    struct id3v2_frame       frame;
+    struct id3v2_frame_list *next;
 };
 
 struct id3v2_tag {

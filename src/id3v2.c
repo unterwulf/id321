@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include "id3v2.h"
 #include "frames.h"

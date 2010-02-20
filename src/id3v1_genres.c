@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <inttypes.h>
 
 static const char *id3v1_genres[] = {
     /*   0. */ "Blues",

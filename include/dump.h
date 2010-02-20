@@ -3,7 +3,7 @@
 
 #include "id3v2.h"
 
-void dump_id3_header(struct id3v2_header *hdr);
-void dump_frame(struct id3v2_frame *frame);
+void dump_id3_header(const struct id3v2_header *hdr);
+void dump_frame(const struct id3v2_frame *frame);
 
 #endif /* DUMP_H */

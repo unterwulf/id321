@@ -2,7 +2,7 @@
 #include "frames.h"
 #include "output.h"
 
-void dump_id3_header(struct id3v2_header *hdr)
+void dump_id3_header(const struct id3v2_header *hdr)
 {
     print(OS_DEBUG,
         "id3v2 tag info:\n"
@@ -12,7 +12,7 @@ void dump_id3_header(struct id3v2_header *hdr)
         hdr->version, hdr->revision, hdr->flags, hdr->size);
 }
 
-void dump_frame(struct id3v2_frame *frame)
+void dump_frame(const struct id3v2_frame *frame)
 {
     print(OS_DEBUG,
         "frame %.4s, len=%u",
