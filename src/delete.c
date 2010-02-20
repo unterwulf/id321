@@ -176,7 +176,7 @@ int delete_tags(const char *filename)
     
     if (fd == -1)
     {
-        print(OS_ERROR, "unable to open source file %s", filename);
+        print(OS_ERROR, "unable to open source file `%s'", filename);
         return;
     }
 

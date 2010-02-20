@@ -6,11 +6,12 @@
 extern int get_tags(const char *filename);
 extern int delete_tags(const char *filename);
 
+char *program_name;
+
 static int dummy()
 {
     print(OS_ERROR, "sorry, this has not been implemented yet");
-
-    return 0;
+    exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv)
@@ -31,6 +32,8 @@ int main(int argc, char **argv)
 
     /* take care of locale */
     setlocale(LC_ALL, "");
+
+    program_name = argv[0];
 
     if (init_config(&argc, &argv) == -1)
         return EXIT_FAILURE;
