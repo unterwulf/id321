@@ -36,6 +36,7 @@ int init_config(int *argc, char ***argv)
                             case '0':
                             case '1':
                             case '2':
+                            case '3':
                                 g_config.minor_ver = atoi(optarg);
                                 break;
 
