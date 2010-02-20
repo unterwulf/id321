@@ -1,6 +1,7 @@
 #ifndef ID3V1_H
 #define ID3V1_H
 
+#include <inttypes.h>
 #include <unistd.h>
 #include <lib313.h>
 

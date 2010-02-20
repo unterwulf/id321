@@ -1,6 +1,7 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef PARAMS_H
+#define PARAMS_H
 
+#include <inttypes.h>
 #include "id3v2.h"
 
 #define ID3T_FORCE_ENCODING  0x8
@@ -22,4 +23,4 @@ struct {
 
 int init_config(int *argc, char ***argv);
 
-#endif /* CONFIG_H */
+#endif /* PARAMS_H */

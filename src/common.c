@@ -36,11 +36,11 @@ const char *locale_encoding()
 {
     static char *enc = NULL;
 
-    if (enc == NULL)
+    if (!enc)
     {
         enc = getenv("LANG");
 
-        if (enc != NULL && (enc = strchr(enc, '.')) != NULL)
+        if (enc && (enc = strchr(enc, '.')) != NULL)
             enc++;
         else
             enc = "ISO-8859-1";

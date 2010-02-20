@@ -1,6 +1,7 @@
 #ifndef SYNCHSAFE_H
 #define SYNCHSAFE_H
 
+#include <inttypes.h>
 #include <unistd.h>
 
 uint32_t deunsync_uint32(uint32_t src);

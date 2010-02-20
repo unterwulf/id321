@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <unistd.h>
 #include <string.h>
 #include "params.h"
@@ -6,10 +7,8 @@
 
 int init_config(int *argc, char ***argv)
 {
-    int        c;
-    uint16_t   debug_mask = OS_ERROR | OS_WARN;
-    uint32_t   options = 0;
-    uint16_t   size;
+    int      c;
+    uint16_t debug_mask = OS_ERROR | OS_WARN;
 
     init_output(OS_ERROR);
     g_config.fmtstr = NULL;

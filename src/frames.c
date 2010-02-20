@@ -6,6 +6,7 @@
 #include "id3v2.h"
 #include "output.h"
 #include "params.h"
+#include "common.h"
 
 static void unpack_string_frame(struct id3v2_frame *frame)
 {
