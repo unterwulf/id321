@@ -22,7 +22,7 @@ static void unpack_string_frame(struct id3v2_frame *frame)
     switch (frame->data[0])
     {
         case 0:
-            cd = iconv_open(to_enc, g_config.options & ID3T_FORCE_ENCODING
+            cd = xiconv_open(to_enc, g_config.options & ID3T_FORCE_ENCODING
                     ? g_config.encoding
                     : "ISO-8859-1");
             break;
@@ -39,14 +39,11 @@ static void unpack_string_frame(struct id3v2_frame *frame)
     
     errno = 0;
     iconv(cd, &in, &inbytesleft, &out, &outbytesleft);
-    print(OS_DEBUG, "errno: %d", errno);
 
     if (inbytesleft == 0)
-    {
         print(OS_DEBUG, "str: %s", buf);
-    }
     else
-        print(OS_ERROR, "iconv error");
+        print(OS_ERROR, "iconv error: %s", strerror(errno));
 
     iconv_close(cd);
 

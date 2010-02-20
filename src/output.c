@@ -45,13 +45,7 @@ void lprint(const char *fromcode, const char *str)
     size_t       outbytesleft = sizeof(buf);
     size_t       retval;
 
-    cd = iconv_open(locale_encoding(), fromcode);
-
-    if (cd == (iconv_t)-1)
-    {
-        perror("iconv_open");
-        exit(-1);
-    }
+    cd = xiconv_open(locale_encoding(), fromcode);
 
     do {
         errno = 0;

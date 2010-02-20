@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iconv.h>
+#include "output.h"
 
 /*
  * FUNCTION: readordie
@@ -45,4 +47,18 @@ const char *locale_encoding()
     }
 
     return enc;
+}
+
+iconv_t xiconv_open(const char *tocode, const char *fromcode)
+{
+    iconv_t cd = iconv_open(tocode, fromcode);
+
+    if (cd == (iconv_t)-1)
+    {
+        print(OS_ERROR, "unable to convert string from `%s' to `%s'",
+                fromcode, tocode);
+        exit(EXIT_FAILURE);
+    }
+
+    return cd;
 }
