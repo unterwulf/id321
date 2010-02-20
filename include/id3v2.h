@@ -93,6 +93,4 @@ int id3_tag_add_frame(struct id3v2_tag *tag, struct id3v2_frame *frame);
 const char *map_v22_to_v24(const char *v23frame);
 const char *map_v23_to_v24(const char *v23frame);
 
-const char *alias_to_frame_id(char alias, int version);
-
 #endif /* ID3V2_H */

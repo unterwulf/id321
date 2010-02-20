@@ -11,5 +11,6 @@
 
 ssize_t readordie(int fd, void *buf, size_t len);
 const char *locale_encoding();
+char *xstrdup(const char *s);
 
 #endif /* COMMON_H */

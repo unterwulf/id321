@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "output.h"
 
 /*
  * FUNCTION: readordie
@@ -45,4 +46,17 @@ const char *locale_encoding()
     }
 
     return enc;
+}
+
+char *xstrdup(const char *s)
+{
+    char *dup = strdup(s);
+
+    if (dup == NULL)
+    {
+        print(OS_ERROR, "i need some more memory");
+        exit(EXIT_FAILURE);
+    }
+
+    return dup;
 }

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include "alias.h"
+#include "common.h"
 #include "params.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
@@ -9,7 +11,26 @@
 #include "output.h"
 #include "framelist.h"
 
-static print_id3v1_tag_field(const char *name, const char *value)
+static void print_id3v1_data(const char alias, const struct id3v1_tag *tag)
+{
+    size_t size;
+    const void *buf = alias_to_v1_data(alias, tag, &size);
+
+    if (!buf)
+        return;
+
+    if (size == 1)
+        printf("%u", *(const uint8_t *)buf);
+    else
+    {
+        lprint(g_config.options & ID3T_FORCE_ENCODING
+                ? g_config.encoding
+                : "ISO8859-1",
+                (const char *)buf);
+    }
+}
+
+static void print_id3v1_tag_field(const char *name, const char *value)
 {
     printf("%s: ", name);
     lprint(g_config.options & ID3T_FORCE_ENCODING
@@ -31,14 +52,14 @@ static void print_id3v1_tag(const struct id3v1_tag *tag)
     printf("Genre: (%u) %s\n", tag->genre, genre_str ? genre_str : "");
 
     if (tag->version != 0)
-        printf("Track no.: %u", tag->track);
+        printf("Track no.: %u\n", tag->track);
 
     if (tag->version == ID3V1E_MINOR)
     {
         print_id3v1_tag_field("Genre2", tag->genre2);
         print_id3v1_tag_field("Start time", tag->starttime);
         print_id3v1_tag_field("End time", tag->endtime);
-        printf("Speed: %u", tag->speed);
+        printf("Speed: %u\n", tag->speed);
     }
 }
 
@@ -62,65 +83,67 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
     }
 }
 
-int print_tag(struct id3v2_tag *tag)
+void print_tag(const struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 {
     char *curpos;
     char *newpos;
     char *fmtstr;
     size_t len;
-    struct id3v2_frame *frame;
+    struct id3v2_frame *frame = NULL;
     const char *frame_id;
 
-    if (g_config.fmtstr != NULL)
-    {
-        /* let's parse format string */
-        fmtstr = strdup(g_config.fmtstr);
+    if (!g_config.fmtstr)
+        return;
 
-        if (fmtstr == NULL)
+    /* let's parse format string */
+    fmtstr = xstrdup(g_config.fmtstr);
+    len = strlen(fmtstr);
+
+    for (curpos = fmtstr;
+            (newpos = strchr(curpos, '%')) != NULL;
+            curpos = newpos)
+    {
+        if (newpos > curpos)
         {
-            print(OS_ERROR, "i need some more memory");
-            return -1;
+            *newpos = '\0';
+            printf("%s", curpos);
         }
 
-        len = strlen(fmtstr);
-
-        for (curpos = fmtstr;
-                (newpos = strchr(curpos, '%')) != NULL;
-                curpos = newpos)
+        if (newpos + 1 <= fmtstr + len)
         {
-            if (newpos > curpos)
-            {
-                *newpos = '\0';
-                printf("%s", curpos);
-            }
+            frame = NULL;
 
-            if (newpos + 1 <= fmtstr + len)
+            if (is_valid_alias(newpos[1]))
             {
-                frame_id = alias_to_frame_id(newpos[1], tag->header.version);
-
-                if (frame_id != NULL)
-                    newpos += 2;
-                else if (newpos + 5 <= fmtstr + len)
+                if (tag2)
                 {
-                    frame_id = newpos + 1;
-                    newpos += 5;
+                    frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
+                    frame = find_frame(tag2->first_frame, frame_id);
                 }
 
-                frame = find_frame(tag->first_frame, frame_id);
+                if (!frame && tag1)
+                    print_id3v1_data(newpos[1], tag1);
 
-                if (frame != NULL)
-                    lprint("UTF-8", frame->data);
+                newpos += 2;
             }
-        }
+            else if (tag2 && (newpos + 5 <= fmtstr + len))
+            {
+                frame_id = newpos + 1;
+                newpos += 5;
+                frame = find_frame(tag2->first_frame, frame_id);
+            }
 
-        if (curpos - fmtstr < len)
-        {
-            printf(curpos);
+            if (frame != NULL)
+                lprint("UTF-8", frame->data);
         }
-        printf("\n");
-
-        free(fmtstr);
     }
+
+    if (curpos - fmtstr < len)
+        printf(curpos);
+
+    printf("\n");
+
+    free(fmtstr);
 }
 
 int get_tags(const char *filename)
@@ -213,8 +236,8 @@ int get_tags(const char *filename)
         }
     }
 
-    if (g_config.fmtstr != NULL && is_tag2_read)
-        print_tag(&tag2);
+    if (g_config.fmtstr)
+        print_tag(is_tag1_read ? &tag1 : NULL, is_tag2_read ? &tag2 : NULL);
 
     close(fd);
 }
