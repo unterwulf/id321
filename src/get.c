@@ -79,11 +79,13 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
             lprint("UTF-8", frame->frame.data);
         else
             printf("[some data] ;)");
+
         printf("\n");
     }
 }
 
-void print_tag(const struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
+static void print_tag(const struct id3v1_tag *tag1,
+                      const struct id3v2_tag *tag2)
 {
     char *curpos;
     char *newpos;
@@ -177,13 +179,10 @@ int get_tags(const char *filename)
                     retval = read_id3v2_ext_header(fd, &tag2);
 
                 retval = read_id3v2_frames(fd, &tag2);
-
                 is_tag2_read = 1;
 
-                if (g_config.fmtstr == NULL)
-                {
+                if (!g_config.fmtstr)
                     print_id3v2_tag(&tag2);
-                }
             }
             else
             {
@@ -229,10 +228,8 @@ int get_tags(const char *filename)
         if (retval != -1)
         {
             is_tag1_read = 1;
-            if (g_config.fmtstr == NULL)
-            {
+            if (!g_config.fmtstr)
                 print_id3v1_tag(&tag1);
-            }
         }
     }
 
