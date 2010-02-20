@@ -4,7 +4,7 @@
 #include "output.h"
 #include "id3v1.h"
 
-int init_config(int argc, char **argv)
+int init_config(int *argc, char ***argv)
 {
     int        c;
     uint16_t   debug_levels[] =  {
@@ -21,7 +21,7 @@ int init_config(int argc, char **argv)
     g_config.major_ver = NOT_SET;
     g_config.minor_ver = NOT_SET;
 
-    while ((c = getopt(argc, argv, "1::2::dgnpse:vf:")) != -1)
+    while ((c = getopt(*argc, *argv, "1::2::dgnpse:vf:")) != -1)
     {
         switch (c)
         {
@@ -112,7 +112,8 @@ int init_config(int argc, char **argv)
     }
 
     init_output(debug_levels[debug_level]);
-    g_config.filename = argv[optind];
+    *argc -= optind;
+    *argv += optind;
 
     return 0;
 }

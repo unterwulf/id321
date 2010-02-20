@@ -165,18 +165,18 @@ static int crop_file(int fd, const struct crop_area *crop)
     return 0;
 }
 
-int delete_tags()
+int delete_tags(const char *filename)
 {
     int              fd;
     off_t            size = 0;
     struct crop_area crop;
     int              retval;
 
-    fd = open(g_config.filename, O_RDWR);
+    fd = open(filename, O_RDWR);
     
     if (fd == -1)
     {
-        print(OS_ERROR, "unable to open source file %s", g_config.filename);
+        print(OS_ERROR, "unable to open source file %s", filename);
         return;
     }
 

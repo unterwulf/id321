@@ -16,11 +16,10 @@ struct {
     uint32_t     options;
     int          major_ver;
     int          minor_ver;
-    const char  *filename;
     const char  *fmtstr;
     const char  *encoding;
 } g_config;
 
-int init_config(int argc, char **argv);
+int init_config(int *argc, char ***argv);
 
 #endif /* CONFIG_H */

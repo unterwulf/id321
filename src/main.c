@@ -1,9 +1,10 @@
+#include <stdlib.h>
 #include <locale.h>
 #include "params.h"
 #include "output.h"
 
-extern int get_tags();
-extern int delete_tags();
+extern int get_tags(const char *filename);
+extern int delete_tags(const char *filename);
 
 static int dummy()
 {
@@ -31,17 +32,21 @@ int main(int argc, char **argv)
     /* take care of locale */
     setlocale(LC_ALL, "");
 
-    if (init_config(argc, argv) == -1)
-        return -1;
+    if (init_config(&argc, &argv) == -1)
+        return EXIT_FAILURE;
 
     for (mode = 0; mode < sizeof(modes)/sizeof(modes[0]); mode++)
     {
         if (g_config.action == modes[mode].id)
         {
-            return modes[mode].handler();
+            for (; argc > 0; argc--, argv++)
+                if (modes[mode].handler(*argv) != 0)
+                    return EXIT_FAILURE;
+
+            return EXIT_SUCCESS;
         }
     }
 
     /* never reaches this line, because ID3_GET is default mode */
-    return -1;
+    return EXIT_FAILURE;
 }

@@ -123,7 +123,7 @@ int print_tag(struct id3v2_tag *tag)
     }
 }
 
-int get_tags()
+int get_tags(const char *filename)
 {
     int               fd;
     int               retval;
@@ -132,11 +132,11 @@ int get_tags()
     int               is_tag2_read = 0;
     int               is_tag1_read = 0;
 
-    fd = open(g_config.filename, O_RDONLY);
+    fd = open(filename, O_RDONLY);
 
     if (fd == -1)
     {
-        print(OS_ERROR, "unable to open source file %s", g_config.filename);
+        print(OS_ERROR, "unable to open source file %s", filename);
         return;
     }
 
