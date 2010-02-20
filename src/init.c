@@ -7,11 +7,7 @@
 int init_config(int *argc, char ***argv)
 {
     int        c;
-    uint16_t   debug_levels[] =  {
-        OS_OUT | OS_ERROR,
-        OS_OUT | OS_ERROR | OS_WARN | PARSE_INFO,
-        OS_OUT | OS_ERROR | OS_WARN | OS_DEBUG | PARSE_INFO | PARSE_DEBUG};
-    uint16_t   debug_level = 0;
+    uint16_t   debug_mask = OS_ERROR | OS_WARN;
     uint32_t   options = 0;
     uint16_t   size;
 
@@ -48,7 +44,7 @@ int init_config(int *argc, char ***argv)
 
                     if (g_config.minor_ver == NOT_SET)
                     {
-                        print(OS_ERROR, "Unknown minor version of id3v1: %s",
+                        print(OS_ERROR, "unknown minor version of id3v1: %s",
                                 optarg);
                         return -1;
                     }
@@ -73,7 +69,7 @@ int init_config(int *argc, char ***argv)
 
                     if (g_config.minor_ver == NOT_SET)
                     {
-                        print(OS_ERROR, "Unknown minor version of id3v2: %s",
+                        print(OS_ERROR, "unknown minor version of id3v2: %s",
                                 optarg);
                         return -1;
                     }
@@ -102,8 +98,7 @@ int init_config(int *argc, char ***argv)
                 break;
 
             case 'v':
-                if (debug_level < sizeof(debug_levels)/sizeof(debug_levels[0]))
-                    debug_level++;
+                debug_mask |= OS_INFO | OS_DEBUG;
                 break;
 
             case 'f':
@@ -112,7 +107,7 @@ int init_config(int *argc, char ***argv)
         }
     }
 
-    init_output(debug_levels[debug_level]);
+    init_output(debug_mask);
     *argc -= optind;
     *argv += optind;
 

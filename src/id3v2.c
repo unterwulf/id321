@@ -188,7 +188,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         size_t bytes_to_read;
         size_t pos;
 
-        print(PARSE_INFO, "Padding length is %u bytes", bytes_left);
+        print(OS_DEBUG, "padding length is %u bytes", bytes_left);
 
         while (bytes_left > 0)
         {
@@ -202,7 +202,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             {
                 if (block[pos] != '\0')
                 {
-                    print(OS_DEBUG, "Padding contains non-zero byte");
+                    print(OS_DEBUG, "padding contains non-zero byte");
                     lseek(fd, bytes_left, SEEK_CUR);
                     break;
                 }
@@ -240,7 +240,8 @@ int validate_id3v2_header(struct id3v2_header *hdr)
         {
             if (hdr->flags & ~fm[i].mask != 0)
             {
-                print(OS_WARN, "header has extra flags are absented in spec");
+                print(OS_WARN, "header has extra flags that are absented "
+                               "in spec");
                 break;
             }
         }

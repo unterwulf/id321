@@ -5,7 +5,7 @@
 void dump_id3_header(struct id3v2_header *hdr)
 {
     print(OS_DEBUG,
-        "Id3 tag info:\n"
+        "id3v2 tag info:\n"
         "  version: %u.%u\n"
         "  flags: %u\n"
         "  size: %u",
@@ -14,7 +14,7 @@ void dump_id3_header(struct id3v2_header *hdr)
 
 void dump_frame(struct id3v2_frame *frame)
 {
-    print(PARSE_DEBUG,
+    print(OS_DEBUG,
         "frame %.4s, len=%u",
         frame->id, frame->size);
 }
