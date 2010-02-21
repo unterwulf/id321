@@ -4,6 +4,7 @@
 #include "params.h"
 #include "output.h"
 #include "id3v1.h"
+#include "common.h"
 
 int init_config(int *argc, char ***argv)
 {
@@ -50,7 +51,7 @@ int init_config(int *argc, char ***argv)
         }
     }
 
-    while ((c = getopt(*argc, *argv, "1::2::e:vf:a:c:g:G:l:n:t:y:")) != -1)
+    while ((c = getopt(*argc, *argv, "1::2::e::vf:a:c:g:G:l:n:t:y:")) != -1)
     {
         switch (c)
         {
@@ -120,7 +121,7 @@ int init_config(int *argc, char ***argv)
 
             case 'e':
                 g_config.options |= ID3T_FORCE_ENCODING;
-                g_config.encoding = optarg;
+                g_config.encoding = optarg ? optarg : locale_encoding();
                 break;
 
             case 'v':

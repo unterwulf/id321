@@ -3,10 +3,10 @@
 .\"
 .TH id321 1 "21 February 2010" id321
 .SH NAME
-id321 \- id3 tags manipulation tool
+id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
 .B id321
-[pr[int]] [-1|-2] [-v] [-e ENCODING] [-f FORMAT|-F FRAME] FILE...
+[pr[int]] [-1|-2] [-v] [-eENCODING] [-f FORMAT|-F FRAME] FILE...
 .br
 .B id321
 mo[dify] [-1|-2] [-v] KEY=value FILE...
@@ -47,25 +47,30 @@ Delete tags.
 .br
 .SH OPTIONS
 .TP
-.BI -1 " [1|2|3|e]
+.BI -1 "[1|2|3|e]
 Perform the action on id3v1 tags only. If the minor version is not specified,
 the scope of the action is any id3v1 tag.
 .TP
-.BI -2 " [2|3|4]
+.BI -2 "[2|3|4]
 Perform the action on id3v2 tags only. If the minor version is not specified,
 the scope of the action is any id3v2 tag.
 .TP
-.BI -e " ENCODING
-Force tag's data encoding. Has no sense with
+.BI -e "ENCODING
+Force tag's data encoding. If
+.I ENCODING
+is omitted, it will be taken from the
+current locale. This option does not affect output of
 .B -F
-option. Note, this option results in non-standard tags.
+option. Note, with
+.B modify
+action this option results in non-standard tags.
 .TP
 .BI -f " FORMAT
 Print tags using printf-like format string. Only useful with
 .B print
 action.
 .TP
-.BI -F " FRAME|t|a|y|g|n|A
+.BI -F " FRAME|a|c|g|G|l|n|t|y
 Dump specified tag's frame/field as a binary data. This option has
 a little sense for id3v1 tags, but it still can be used to retrieve
 raw tag's field value regardless current locale. Only useful with
