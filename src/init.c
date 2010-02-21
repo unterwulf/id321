@@ -10,13 +10,47 @@ int init_config(int *argc, char ***argv)
     int      c;
     uint16_t debug_mask = OS_ERROR | OS_WARN;
 
+    static const struct {
+        char         *act_name;
+        id3_action_t  act_id;
+    }
+    actions[] =
+    {
+        { "pr",     ID3_PRINT  },
+        { "print",  ID3_PRINT  },
+        { "rm",     ID3_DELETE },
+        { "delete", ID3_DELETE },
+        { "mo",     ID3_MODIFY },
+        { "modify", ID3_MODIFY },
+        { "sy",     ID3_SYNC   },
+        { "sync",   ID3_SYNC   },
+        { "cp",     ID3_COPY   },
+        { "copy",   ID3_COPY   }
+    };
+
     init_output(OS_ERROR);
     g_config.fmtstr = NULL;
-    g_config.action = ID3_GET;
+    g_config.action = ID3_PRINT;
     g_config.major_ver = NOT_SET;
     g_config.minor_ver = NOT_SET;
 
-    while ((c = getopt(*argc, *argv, "1::2::dgnpse:vf:")) != -1)
+    /* determine action if specified, by default print tags */
+    if (*argc > 1 && (*argv)[1][0] != '-')
+    {
+        int i;
+
+        for (i = 0; i < sizeof(actions)/sizeof(actions[0]); i++)
+        {
+            if (strcmp((*argv)[1], actions[i].act_name) == 0)
+            {
+                g_config.action = actions[i].act_id;
+                optind = 2;
+                break;
+            }
+        }
+    }
+
+    while ((c = getopt(*argc, *argv, "1::2::e:vf:a:c:g:G:l:n:t:y:")) != -1)
     {
         switch (c)
         {
@@ -75,21 +109,14 @@ int init_config(int *argc, char ***argv)
                 }
                 break;
 
-            case 'd':
-                g_config.action = ID3_DELETE;
-                break;
-
-            case 'g':
-                g_config.action = ID3_GET;
-                break;
-
-            case 's':
-                g_config.action = ID3_SYNC;
-                break;
-
-            case 'm':
-                g_config.action = ID3_MODIFY;
-                break;
+            case 'a': g_config.artist = optarg; break;
+            case 'c': g_config.comment = optarg; break;
+            case 'g': g_config.genre = optarg; break;
+            case 'G': g_config.genre = optarg; break;
+            case 'l': g_config.album = optarg; break;
+            case 'n': g_config.track = optarg; break;
+            case 't': g_config.title = optarg; break;
+            case 'y': g_config.year = optarg; break;
 
             case 'e':
                 g_config.options |= ID3T_FORCE_ENCODING;

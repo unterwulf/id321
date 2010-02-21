@@ -9,7 +9,7 @@
 #define NOT_SET -1
 
 typedef enum {
-    ID3_GET, ID3_MODIFY, ID3_DELETE, ID3_SYNC, ID3_NORMALIZE
+    ID3_PRINT, ID3_MODIFY, ID3_DELETE, ID3_SYNC, ID3_COPY
 } id3_action_t;
 
 struct {
@@ -19,6 +19,14 @@ struct {
     int          minor_ver;
     const char  *fmtstr;
     const char  *encoding;
+
+    const char  *artist;
+    const char  *album;
+    const char  *title;
+    const char  *comment;
+    const char  *year;
+    const char  *track;
+    const char  *genre;
 } g_config;
 
 int init_config(int *argc, char ***argv);

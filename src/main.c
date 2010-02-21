@@ -22,11 +22,11 @@ int main(int argc, char **argv)
     }
     modes[] =
     {
-        { ID3_GET,       get_tags    },
-        { ID3_MODIFY,    dummy       },
-        { ID3_DELETE,    delete_tags },
-        { ID3_SYNC,      dummy       },
-        { ID3_NORMALIZE, dummy       }
+        { ID3_PRINT,   get_tags    },
+        { ID3_MODIFY,  dummy       },
+        { ID3_DELETE,  delete_tags },
+        { ID3_SYNC,    dummy       },
+        { ID3_COPY,    dummy       }
     };
     int mode;
 
@@ -50,6 +50,6 @@ int main(int argc, char **argv)
         }
     }
 
-    /* never reaches this line, because ID3_GET is default mode */
+    /* never reaches this line, because ID3_PRINT is default mode */
     return EXIT_FAILURE;
 }
