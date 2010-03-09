@@ -28,8 +28,8 @@ int init_config(int *argc, char ***argv)
     init_output(OS_ERROR);
     g_config.fmtstr = NULL;
     g_config.action = ID3_PRINT;
-    g_config.major_ver = NOT_SET;
-    g_config.minor_ver = NOT_SET;
+    g_config.ver.major = NOT_SET;
+    g_config.ver.minor = NOT_SET;
 
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')
@@ -52,7 +52,7 @@ int init_config(int *argc, char ***argv)
         switch (c)
         {
             case '1':
-                g_config.major_ver = 1;
+                g_config.ver.major = 1;
                 if (optarg != 0)
                 {
                     if (strlen(optarg) == 1)
@@ -63,16 +63,16 @@ int init_config(int *argc, char ***argv)
                             case '1':
                             case '2':
                             case '3':
-                                g_config.minor_ver = atoi(optarg);
+                                g_config.ver.minor = atoi(optarg);
                                 break;
 
                             case 'e':
-                                g_config.minor_ver = ID3V1E_MINOR;
+                                g_config.ver.minor = ID3V1E_MINOR;
                                 break;
                         }
                     }
 
-                    if (g_config.minor_ver == NOT_SET)
+                    if (g_config.ver.minor == NOT_SET)
                     {
                         print(OS_ERROR, "unknown minor version of id3v1: %s",
                                 optarg);
@@ -82,7 +82,7 @@ int init_config(int *argc, char ***argv)
                 break;
 
             case '2':
-                g_config.major_ver = 2;
+                g_config.ver.major = 2;
                 if (optarg != 0)
                 {
                     if (strlen(optarg) == 1)
@@ -92,12 +92,12 @@ int init_config(int *argc, char ***argv)
                             case '2':
                             case '3':
                             case '4':
-                                g_config.minor_ver = atoi(optarg);
+                                g_config.ver.minor = atoi(optarg);
                                 break;
                         }
                     }
 
-                    if (g_config.minor_ver == NOT_SET)
+                    if (g_config.ver.minor == NOT_SET)
                     {
                         print(OS_ERROR, "unknown minor version of id3v2: %s",
                                 optarg);

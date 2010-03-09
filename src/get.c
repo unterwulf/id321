@@ -165,13 +165,13 @@ int get_tags(const char *filename)
         return;
     }
 
-    if (g_config.major_ver == 2 || g_config.major_ver == NOT_SET)
+    if (g_config.ver.major == 2 || g_config.ver.major == NOT_SET)
     {
         /* read id3v2 tag if available */
         if (read_id3v2_header(fd, &tag2.header) != -1)
         {
-            if (g_config.minor_ver == tag2.header.version
-                || g_config.minor_ver == NOT_SET)
+            if (g_config.ver.minor == tag2.header.version
+                || g_config.ver.minor == NOT_SET)
             {
                 dump_id3_header(&tag2.header);
 
@@ -196,29 +196,29 @@ int get_tags(const char *filename)
         }
     }
 
-    if (g_config.major_ver == 1 || g_config.major_ver == NOT_SET)
+    if (g_config.ver.major == 1 || g_config.ver.major == NOT_SET)
     {
         retval = -1;
 
-        if (g_config.minor_ver == ID3V1E_MINOR || g_config.minor_ver == NOT_SET)
+        if (g_config.ver.minor == ID3V1E_MINOR || g_config.ver.minor == NOT_SET)
         {
             /* read id3v1 extended tag if available */
             lseek(fd, -(ID3V1E_TAG_SIZE), SEEK_END);
             retval = read_id3v1_ext_tag(fd, &tag1);
         }
 
-        if (retval == -1 && (g_config.minor_ver == 2
-                             || g_config.minor_ver == NOT_SET))
+        if (retval == -1 && (g_config.ver.minor == 2
+                             || g_config.ver.minor == NOT_SET))
         {
             /* read id3v1.2 tag if available */
             lseek(fd, -ID3V12_TAG_SIZE, SEEK_END);
             retval = read_id3v1_tag(fd, &tag1);
         }
 
-        if (retval == -1 && (g_config.minor_ver == 1
-                             || g_config.minor_ver == 3
-                             || g_config.minor_ver == 0
-                             || g_config.minor_ver == NOT_SET))
+        if (retval == -1 && (g_config.ver.minor == 1
+                             || g_config.ver.minor == 3
+                             || g_config.ver.minor == 0
+                             || g_config.ver.minor == NOT_SET))
         {
             /* read id3v1 tag if available */
             lseek(fd, -ID3V1_TAG_SIZE, SEEK_END);
