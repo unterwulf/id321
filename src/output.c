@@ -35,13 +35,13 @@ void print(output_severity sev, const char* format, ...)
     }
 }
 
-void lprint(const char *fromcode, const char *str)
+void lnprint(const char *fromcode, size_t size, const char *str)
 {
     iconv_t      cd;
     char         buf[BUFSIZ];
     char        *out = buf;
     const char  *in = str;
-    size_t       inbytesleft = strlen(str);
+    size_t       inbytesleft = size;
     size_t       outbytesleft = sizeof(buf);
     size_t       retval;
 
@@ -65,7 +65,7 @@ void lprint(const char *fromcode, const char *str)
                     out = buf;
                     outbytesleft = sizeof(buf);
                     /* print invalid character replacement */
-                    lprint(fromcode, "?");
+                    lprint("ISO-8859-1", "?");
                     continue;
 
                 case E2BIG:
@@ -80,4 +80,9 @@ void lprint(const char *fromcode, const char *str)
 
     iconv_close(cd);
     fwrite(buf, sizeof(buf) - outbytesleft, 1, stdout);
+}
+
+void lprint(const char *fromcode, const char *str)
+{
+    lnprint(fromcode, strlen(str), str);
 }

@@ -2,6 +2,7 @@
 #define OUTPUT_H
 
 #include <inttypes.h>
+#include <sys/types.h>
 
 typedef enum {
     OS_DEBUG = 0x8,
@@ -13,5 +14,6 @@ typedef enum {
 void init_output(uint16_t mask);
 void print(output_severity sev, const char *format, ...);
 void lprint(const char *fromcode, const char *str);
+void lnprint(const char *fromcode, size_t size, const char *str);
 
 #endif /* OUTPUT_H */
