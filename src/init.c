@@ -31,6 +31,11 @@ int init_config(int *argc, char ***argv)
     g_config.ver.major = NOT_SET;
     g_config.ver.minor = NOT_SET;
 
+    g_config.enc_iso8859_1 = "ISO-8859-1";
+    g_config.enc_utf8 = "UTF-8";
+    g_config.enc_utf16 = "UTF-16";
+    g_config.enc_utf16be = "UTF-16BE";
+
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')
     {
@@ -116,8 +121,9 @@ int init_config(int *argc, char ***argv)
             case 'y': g_config.year = optarg; break;
 
             case 'e':
-                g_config.options |= ID3T_FORCE_ENCODING;
-                g_config.encoding = optarg ? optarg : locale_encoding();
+                g_config.enc_iso8859_1 = g_config.enc_utf8 =
+                    g_config.enc_utf16 = g_config.enc_utf16be =
+                    optarg ? optarg : locale_encoding();
                 break;
 
             case 'v':

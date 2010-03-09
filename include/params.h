@@ -4,8 +4,6 @@
 #include <inttypes.h>
 #include "id3v2.h"
 
-#define ID3T_FORCE_ENCODING  0x8
-
 #define NOT_SET 255
 
 typedef enum {
@@ -23,7 +21,10 @@ struct {
     uint32_t        options;
     struct version  ver;
     const char     *fmtstr;
-    const char     *encoding;
+    const char     *enc_iso8859_1;
+    const char     *enc_utf8;
+    const char     *enc_utf16;
+    const char     *enc_utf16be;
 
     const char     *artist;
     const char     *album;

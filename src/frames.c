@@ -16,27 +16,20 @@ static void unpack_string_frame(struct id3v2_frame *frame)
     char       *in = frame->data + 1;
     size_t      inbytesleft = frame->size - 1;
     size_t      outbytesleft = sizeof(buf);
-    const char *to_enc = "UTF-8";
+    const char *tocode = "UTF-8";
+    const char *fromcode = NULL;
 
     memset(buf, 0, sizeof(buf));
 
     switch (frame->data[0])
     {
-        case 0:
-            cd = xiconv_open(to_enc, g_config.options & ID3T_FORCE_ENCODING
-                    ? g_config.encoding
-                    : "ISO-8859-1");
-            break;
-        case 1:
-            cd = iconv_open(to_enc, "UTF-16");
-            break;
-        case 2:
-            cd = iconv_open(to_enc, "UTF-16BE");
-            break;
-        case 3:
-            cd = iconv_open(to_enc, "UTF-8");
-            break;
+        case 0: fromcode = g_config.enc_iso8859_1; break;
+        case 1: fromcode = g_config.enc_utf16; break;
+        case 2: fromcode = g_config.enc_utf16be; break;
+        case 3: fromcode = g_config.enc_utf8; break;
     }
+
+    cd = xiconv_open(tocode, fromcode);
     
     errno = 0;
     iconv(cd, &in, &inbytesleft, &out, &outbytesleft);
