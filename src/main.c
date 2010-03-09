@@ -2,6 +2,7 @@
 #include <locale.h>
 #include "params.h"
 #include "output.h"
+#include "common.h" /* for_each() */
 
 extern int get_tags(const char *filename);
 extern int delete_tags(const char *filename);
@@ -16,19 +17,20 @@ static int dummy(const char *filename)
 
 int main(int argc, char **argv)
 {
-    struct {
+    static const struct
+    {
         id3_action_t id;
         int (* handler)(const char *);
     }
     modes[] =
     {
-        { ID3_PRINT,   get_tags    },
-        { ID3_MODIFY,  dummy       },
-        { ID3_DELETE,  delete_tags },
-        { ID3_SYNC,    dummy       },
-        { ID3_COPY,    dummy       }
+        { ID3_PRINT,  get_tags    },
+        { ID3_MODIFY, dummy       },
+        { ID3_DELETE, delete_tags },
+        { ID3_SYNC,   dummy       },
+        { ID3_COPY,   dummy       }
     };
-    int mode;
+    unsigned mode;
 
     /* take care of locale */
     setlocale(LC_ALL, "");
@@ -38,7 +40,7 @@ int main(int argc, char **argv)
     if (init_config(&argc, &argv) == -1)
         return EXIT_FAILURE;
 
-    for (mode = 0; mode < sizeof(modes)/sizeof(modes[0]); mode++)
+    for_each (mode, modes)
     {
         if (g_config.action == modes[mode].id)
         {

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include "id3v1.h"
+#include "common.h"
 
 #define OFFV1(field) offsetof(struct id3v1_tag, field)
 #define SIZV1(field) sizeof(((struct id3v1_tag *)NULL)->field)
@@ -26,13 +27,13 @@ map[] =
     { 'y', "TYE", "TYER", "TDRC", OFFV1(year),    SIZV1(year)    }
 };
 
-const char *alias_to_frame_id(char alias, int version)
+const char *alias_to_frame_id(char alias, unsigned version)
 {
-    int i;
+    unsigned i;
 
-    for (i = 0; i < sizeof(map)/sizeof(map[0]); i++)
+    for_each (i, map)
     {
-        if (alias == map[i].alias)
+        if (map[i].alias == alias)
         {
             switch (version)
             {
@@ -51,9 +52,9 @@ const char *alias_to_frame_id(char alias, int version)
 const void *alias_to_v1_data(char alias, const struct id3v1_tag *tag,
                              size_t *size)
 {
-    int i;
+    unsigned i;
 
-    for (i = 0; i < sizeof(map)/sizeof(map[0]); i++)
+    for_each (i, map)
     {
         if (alias == map[i].alias)
         {

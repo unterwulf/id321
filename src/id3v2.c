@@ -223,18 +223,20 @@ int read_id3v2_ext_header(int fd, struct id3v2_tag *tag)
 
 int validate_id3v2_header(struct id3v2_header *hdr)
 {
-    int i;
-    static const struct flagmask {
+    unsigned i;
+    static const struct flagmask
+    {
         uint8_t version;
         uint8_t mask;
     }
-    fm[] = {
+    fm[] =
+    {
         { 2, ID3V22_FLAG_MASK },
         { 3, ID3V23_FLAG_MASK },
         { 4, ID3V24_FLAG_MASK }
     };
 
-    for (i = 0; i < sizeof(fm)/sizeof(fm[0]); i++)
+    for_each (i, fm)
     {
         if (fm[i].version == hdr->version)
         {

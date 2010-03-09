@@ -10,6 +10,9 @@
     if (readordie(fd, buf, size) != size) \
         return -1;
 
+#define for_each(i, array) \
+    for (i = 0; i < sizeof(array)/sizeof(array[0]); i++)
+
 ssize_t readordie(int fd, void *buf, size_t len);
 const char *locale_encoding();
 char *xstrdup(const char *s);

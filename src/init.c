@@ -11,22 +11,18 @@ int init_config(int *argc, char ***argv)
     int      c;
     uint16_t debug_mask = OS_ERROR | OS_WARN;
 
-    static const struct {
+    static const struct
+    {
         char         *act_name;
         id3_action_t  act_id;
     }
     actions[] =
     {
-        { "pr",     ID3_PRINT  },
-        { "print",  ID3_PRINT  },
-        { "rm",     ID3_DELETE },
-        { "delete", ID3_DELETE },
-        { "mo",     ID3_MODIFY },
-        { "modify", ID3_MODIFY },
-        { "sy",     ID3_SYNC   },
-        { "sync",   ID3_SYNC   },
-        { "cp",     ID3_COPY   },
-        { "copy",   ID3_COPY   }
+        { "pr", ID3_PRINT  }, { "print",  ID3_PRINT  },
+        { "rm", ID3_DELETE }, { "delete", ID3_DELETE },
+        { "mo", ID3_MODIFY }, { "modify", ID3_MODIFY },
+        { "sy", ID3_SYNC   }, { "sync",   ID3_SYNC   },
+        { "cp", ID3_COPY   }, { "copy",   ID3_COPY   }
     };
 
     init_output(OS_ERROR);
@@ -38,9 +34,9 @@ int init_config(int *argc, char ***argv)
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')
     {
-        int i;
+        unsigned i;
 
-        for (i = 0; i < sizeof(actions)/sizeof(actions[0]); i++)
+        for_each (i, actions)
         {
             if (strcmp((*argv)[1], actions[i].act_name) == 0)
             {
