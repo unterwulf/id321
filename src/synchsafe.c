@@ -6,10 +6,17 @@ ss_uint32_t unsync_uint32(uint32_t src)
 {
     uint32_t res;
 
+    /* The unsyncronisation scheme is the following:
+     *
+     * pos: 76543210 76543210 76543210 76543210
+     * src: FEDCBAzy xwvutsrq ponmlkji hgfedcba
+     * res: 0BAzyxwv 0utsrqpo 0nmlkjih 0gfedcba
+     */
+
     res = src & 0x7F |
          (src & 0x3F80) << 1 |
-         (src & 0x1FB000) << 2 |
-         (src & 0x0FF00000) << 3;
+         (src & 0x1FC000) << 2 |
+         (src & 0xFE00000) << 3;
 
     return (ss_uint32_t)res;
 }
@@ -17,6 +24,13 @@ ss_uint32_t unsync_uint32(uint32_t src)
 uint32_t deunsync_uint32(ss_uint32_t src)
 {
     uint32_t res;
+
+    /* The deunsyncronisation scheme is the following:
+     *
+     * pos: 76543210 76543210 76543210 76543210
+     * src: 0BAzyxwv 0utsrqpo 0nmlkjih 0gfedcba
+     * res: 0000BAzy xwvutsrq ponmlkji hgfedcba
+     */
 
     res = src & 0x7F |
          (src & 0x7F00) >> 1 |
