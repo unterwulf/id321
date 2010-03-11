@@ -1,7 +1,7 @@
 #include <stdlib.h>
-#include <stddef.h>
-#include "id3v1.h"
-#include "common.h"
+#include <stddef.h> /* offsetof() */
+#include "id3v1.h"  /* struct id3v1_tag {...} */
+#include "common.h" /* for_each() */
 
 #define OFFV1(field) offsetof(struct id3v1_tag, field)
 #define SIZV1(field) sizeof(((struct id3v1_tag *)NULL)->field)
