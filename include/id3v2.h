@@ -3,8 +3,6 @@
 
 #include <inttypes.h>
 
-typedef uint32_t ss_uint32_t;
-
 struct id3v2_header {
     uint8_t   version;
     uint8_t   revision;

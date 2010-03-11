@@ -1,10 +1,11 @@
 #include <inttypes.h>
 #include <unistd.h>
-#include "id3v2.h"
+#include "common.h"
+#include "synchsafe.h"
 
 ss_uint32_t unsync_uint32(uint32_t src)
 {
-    uint32_t res;
+    ss_uint32_t res;
 
     /* The unsyncronisation scheme is the following:
      *
@@ -13,12 +14,12 @@ ss_uint32_t unsync_uint32(uint32_t src)
      * res: 0BAzyxwv 0utsrqpo 0nmlkjih 0gfedcba
      */
 
-    res = src & 0x7F |
-         (src & 0x3F80) << 1 |
-         (src & 0x1FC000) << 2 |
-         (src & 0xFE00000) << 3;
+    res = (src & 0x7F) |
+         ((src & 0x3F80) << 1) |
+         ((src & 0x1FC000) << 2) |
+         ((src & 0xFE00000) << 3);
 
-    return (ss_uint32_t)res;
+    return res;
 }
 
 uint32_t deunsync_uint32(ss_uint32_t src)
@@ -32,43 +33,73 @@ uint32_t deunsync_uint32(ss_uint32_t src)
      * res: 0000BAzy xwvutsrq ponmlkji hgfedcba
      */
 
-    res = src & 0x7F |
-         (src & 0x7F00) >> 1 |
-         (src & 0x7F0000) >> 2 |
-         (src & 0x7F000000) >> 3;
+    res = (src & 0x7F) |
+         ((src & 0x7F00) >> 1) |
+         ((src & 0x7F0000) >> 2) |
+         ((src & 0x7F000000) >> 3);
 
     return res;
 }
 
 /*
-int unsyncBuffer(char *)
-{
-}
-*/
-
-/*
+ * Function:     unsync_buf
  *
+ * Description:  Unsynchronises buffer src of size srcsize and write the result
+ *               to the buffer dst of size dstsize
+ *
+ * Return value: size of unsynchronised buffer, if it is greater than
+ *               dstsize the buffer was truncated
+ *
+ * Notes:        May be called with dstsize == 0 to estimate required
+ *               destination buffer size
  */
-
-uint16_t deunsync_buf(uint8_t *buf, uint16_t size, int pre)
+size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
 {
-    uint16_t  pos = 0;
-    uint8_t  *wr_pos = buf;
+    size_t pos;
+    size_t dstpos;
+    unsigned char *usrc = (unsigned char *)src; /* do not spell it in Russian */
+
+    for (pos = 0, dstpos = 0; pos < srcsize && dstpos < dstsize; pos++)
+    {
+        dst[dstpos++] = src[pos];
+
+        if (usrc[pos] == 0xFF &&
+            ((pos + 1 < srcsize && (usrc[pos+1] & 0xE0 || usrc[pos+1] == 0x0))
+             || pos + 1 == srcsize))
+        {
+            if (dstpos < dstsize)
+                dst[dstpos++] = 0x0;
+            else
+                dstpos++;
+        }
+    }
+
+    /* just estimate required buffer size */
+    for (dstpos += srcsize - pos; pos < srcsize; pos++)
+        if (usrc[pos] == 0xFF &&
+            ((pos + 1 < srcsize && (usrc[pos+1] & 0xE0 || usrc[pos+1] == 0x0))
+             || pos + 1 == srcsize))
+            dstpos++;
+
+    return dstpos;
+}
+
+size_t deunsync_buf(char *buf, size_t size, int pre)
+{
+    size_t  pos = 0;
+    char   *wr_pos = buf;
 
     /* checking precondition */
     if (pre == 1 && buf[0] == '\0')
-    {
         pos++;
-    }
 
     for (; pos < size; pos++)
     {
         *(wr_pos++) = buf[pos];
 
-        if (buf[pos] == 0xFF && pos + 1 < size && buf[pos+1] == 0x00)
-        {
+        if ((unsigned char)buf[pos] == 0xFF
+            && pos + 1 < size && buf[pos+1] == '\0')
             pos++;
-        }
     }
 
     return wr_pos - buf;
@@ -79,7 +110,7 @@ ssize_t read_unsync(int fd, void *buf, size_t size, int pre)
     size_t realsize;
     ssize_t bytes_read = 0;
 
-    while (readordie(fd, buf, size) == size)
+    while (readordie(fd, buf, size) == (ssize_t)size)
     {
         bytes_read += size;
         realsize = deunsync_buf(buf, size, pre);
