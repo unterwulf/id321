@@ -1,4 +1,6 @@
 #include <inttypes.h>
+#include <string.h>
+#include "id3v1_genres.h"
 
 static const char *id3v1_genres[] = {
     /*   0. */ "Blues",
@@ -134,8 +136,19 @@ static const char *id3v1_genres[] = {
 
 const char *get_id3v1_genre_str(uint8_t genre)
 {
-    if (genre < sizeof(id3v1_genres)/sizeof(id3v1_genres[0]))
-        return 0;
+    if (genre > ID3V1_GENRE_ID_MAX)
+        return "Unknown";
     else
         return id3v1_genres[genre];
+}
+
+uint8_t get_id3v1_genre_id(const char *name)
+{
+    uint8_t i;
+
+    for (i = 0; i <= ID3V1_GENRE_ID_MAX; i++)
+        if (!strcmp(id3v1_genres[i], name))
+            return i;
+
+    return ID3V1_UNKNOWN_GENRE;
 }
