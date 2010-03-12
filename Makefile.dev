@@ -1,0 +1,11 @@
+all: configure
+
+configure: Makefile.am configure.ac src/Makefile.am
+	autoreconf -s -i
+
+clean:
+	-if [ -f Makefile ]; then make maintainer-clean; fi
+	-(cd lib313 && make -f Makefile.dev clean)
+	-find -name Makefile.in -exec rm -r {} \;
+	-rm -f build/* config.h.in configure aclocal.m4
+	-rm -rf autom4te.cache

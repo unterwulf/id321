@@ -1,0 +1,30 @@
+lib313 - a C library for packing/unpacking id3v1.3 tags
+-------------------------------------------------------
+
+id3v1.3 tags specification:
+
+  http://wiki.sinil.in/en:id3v1.3
+
+Website:
+
+  http://wiki.sinil.in/en:lib313
+
+Project page:
+
+  http://sourceforge.net/projects/lib313
+
+lib313 is free, open-source software, distributed under the terms of
+the MIT License.
+
+
+Installation
+------------
+
+    ./configure [--prefix=/usr/local]
+    make
+    sudo make install
+
+If you are checked out from git, you will have to prepare the configure
+script just before you proceed with the above instructions:
+
+    autoreconf -i -s

@@ -1,4 +1,9 @@
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
+
+if STATIC_LIB313
+AM_CPPFLAGS += -I$(top_srcdir)/lib313/include
+id321_LDADD = $(top_srcdir)/lib313/src/lib313.a
+endif
 
 bin_PROGRAMS = id321
 
