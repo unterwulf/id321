@@ -1,20 +1,45 @@
 #include <inttypes.h>
+#include <stdlib.h>       /* atoi() */
 #include <unistd.h>
 #include <string.h>
+#include <getopt.h>
 #include "params.h"
 #include "output.h"
 #include "id3v1.h"
+#include "id3v1_genres.h"
+#include "id3v1e_speed.h"
 #include "common.h"
+
+#define OPT_SPEED      1
+#define OPT_START_TIME 2
+#define OPT_END_TIME   3
 
 int init_config(int *argc, char ***argv)
 {
     int      c;
+    long     long_val;
+    int      ret;
     uint16_t debug_mask = OS_ERROR | OS_WARN;
+
+    static const struct option long_opts[] =
+    {
+        { "title",      1, 0, 't' },
+        { "artist",     1, 0, 'a' },
+        { "album",      1, 0, 'l' },
+        { "year",       1, 0, 'y' },
+        { "comment",    1, 0, 'c' },
+        { "genre",      1, 0, 'g' },
+        { "size",       1, 0, 's' },
+        { "speed",      1, 0, OPT_SPEED },
+        { "start-time", 1, 0, OPT_START_TIME },
+        { "end-time",   1, 0, OPT_END_TIME },
+        { 0, 0, 0, 0 }
+    };
 
     static const struct
     {
-        char         *act_name;
-        id3_action_t  act_id;
+        char            *act_name;
+        enum id3_action  act_id;
     }
     actions[] =
     {
@@ -22,11 +47,10 @@ int init_config(int *argc, char ***argv)
         { "rm", ID3_DELETE }, { "delete", ID3_DELETE },
         { "mo", ID3_MODIFY }, { "modify", ID3_MODIFY },
         { "sy", ID3_SYNC   }, { "sync",   ID3_SYNC   },
-        { "cp", ID3_COPY   }, { "copy",   ID3_COPY   }
+        { "cp", ID3_COPY   }, { "copy",   ID3_COPY   },
     };
 
     init_output(OS_ERROR);
-    g_config.fmtstr = NULL;
     g_config.action = ID3_PRINT;
     g_config.ver.major = NOT_SET;
     g_config.ver.minor = NOT_SET;
@@ -43,7 +67,7 @@ int init_config(int *argc, char ***argv)
 
         for_each (i, actions)
         {
-            if (strcmp((*argv)[1], actions[i].act_name) == 0)
+            if (!strcmp((*argv)[1], actions[i].act_name))
             {
                 g_config.action = actions[i].act_id;
                 optind = 2;
@@ -52,7 +76,9 @@ int init_config(int *argc, char ***argv)
         }
     }
 
-    while ((c = getopt(*argc, *argv, "1::2::e::vf:a:c:g:G:l:n:t:y:")) != -1)
+    while ((c = getopt_long(*argc, *argv,
+                       "1::2::e::vEf:F:a:c:g:l:n:t:y:s:",
+                       long_opts, NULL)) != -1)
     {
         switch (c)
         {
@@ -80,7 +106,7 @@ int init_config(int *argc, char ***argv)
                     if (g_config.ver.minor == NOT_SET)
                     {
                         print(OS_ERROR, "unknown minor version of id3v1: %s",
-                                optarg);
+                              optarg);
                         return -1;
                     }
                 }
@@ -105,20 +131,68 @@ int init_config(int *argc, char ***argv)
                     if (g_config.ver.minor == NOT_SET)
                     {
                         print(OS_ERROR, "unknown minor version of id3v2: %s",
-                                optarg);
+                              optarg);
                         return -1;
                     }
                 }
                 break;
 
+            case 's':                
+                ret = str_to_long(optarg, &long_val);
+                if (ret == 0 && long_val >= 0)
+                {
+                    g_config.size = long_val;
+                    g_config.options |= ID3T_CHANGE_SIZE;
+                }
+                else
+                {
+                    print(OS_ERROR, "invalid tag size value specified");
+                    return -1;
+                }
+                break;
+
+            case 'g':
+            {
+                /* genre shall be in format id3v1_genre_id[:genre_str]
+                 * where id3v1_genre_id may be specified by name */
+                char *sep = strchr(optarg, ':');
+
+                if (sep)
+                {
+                    *sep = '\0';
+                    g_config.genre_str = sep + 1;
+                }
+
+                if (sep == optarg)
+                    break;
+
+                ret = str_to_long(optarg, &long_val);
+                if (ret == 0 && long_val >= 0 && long_val <= 0xFF)
+                {
+                    g_config.genre_id = long_val;
+                    g_config.options |= ID3T_SET_GENRE_ID;
+                }
+                else
+                {
+                    g_config.genre_id = get_id3v1_genre_id(optarg);
+                    if (g_config.genre_id == ID3V1_UNKNOWN_GENRE)
+                    {
+                        print(OS_ERROR, "invalid genre specified");
+                        return -1;
+                    }
+
+                    g_config.options |= ID3T_SET_GENRE_ID;
+                }
+                break;
+            }
+
             case 'a': g_config.artist = optarg; break;
             case 'c': g_config.comment = optarg; break;
-            case 'g': g_config.genre = optarg; break;
-            case 'G': g_config.genre = optarg; break;
             case 'l': g_config.album = optarg; break;
             case 'n': g_config.track = optarg; break;
             case 't': g_config.title = optarg; break;
             case 'y': g_config.year = optarg; break;
+            case 'F': g_config.frame = optarg; break;
 
             case 'e':
                 g_config.enc_iso8859_1 = g_config.enc_utf8 =
@@ -126,14 +200,60 @@ int init_config(int *argc, char ***argv)
                     optarg ? optarg : locale_encoding();
                 break;
 
-            case 'v':
-                debug_mask |= OS_INFO | OS_DEBUG;
-                break;
+            case 'v': debug_mask |= OS_INFO | OS_DEBUG; break;
+            case 'f': g_config.fmtstr = optarg; break;
+            case 'E': g_config.options |= ID3T_EXPERT; break;
 
-            case 'f':
-                g_config.fmtstr = optarg;
+            case OPT_SPEED:
+                g_config.speed = get_id3v1e_speed_id(optarg);
+                if (g_config.speed == 0)
+                {
+                    ret = str_to_long(optarg, &long_val);
+                    if (ret == 0 && long_val == (long_val & 0xFF))
+                        g_config.speed = (uint8_t)long_val;
+                    else
+                    {
+                        print(OS_ERROR, "invalid speed value");
+                        return -1;
+                    }
+                }
+                g_config.options |= ID3T_SET_SPEED;
                 break;
         }
+    }
+    
+    if (!(g_config.options & ID3T_EXPERT))
+    {
+        if (g_config.action == ID3_DELETE
+            && (g_config.ver.minor == 0 || g_config.ver.minor == 1
+                || g_config.ver.minor == 3))
+        {
+            print(OS_ERROR, "removing of namely ID3v1.%u tag may lead to "
+                  "a garbage at the end of the file in case there is an "
+                  "ID3v1.2 or ID3v1 enhanced tag; if you are sure use -E "
+                  "to do so",
+                  g_config.ver.minor);
+            return -1;
+        }
+
+        if ((g_config.options & ID3T_SET_SPEED)
+            && !(is_valid_id3v1e_speed_id(g_config.speed)))
+        {
+            print(OS_ERROR, "non standard speed value `%u' specified; "
+                  "if you are sure what are you doing use -E to force this",
+                  g_config.speed);
+            return -1;
+        }
+
+        if ((g_config.options & ID3T_SET_GENRE_ID)
+            && g_config.genre_id > ID3V1_GENRE_ID_MAX)
+        {
+            print(OS_ERROR, "non standard genre id `%u' specified; "
+                  "if you are sure what are you doing use -E to force this",
+                  g_config.genre_id);
+            return -1;
+        }
+
     }
 
     init_output(debug_mask);

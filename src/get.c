@@ -1,232 +1,143 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h> /* lseek, SEEK_* */
 #include <string.h>
-#include <fcntl.h>
-#include "alias.h"
+#include <fcntl.h>  /* O_RDWR */
 #include "common.h"
 #include "params.h"
 #include "id3v1.h"
-#include "id3v1_genres.h"
 #include "id3v2.h"
 #include "output.h"
-#include "framelist.h"
+#include "crop.h"
+#include "file.h"
+#include "dump.h"
 
-static void print_id3v1_data(const char alias, const struct id3v1_tag *tag)
+static int get_id3v1_tag(struct file *file, unsigned minor,
+                         struct id3v1_tag **tag)
 {
-    size_t size;
-    const void *buf = alias_to_v1_data(alias, tag, &size);
+    char    buf[ID3V1E_TAG_SIZE];
+    ssize_t size;
+    int     ret;
 
-    if (!buf)
-        return;
+    ret = crop_id3v1_tag(file, NOT_SET);
 
-    if (size == 1)
-        printf("%u", *(const uint8_t *)buf);
+    if (ret != 0)
+        return 0;
+
+    lseek(file->fd, file->crop.end, SEEK_SET);
+    size = readordie(file->fd, buf, ID3V1E_TAG_SIZE);
+
+    if (size <= 0)
+        return -1;
+
+    *tag = malloc(sizeof(struct id3v1_tag));
+
+    if (!*tag)
+    {
+        print(OS_ERROR, "out of memory");
+        return -1;
+    }
+
+    ret = -1;
+
+    if (minor == ID3V1E_MINOR || minor == NOT_SET)
+        /* read v1 enhanced tag if available */
+        ret = unpack_id3v1_enh_tag(*tag, buf, size);
+
+    if (ret == -1 && (minor == 2 || minor == NOT_SET))
+        /* read v1.2 tag if available */
+        ret = unpack_id3v12_tag(*tag, buf, size);
+
+    if (ret == -1 && (minor == 0 || minor == 1))
+        /* read v1.[01] tag if available */
+        ret = unpack_id3v1_tag(*tag, buf, size);
+
+    if (ret == -1 && (minor == 3 || minor == NOT_SET))
+        /* read v1.3 tag if available */
+        ret = unpack_id3v13_tag(*tag, buf, size);
+
+    if (ret == -1)
+    {
+        free(*tag);
+        *tag = NULL;
+    }
+
+    return 0;
+}
+
+static int get_id3v2_tag(struct file *file, unsigned minor,
+                         struct id3v2_tag **tag)
+{
+    int ret;
+
+    *tag = new_id3v2_tag();
+
+    if (!*tag)
+    {
+        print(OS_ERROR, "out of memory");
+        return -1;
+    }
+
+    lseek(file->fd, 0, SEEK_SET);
+
+    /* read id3v2 tag if available */
+    if (read_id3v2_header(file->fd, &(*tag)->header) != -1)
+    {
+        if (minor == (*tag)->header.version || minor == NOT_SET)
+        {
+            dump_id3_header(&(*tag)->header);
+
+            if ((*tag)->header.flags & ID3V2_FLAG_EXT_HEADER)
+                ret = read_id3v2_ext_header(file->fd, *tag);
+
+            ret = read_id3v2_frames(file->fd, *tag);
+        }
+        else
+        {
+            print(OS_DEBUG, "file has id3v2.%d tag, ignore it",
+                            (*tag)->header.version);
+            free_id3v2_tag(*tag);
+            *tag = NULL;
+        }
+    }
     else
-        lprint(g_config.enc_iso8859_1, (const char *)buf);
+    {
+        /* check presence of an appended id3v2 tag */
+        free_id3v2_tag(*tag);
+        *tag = NULL;
+    }
+
+    return 0;
 }
 
-static void print_id3v1_tag_field(const char *name, const char *value)
+int get_tags(const char *filename, struct version ver,
+             struct id3v1_tag **tag1, struct id3v2_tag **tag2)
 {
-    printf("%s: ", name);
-    lprint(g_config.enc_iso8859_1, value);
-    printf("\n");
-}
+    int ret = 0;
+    struct file *file;
 
-static void print_id3v1_tag(const struct id3v1_tag *tag)
-{
-    const char *genre_str = get_id3v1_genre_str(tag->genre);
+    file = open_file(filename, O_RDWR);
 
-    print_id3v1_tag_field("Title", tag->title);
-    print_id3v1_tag_field("Artist", tag->artist);
-    print_id3v1_tag_field("Album", tag->album);
-    print_id3v1_tag_field("Year", tag->year);
-    print_id3v1_tag_field("Comment", tag->comment);
-    printf("Genre: (%u) %s\n", tag->genre, genre_str ? genre_str : "");
+    if (!file)
+        return -1;
 
-    if (tag->version != 0)
-        printf("Track no.: %u\n", tag->track);
+    /* the order makes sense */
+    if (ver.major == 1 || ver.major == NOT_SET)
+        ret = get_id3v1_tag(file, ver.minor, tag1);
+    else
+        *tag1 = NULL;
 
-    if (tag->version == ID3V1E_MINOR)
+    if (ret == 0 && (ver.major == 2 || ver.major == NOT_SET))
+        ret = get_id3v2_tag(file, ver.minor, tag2);
+    else
+        *tag2 = NULL;
+
+    if (ret != 0 && *tag1)
     {
-        print_id3v1_tag_field("Genre2", tag->genre2);
-        print_id3v1_tag_field("Start time", tag->starttime);
-        print_id3v1_tag_field("End time", tag->endtime);
-        printf("Speed: %u\n", tag->speed);
-    }
-}
-
-static void print_id3v2_tag(const struct id3v2_tag *tag)
-{
-    struct id3v2_frame_list *frame = tag->first_frame;
-
-    for (; frame != NULL; frame = frame->next)
-    {
-        printf("%.4s: ", frame->frame.id);
-
-        /* TODO: print function for each frame type should be
-         *       implemented
-         */
-
-        if (frame->frame.id[0] == 'T')
-            lprint("UTF-8", frame->frame.data);
-        else
-            printf("[some data] ;)");
-
-        printf("\n");
-    }
-}
-
-static void print_tag(const struct id3v1_tag *tag1,
-                      const struct id3v2_tag *tag2)
-{
-    char *curpos;
-    char *newpos;
-    char *fmtstr;
-    size_t len;
-    struct id3v2_frame *frame = NULL;
-    const char *frame_id;
-
-    if (!g_config.fmtstr)
-        return;
-
-    /* let's parse format string */
-    fmtstr = xstrdup(g_config.fmtstr);
-    len = strlen(fmtstr);
-
-    for (curpos = fmtstr;
-            (newpos = strchr(curpos, '%')) != NULL;
-            curpos = newpos)
-    {
-        if (newpos > curpos)
-        {
-            *newpos = '\0';
-            printf("%s", curpos);
-        }
-
-        if (newpos + 1 <= fmtstr + len)
-        {
-            frame = NULL;
-
-            if (is_valid_alias(newpos[1]))
-            {
-                if (tag2)
-                {
-                    frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
-                    frame = find_frame(tag2->first_frame, frame_id);
-                }
-
-                if (!frame && tag1)
-                    print_id3v1_data(newpos[1], tag1);
-
-                newpos += 2;
-            }
-            else if (tag2 && (newpos + 5 <= fmtstr + len))
-            {
-                frame_id = newpos + 1;
-                newpos += 5;
-                frame = find_frame(tag2->first_frame, frame_id);
-            }
-
-            if (frame != NULL)
-                lprint("UTF-8", frame->data);
-        }
+        free(*tag1); 
+        *tag1 = NULL;
     }
 
-    if (curpos - fmtstr < len)
-        printf(curpos);
+    close_file(file);
 
-    printf("\n");
-
-    free(fmtstr);
-}
-
-int get_tags(const char *filename)
-{
-    int               fd;
-    int               retval;
-    struct id3v2_tag  tag2 = {0};
-    struct id3v1_tag  tag1 = {0};
-    int               is_tag2_read = 0;
-    int               is_tag1_read = 0;
-
-    fd = open(filename, O_RDONLY);
-
-    if (fd == -1)
-    {
-        print(OS_ERROR, "unable to open source file `%s'", filename);
-        return;
-    }
-
-    if (g_config.ver.major == 2 || g_config.ver.major == NOT_SET)
-    {
-        /* read id3v2 tag if available */
-        if (read_id3v2_header(fd, &tag2.header) != -1)
-        {
-            if (g_config.ver.minor == tag2.header.version
-                || g_config.ver.minor == NOT_SET)
-            {
-                dump_id3_header(&tag2.header);
-
-                if (tag2.header.flags | ID3V2_FLAG_EXT_HEADER)
-                    retval = read_id3v2_ext_header(fd, &tag2);
-
-                retval = read_id3v2_frames(fd, &tag2);
-                is_tag2_read = 1;
-
-                if (!g_config.fmtstr)
-                    print_id3v2_tag(&tag2);
-            }
-            else
-            {
-                print(OS_DEBUG, "file has id3v2.%d tag, ignore it",
-                       tag2.header.version);
-            }
-        }
-        else
-        {
-            /* check presence of an appended id3v2 tag */
-        }
-    }
-
-    if (g_config.ver.major == 1 || g_config.ver.major == NOT_SET)
-    {
-        retval = -1;
-
-        if (g_config.ver.minor == ID3V1E_MINOR || g_config.ver.minor == NOT_SET)
-        {
-            /* read id3v1 extended tag if available */
-            lseek(fd, -(ID3V1E_TAG_SIZE), SEEK_END);
-            retval = read_id3v1_ext_tag(fd, &tag1);
-        }
-
-        if (retval == -1 && (g_config.ver.minor == 2
-                             || g_config.ver.minor == NOT_SET))
-        {
-            /* read id3v1.2 tag if available */
-            lseek(fd, -ID3V12_TAG_SIZE, SEEK_END);
-            retval = read_id3v1_tag(fd, &tag1);
-        }
-
-        if (retval == -1 && (g_config.ver.minor == 1
-                             || g_config.ver.minor == 3
-                             || g_config.ver.minor == 0
-                             || g_config.ver.minor == NOT_SET))
-        {
-            /* read id3v1 tag if available */
-            lseek(fd, -ID3V1_TAG_SIZE, SEEK_END);
-            retval = read_id3v1_tag(fd, &tag1);
-        }
-
-        if (retval != -1)
-        {
-            is_tag1_read = 1;
-            if (!g_config.fmtstr)
-                print_id3v1_tag(&tag1);
-        }
-    }
-
-    if (g_config.fmtstr)
-        print_tag(is_tag1_read ? &tag1 : NULL, is_tag2_read ? &tag2 : NULL);
-
-    close(fd);
+    return ret;
 }

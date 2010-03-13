@@ -1,7 +1,7 @@
 .\"
 .\" Copyright (c) 2009 Vitaly Sinilin <vs@kp4.ru>
 .\"
-.TH id321 1 "21 February 2010" id321
+.TH id321 1 "6 March 2010" id321
 .SH NAME
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
@@ -18,7 +18,7 @@ cp|copy [-1|-2] [-v] SOURCE DEST
 sy[nc] [-1|-2] [-v] FILE...
 .br
 .B id321
-rm|delete [-1|-2] [-v] FILE...
+rm|delete [-1|-2] [-v] [-E] FILE...
 .br
 .SH DESCRIPTION
 .B id321
@@ -48,12 +48,15 @@ Delete tags.
 .SH OPTIONS
 .TP
 .BI -1 "[1|2|3|e]
-Perform the action on id3v1 tags only. If the minor version is not specified,
-the scope of the action is any id3v1 tag.
+Perform the action on v1 tags only. If the minor version is not specified,
+the scope of the action is any v1 tag.
 .TP
 .BI -2 "[2|3|4]
-Perform the action on id3v2 tags only. If the minor version is not specified,
-the scope of the action is any id3v2 tag.
+Perform the action on v2 tags only. If the minor version is not specified,
+the scope of the action is any v2 tag.
+.TP
+.BI -E
+Expert mode. Some dangerous actions are allowed in this mode.
 .TP
 .BI -e "ENCODING
 Force tag's data encoding. If
@@ -72,7 +75,7 @@ action.
 .TP
 .BI -F " FRAME|a|c|g|G|l|n|t|y
 Dump specified tag's frame/field as a binary data. This option has
-a little sense for id3v1 tags, but it still can be used to retrieve
+a little sense for v1 tags, but it still can be used to retrieve
 raw tag's field value regardless current locale. Only useful with
 .B print
 action.
@@ -80,22 +83,22 @@ action.
 .B -v
 Be verbose.
 .SH EXAMPLES
-Dump all id3 tags:
+Dump all ID3 tags:
 .IP
 .B id321 best.mp3
 .LP
-Dump any id3v1 tag (enhanced, id3v1.3, id3v1.2, id3v1.1, id3v1):
+Dump any ID3v1 tag (enhanced, v1.3, v1.2, v1.1, v1.0):
 .IP
 .B id321 -1 best.mp3
 .LP
-Dump enhanced id3v1 tag only (if there is a regular id3v1 tag only,
+Dump enhanced ID3v1 tag only (if there is a regular ID3v1 tag only,
 nothing will be dumped):
 .IP
 .B id321 -1e best.mp3
 .LP
 Print tags as a formatted string. As only one value for each field can
-be printed id3v2 tag has higher priority when tag version is not
-specified and alias used. For id3v2 tags you can specify the frame id
+be printed ID3v2 tag has higher priority when tag version is not
+specified and alias used. For ID3v2 tags you can specify the frame id
 (e.g. %TIT2 for song title).
 .IP
 .B id321 -f """%n - %t""" best.mp3
@@ -104,37 +107,37 @@ Dump frame in binary format:
 .IP
 .B id321 -F TIT2
 .LP
-Synchronize id3v1 tag data with id3v2 tag data. Original data will be
-lost even if there is no corresponding frame in id3v2 tag. If minor
+Synchronize ID3v1 tag data with ID3v2 tag data. Original data will be
+lost even if there is no corresponding frame in ID3v2 tag. If minor
 version is specified and existent tag has another minor version, it
 will be converted to the specified one, otherwise existent minor
-version will be preserved. If the file has no id3v1 tag, it will be
-created having the specified minor version or id3v1.1 by default.
+version will be preserved. If the file has no ID3v1 tag, it will be
+created having the specified minor version or ID3v1.3 by default.
 .IP
 .B id321 sync -1 best.mp3
 .LP
-Synchronize id3v2 tag data with id3v1 tag data. The same as above.
-id3v2.4 is default for id3v2.
+Synchronize ID3v2 tag data with ID3v1 tag data. The same as above.
+ID3v2.4 is default for ID3v2.
 .IP
 .B id321 sync -2 best.mp3
 .LP
-Delete all tags:
+Delete all ID3 tags:
 .IP
 .B id321 rm best.mp3
 .LP
-Delete all id3v1 tags:
+Delete any ID3v1 tag:
 .IP
 .B id321 rm -1 best.mp3
 .LP
-Delete id3v1 enhanced tag. Notice that id3v1 enhanced tag is considered
-as including id3v1 tag, so general id3v1 tag will be removed as well.
+Delete ID3v1 enhanced tag. Notice that ID3v1 enhanced tag is considered
+as including ID3v1 tag, so general ID3v1 tag will be removed as well.
 In order to remove only enhanced part use `modify -11' command instead.
 .IP
 .B id321 rm -1e best.mp3
 .LP
 Modify tag. If no version is specified and there are both v1 and v2 tags
 in the file, both v1 and v2 tags will be modified. If there is no tags
-in the file and no version is specified an id3v2.4 tag will be prepended
+in the file and no version is specified an ID3v2.4 tag will be prepended
 at the very begining of the file. If version is specified the only tag
 of this version will be modified. Moreover, if also minor version is
 specified existent tag will be converted to this minor version.
@@ -147,7 +150,7 @@ Convert tag minor version.
 .IP
 .B id321 modify -11 best.mp3
 .LP
-Padding size of id3v2 tag.
+Padding size of ID3v2 tag.
 
 If value has plus sign at the very begining it is relative value,
 i.e. the tag size will be minimal size needed to store all tag's data

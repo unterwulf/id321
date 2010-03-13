@@ -105,7 +105,7 @@ size_t deunsync_buf(char *buf, size_t size, int pre)
     return wr_pos - buf;
 }
 
-ssize_t read_unsync(int fd, void *buf, size_t size, int pre)
+ssize_t read_unsync(int fd, void *buf, size_t size, int *pre)
 {
     size_t realsize;
     ssize_t bytes_read = 0;
@@ -113,8 +113,8 @@ ssize_t read_unsync(int fd, void *buf, size_t size, int pre)
     while (readordie(fd, buf, size) == (ssize_t)size)
     {
         bytes_read += size;
-        realsize = deunsync_buf(buf, size, pre);
-        pre = (((uint8_t *)buf)[realsize - 1] == 0xFF);
+        realsize = deunsync_buf(buf, size, *pre);
+        *pre = (((uint8_t *)buf)[size - 1] == 0xFF);
 
         if (realsize < size)
         {

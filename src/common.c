@@ -7,10 +7,12 @@
 #include "output.h"
 
 /*
- * FUNCTION: readordie
- * This function reads until len bytes has been read or EOF has been reached
- * Returns size read, or -1 on error
-*/
+ * Function:     readordie
+ *
+ * Description:  reads until len bytes has been read or EOF has been reached
+ *
+ * Return value: number of bytes has been read, or -1 on error
+ */
 ssize_t readordie(int fd, void *buf, size_t len)
 {
     ssize_t ret;
@@ -32,9 +34,32 @@ ssize_t readordie(int fd, void *buf, size_t len)
     return len - left;
 }
 
+ssize_t writeordie(int fd, const void *buf, size_t count)
+{
+    size_t written = 0;
+    ssize_t len;
+
+    while (written < count)
+    {
+        len = write(fd, buf + written, count - written);
+
+        if (len < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            else
+                break;
+        }
+        else
+            written += len;
+    }
+
+    return written;
+}
+
 const char *locale_encoding()
 {
-    static char *enc = NULL;
+    static const char *enc = NULL;
 
     if (!enc)
     {
@@ -49,17 +74,16 @@ const char *locale_encoding()
     return enc;
 }
 
-char *xstrdup(const char *s)
+int str_to_long(const char *nptr, long *ret)
 {
-    char *dup = strdup(s);
+    char *endptr;
 
-    if (dup == NULL)
-    {
-        print(OS_ERROR, "i need some more memory");
-        exit(EXIT_FAILURE);
-    }
+    if (!nptr)
+        return -1;
 
-    return dup;
+    *ret = strtol(nptr, &endptr, 0);
+
+    return (*nptr != '\0' && *endptr == '\0') ? 0 : -1;
 }
 
 iconv_t xiconv_open(const char *tocode, const char *fromcode)
@@ -74,4 +98,74 @@ iconv_t xiconv_open(const char *tocode, const char *fromcode)
     }
 
     return cd;
+}
+
+char *iconv_buf(const char *tocode, const char *fromcode,
+                size_t size, const char *str, size_t *retsize)
+{
+    iconv_t      cd;
+    char        *buf;
+    char        *tmp;
+    char        *out;
+    size_t       tmppos;
+    const char  *in = str;
+    size_t       outsize = size;
+    size_t       inbytesleft = size;
+    size_t       outbytesleft = outsize;
+    size_t       ret;
+
+    print(OS_DEBUG, "to: %s, from: %s!", tocode, fromcode);
+
+    cd = xiconv_open(tocode, fromcode);
+
+    buf = malloc(outsize);
+    if (!buf)
+        goto oom;
+
+    buf[0] = '\0';
+    out = buf;
+
+    do {
+        errno = 0;
+        ret = iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
+
+        if (ret == (size_t)(-1))
+        {
+            switch (errno)
+            {
+                case EILSEQ:
+                case EINVAL:
+                    /* skip invalid character */
+                    in++;
+                    inbytesleft--;
+                    continue;
+
+                case E2BIG:
+                    tmppos = out - buf;
+                    tmp = realloc(buf, outsize*2);
+                    if (!tmp)
+                    {
+                        free(buf);
+                        goto oom;
+                    }
+                    buf = tmp;
+                    out = buf + tmppos;
+                    out[0] = '\0';
+                    outbytesleft = outsize*2 - tmppos;
+                    outsize *= 2;
+                    continue;
+            }
+        }
+    } while (inbytesleft > 0);
+
+    iconv_close(cd);
+
+    *retsize = out - buf;
+    return buf;
+
+oom:
+
+    iconv_close(cd);
+    print(OS_ERROR, "out of memory");
+    return NULL;
 }

@@ -2,44 +2,52 @@
 #define ID3V2_H
 
 #include <inttypes.h>
+#include <unistd.h>
 
-struct id3v2_header {
+struct id3v2_header
+{
     uint8_t   version;
     uint8_t   revision;
     uint8_t   flags;
     uint32_t  size;
 };
 
-struct id3v2_ext_header {
+struct id3v2_ext_header
+{
     uint32_t  size;   /* can never has a size of fewer than six bytes */
     uint8_t   number; /* 01 */
     uint8_t   flags;
 };
 
-struct id3v2_frame {
+struct id3v2_frame
+{
     char      id[4];
     uint32_t  size;
     uint8_t   status_flags;
     uint8_t   format_flags;
-    uint8_t  *data;
+    char     *data;
 };
 
-struct id3v2_frame_list {
+struct id3v2_frame_list
+{
     struct id3v2_frame       frame;
+    struct id3v2_frame_list *prev;
     struct id3v2_frame_list *next;
 };
 
-struct id3v2_tag {
-    struct id3v2_header      header;
-    struct id3v2_ext_header  ext_header;
-    struct id3v2_frame_list *first_frame;
+struct id3v2_tag
+{
+    struct id3v2_header     header;
+    struct id3v2_ext_header ext_header;
+    struct id3v2_frame_list frame_head;
 };
 
-typedef void (* id3_frame_handler_t)(struct id3v2_frame *);
+typedef void (* id3_frame_handler_t)(const struct id3v2_frame *);
 
-typedef struct id3_frame_handler_table_t {
+typedef struct id3_frame_handler_table_t
+{
     const char          *id;
-    id3_frame_handler_t  unpack;
+    id3_frame_handler_t  print;
     const char          *desc;
 } id3_frame_handler_table_t;
 
@@ -81,12 +89,32 @@ typedef struct id3_frame_handler_table_t {
 #define ID3V24_FRM_FMT_FLAG_UNSYNC  0x02
 #define ID3V24_FRM_FMT_FLAG_LEN     0x01
 
+#define ID3V22_STR_ISO88591         0
+#define ID3V22_STR_UCS2             1
+
+#define ID3V23_STR_ISO88591         0
+#define ID3V23_STR_UCS2             1
+
+#define ID3V24_STR_ISO88591         0
+#define ID3V24_STR_UTF16            1
+#define ID3V24_STR_UTF16BE          2
+#define ID3V24_STR_UTF8             3
+
+struct id3v2_tag *new_id3v2_tag();
+void free_id3v2_tag(struct id3v2_tag *tag);
+
 int read_id3v2_header(int fd, struct id3v2_header *hdr);
 int read_id3v2_footer(int fd, struct id3v2_header *hdr);
-int unpack_id3v2_header(struct id3v2_header *hdr, const unsigned char *buf);
+int unpack_id3v2_header(struct id3v2_header *hdr, const char *buf);
 int read_id3v2_ext_header(int fd, struct id3v2_tag *tag);
 int read_id3v2_frames(int fd, struct id3v2_tag *tag);
-int id3_tag_add_frame(struct id3v2_tag *tag, struct id3v2_frame *frame);
+
+int append_id3v2_tag_frame(struct id3v2_tag *tag,
+                           const struct id3v2_frame *frame);
+int update_id3v2_tag_frame(struct id3v2_tag *tag,
+                           const struct id3v2_frame *frame);
+
+ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf);
 
 const char *map_v22_to_v24(const char *v23frame);
 const char *map_v23_to_v24(const char *v23frame);

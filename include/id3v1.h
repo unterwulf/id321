@@ -2,48 +2,88 @@
 #define ID3V1_H
 
 #include <inttypes.h>
-#include <unistd.h>
+#include <stddef.h>
 #include <lib313.h>
 
-/* though v1 enhanced tag is not known as v1.4 we will consider it as
+/* v1.1 defines */
+
+#define ID3V11_TIT_SIZE         ID3V1_TIT_SIZE
+#define ID3V11_ART_SIZE         ID3V1_ART_SIZE
+#define ID3V11_ALB_SIZE         ID3V1_ALB_SIZE
+
+/* v1.2 defines */
+
+#define ID3V12_TAG_SIZE         (128+128)
+
+#define ID3V12_HEADER           "EXT"
+#define ID3V12_HEADER_SIZE      3
+
+#define ID3V12_TIT_SIZE         30
+#define ID3V12_ART_SIZE         30
+#define ID3V12_ALB_SIZE         30
+#define ID3V12_COM_SIZE         15
+#define ID3V12_GN2_SIZE         20
+
+#define ID3V12_TIT_OFF          3
+#define ID3V12_ART_OFF          33
+#define ID3V12_ALB_OFF          63
+#define ID3V12_COM_OFF          93
+#define ID3V12_GN2_OFF          108
+
+/* enhanced tag defines */
+
+/* though enhanced tag is not known as v1.4 we will consider it as
  * having 4 as minor version because we need an integer minor version
  * for internal use */
 
 #define ID3V1E_MINOR            4
+#define ID3V1E_TAG_SIZE         (128+227)
 
-#define ID3V12_TAG_SIZE         128+128
-#define ID3V1E_TAG_SIZE         128+227
-
-#define ID3V12_HEADER           "EXT"
 #define ID3V1E_HEADER           "TAG+"
-#define ID3V12_HEADER_SIZE      3
 #define ID3V1E_HEADER_SIZE      4
 
-#define ID3V1E_GEN_SIZE         30
+#define ID3V1E_TIT_SIZE         60
+#define ID3V1E_ART_SIZE         60
+#define ID3V1E_ALB_SIZE         60
+#define ID3V1E_GN2_SIZE         30
+#define ID3V1E_STM_SIZE         6
+#define ID3V1E_ETM_SIZE         6
+
+#define ID3V1E_TIT_OFF          4
+#define ID3V1E_ART_OFF          64
+#define ID3V1E_ALB_OFF          124
+#define ID3V1E_SPD_OFF          184
+#define ID3V1E_GN2_OFF          185
+#define ID3V1E_STM_OFF          215
+#define ID3V1E_ETM_OFF          221
 
 struct id3v1_tag 
 {
-    int     version;
-    char    title[ID3V13_MAX_TIT_SIZE+1];
-    char    artist[ID3V13_MAX_ART_SIZE+1];
-    char    album[ID3V13_MAX_ALB_SIZE+1];
-    char    year[ID3V1_YER_SIZE+1];
-    char    comment[ID3V13_MAX_COM_SIZE+1];
-    uint8_t track;        /* absent in id3v1.0 */
-    uint8_t genre;
+    unsigned version;
+    char     title[ID3V13_MAX_TIT_SIZE+1];
+    char     artist[ID3V13_MAX_ART_SIZE+1];
+    char     album[ID3V13_MAX_ALB_SIZE+1];
+    char     year[ID3V1_YER_SIZE+1];
+    char     comment[ID3V13_MAX_COM_SIZE+1];
+    uint8_t  track;        /* absent in v1.0 */
+    uint8_t  genre_id;
+
+    /* v1.2 and enhanced tag common fields */
+
+    char     genre_str[ID3V1E_GN2_SIZE+1];
 
     /* enhanced tag only fields */
 
-    char    genre2[ID3V1E_GEN_SIZE+1];
-    char    starttime[6];
-    char    endtime[6];
-    uint8_t speed;
+    char     starttime[ID3V1E_STM_SIZE+1];
+    char     endtime[ID3V1E_ETM_SIZE+1];
+    uint8_t  speed;
 };
 
-ssize_t read_id3v1_tag(int fd, struct id3v1_tag *tag);
-ssize_t read_id3v1_enh_tag(int fd, struct id3v1_tag *tag);
-ssize_t read_id3v11_tag(int fd, struct id3v1_tag *tag);
+int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size);
+int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size);
+int unpack_id3v13_tag(struct id3v1_tag *tag, const char *buf, size_t size);
+int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size);
 
-int pack_id3v1_tag(struct id3v1_tag *tag, void *buf, size_t size);
+size_t pack_id3v1_tag(char *buf, const struct id3v1_tag *tag);
 
 #endif /* ID3V1_H */

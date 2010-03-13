@@ -1,29 +1,29 @@
-#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include "id3v2.h"
-
-struct id3v2_frame *find_frame(
-        struct id3v2_frame_list *list,
-        const char *name)
+ 
+struct id3v2_frame *find_frame(const struct id3v2_frame_list *head,
+                               const char *name)
 {
-    for (; list != NULL; list = list->next)
-    {
-        if (memcmp(list->frame.id, name, 4) == 0)
-            return &list->frame;
-    }
+    struct id3v2_frame_list *frame;
+
+    for (frame = head->next; frame != head; frame = frame->next)
+        if (!memcmp(frame->frame.id, name, 4))
+            return &frame->frame;
 
     return NULL;
 }
 
-void free_frame_list(struct id3v2_frame_list *list)
+void free_frame_list(struct id3v2_frame_list *head)
 {
-    struct id3v2_frame_list *cur;
+    struct id3v2_frame_list *next = head->next;
+    struct id3v2_frame_list *tmp;
 
-    while (list != NULL)
+    while (next != head)
     {
-        cur = list;
-        list = cur->next;
-        free(cur);
+        tmp = next;
+        next = next->next;
+        free(tmp->frame.data);
+        free(tmp);
     }
 }

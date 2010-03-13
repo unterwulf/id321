@@ -1,8 +1,12 @@
+#include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
+#include <arpa/inet.h> /* ntohl(), htonl() */
 #include "id3v2.h"
 #include "frames.h"
+#include "framelist.h"
 #include "synchsafe.h"
 #include "dump.h"
 #include "output.h"
@@ -11,34 +15,63 @@
 #define IS_WHOLE_TAG_UNSYNC(hdr) \
     ((hdr.version == 2 || hdr.version == 3) && hdr.flags & ID3V2_FLAG_UNSYNC)
 
-int id3_tag_add_frame(struct id3v2_tag *tag, struct id3v2_frame *frame)
+struct id3v2_tag *new_id3v2_tag()
 {
-    struct id3v2_frame_list *cur_node = NULL;
-    struct id3v2_frame_list *new_node = NULL;
+    struct id3v2_tag *tag = calloc(1, sizeof(struct id3v2_tag));
 
-    if ((new_node = (struct id3v2_frame_list *)
-                malloc(sizeof(struct id3v2_frame_list))) == NULL)
+    if (tag)
     {
-        return 0;
+        tag->frame_head.next = &tag->frame_head;
+        tag->frame_head.prev = &tag->frame_head;
     }
-    new_node->next = NULL;
+
+    return tag;
+}
+
+void free_id3v2_tag(struct id3v2_tag *tag)
+{
+    if (!tag)
+        return;
+
+    free_frame_list(&tag->frame_head);
+    free(tag);
+}
+
+int append_id3v2_tag_frame(struct id3v2_tag *tag,
+                           const struct id3v2_frame *frame)
+{
+    struct id3v2_frame_list *new_node =
+        (struct id3v2_frame_list *)malloc(sizeof(struct id3v2_frame_list));
+
+    if (!new_node)
+        return -1;
 
     memcpy(&new_node->frame, frame, sizeof(struct id3v2_frame));
 
-    if (tag->first_frame == NULL)
+    new_node->prev = tag->frame_head.prev;
+    tag->frame_head.prev->next = new_node;
+    new_node->next = &tag->frame_head;
+    tag->frame_head.prev = new_node;
+
+    return 0;
+}
+
+int update_id3v2_tag_frame(struct id3v2_tag *tag,
+                           const struct id3v2_frame *frame)
+{
+    struct id3v2_frame *ex_frame = find_frame(&tag->frame_head, frame->id);
+    int ret = 0;
+
+    /* replace existing frame if so */
+    if (ex_frame)
     {
-        tag->first_frame = new_node;
+        free(ex_frame->data);
+        memcpy(ex_frame, frame, sizeof(struct id3v2_frame));
     }
     else
-    {
-        cur_node = tag->first_frame;
-        while (cur_node->next != NULL)
-            cur_node = cur_node->next;
+        ret = append_id3v2_tag_frame(tag, frame);
 
-        cur_node->next = new_node;
-    }
-
-    return 1;
+    return ret;
 }
 
 static const char *map_v22_frame_to_v24(const char *v22frame)
@@ -48,45 +81,26 @@ static const char *map_v22_frame_to_v24(const char *v22frame)
     return NULL;
 }
 
-static int unpack_id3v2_frame_header(
-    struct id3v2_frame *frame,
-    const unsigned char *buf,
-    unsigned char version)
+static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
+                                     const unsigned char *buf,
+                                     unsigned char version)
 {
     const char *frame_id;
 
     if (version == 2)
     {
-        uint8_t size[4] = {0};
+        uint8_t size[4] = { };
 
-        frame_id = map_v22_frame_to_v24(buf);
-
-        if (frame_id == NULL)
-        {
-            print(OS_ERROR, "unknown id3v2.2 frame %.3s", buf);
-            return -1;
-        }
-
-        memcpy(frame->id, frame_id, 4);
+        memcpy(frame->id, buf, 3);
         /* size array will contain 4-byte word in network byte order */
-        memcpy(size, buf + 3, 3);
+        memcpy(size + 1, buf + 3, 3);
         frame->size = ntohl(*((uint32_t *)size));
         frame->status_flags = 0;
         frame->format_flags = 0;
     }
     else
     {
-        frame_id = map_v23_to_v24(buf);
-
-        if (version == 3 && frame_id != NULL)
-        {
-            memcpy(frame->id, frame_id, 4);
-        }
-        else
-        {
-            memcpy(frame->id, buf, 4);
-        }
-
+        memcpy(frame->id, buf, 4);
         frame->size = ntohl(*((uint32_t *)&(buf[4])));
         frame->status_flags = buf[8];
         frame->format_flags = buf[9];
@@ -100,28 +114,23 @@ static int unpack_id3v2_frame_header(
 
 int read_id3v2_frames(int fd, struct id3v2_tag *tag)
 {
-    uint32_t            size;
     uint8_t             buf[ID3V2_FRAME_HEADER_SIZE];
-    int32_t             bytes_left = tag->header.size;
+    size_t              bytes_left = tag->header.size;
     struct id3v2_frame  frame;
-    int                 retval;
-    int                 frame_header_size = ID3V2_FRAME_HEADER_SIZE;
+    size_t              frame_header_size = ID3V2_FRAME_HEADER_SIZE;
     int                 pre = 0;
     ssize_t             bytes_read = 0;
 
     if (tag->header.version == 2)
-    {
         frame_header_size = ID3V22_FRAME_HEADER_SIZE;
-    }
 
     while (bytes_left > frame_header_size)
     {
         if (IS_WHOLE_TAG_UNSYNC(tag->header))
         {
-            bytes_read = read_unsync(fd, buf, frame_header_size, pre);
+            bytes_read = read_unsync(fd, buf, frame_header_size, &pre);
             if (bytes_read == -1)
                 return -1;
-            pre = (buf[frame_header_size - 1] == 0xFF);
         }
         else
         {
@@ -136,29 +145,31 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             break;
         }
 
-        memset(&frame, 0, sizeof(frame));
+        memset(&frame, '\0', sizeof(frame));
         bytes_left -= bytes_read;
 
         unpack_id3v2_frame_header(&frame, buf, tag->header.version);
 
         if (frame.size > bytes_left)
         {
-            print(OS_ERROR, "size was %d, space left %d",
-                    frame.size, bytes_left);
+            print(OS_ERROR, "frame `%.4s' size is %d, but space left is %d",
+                  frame.id, frame.size, bytes_left);
             return -1;
         }
 
-        if ((frame.data = malloc(frame.size)) == NULL)
+        frame.data = malloc(frame.size);
+
+        if (!frame.data)
         {
-            return;
+            print(OS_ERROR, "out of memory");
+            return -1;
         }
 
         if (IS_WHOLE_TAG_UNSYNC(tag->header))
         {
-            bytes_read = read_unsync(fd, frame.data, frame.size, pre);
+            bytes_read = read_unsync(fd, frame.data, frame.size, &pre);
             if (bytes_read == -1)
                 return -1;
-            pre = (buf[frame.size - 1] == 0xFF);
         }
         else
         {
@@ -175,16 +186,13 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             frame.size = deunsync_buf(frame.data, frame.size, 0);
         }
 
-        unpack_frame_data(&frame);
-
-        if (!id3_tag_add_frame(tag, &frame))
-            return;
+        append_id3v2_tag_frame(tag, &frame);
     }
 
     /* check that padding contains zero bytes only */
     if (bytes_left > 0)
     {
-        uint8_t block[BLOCK_SIZE];
+        char   block[BLOCK_SIZE];
         size_t bytes_to_read;
         size_t pos;
 
@@ -219,9 +227,11 @@ int read_id3v2_ext_header(int fd, struct id3v2_tag *tag)
     {
 
     }
+
+    return -1;
 }
 
-int validate_id3v2_header(struct id3v2_header *hdr)
+static int validate_id3v2_header(const struct id3v2_header *hdr)
 {
     unsigned i;
     static const struct flagmask
@@ -240,9 +250,9 @@ int validate_id3v2_header(struct id3v2_header *hdr)
     {
         if (fm[i].version == hdr->version)
         {
-            if (hdr->flags & ~fm[i].mask != 0)
+            if ((hdr->flags & ~fm[i].mask) != 0)
             {
-                print(OS_WARN, "header has extra flags that are absented "
+                print(OS_WARN, "header has extra flags that are absent "
                                "in spec");
                 break;
             }
@@ -250,12 +260,14 @@ int validate_id3v2_header(struct id3v2_header *hdr)
     }
 }
 
-int unpack_id3v2_header(struct id3v2_header *hdr, const unsigned char *buf)
+int unpack_id3v2_header(struct id3v2_header *hdr, const char *buf)
 {
-    hdr->version = buf[3];
-    hdr->revision = buf[4];
-    hdr->flags = buf[5];
+    hdr->version = (uint8_t)buf[3];
+    hdr->revision = (uint8_t)buf[4];
+    hdr->flags = (uint8_t)buf[5];
     hdr->size = deunsync_uint32(ntohl(*((uint32_t*)&(buf[6]))));
+
+    return 0;
 }
 
 #if 0
@@ -297,24 +309,24 @@ int find_id3v2_tag(struct id3v2_header *header, FILE *fp_src, FILE *fp_dst)
 
 static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
 {
-    unsigned char buf[ID3V2_HEADER_LEN];
-    int           pos;
-    const char   *id = footer ? "3DI" : "ID3";
+    char         buf[ID3V2_HEADER_LEN];
+    int          pos;
+    const char  *id = footer ? "3DI" : "ID3";
 
-    read(fd, buf, ID3V2_HEADER_LEN);
+    READORDIE(fd, buf, ID3V2_HEADER_LEN);
 
-    if (memcmp(buf, id, 3) == 0)
+    if (!memcmp(buf, id, 3))
     {
         for (pos = 3; pos < ID3V2_HEADER_LEN; pos++)
         {
-            if ((buf[pos] == 0xFF && (pos == 3 || pos == 4))
-                    || (buf[pos] >= 0x80 && pos >= 6 && pos <= 9))
+            if (((uint8_t)buf[pos] == 0xFF && (pos == 3 || pos == 4))
+                    || (((uint8_t)buf[pos] & 0x80) && pos >= 6 && pos <= 9))
                 return -1;
         }
 
         unpack_id3v2_header(hdr, buf);
 
-        if (hdr->version != 3 && hdr->version != 4)
+        if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
         {
             print(OS_ERROR, "i don't know id3v2.%d", hdr->version);
             return -1;
@@ -333,14 +345,165 @@ int read_id3v2_header(int fd, struct id3v2_header *hdr)
 
 int read_id3v2_footer(int fd, struct id3v2_header *hdr)
 {
-    int retval = read_id3v2_headfoot(fd, hdr, 1);
+    int ret = read_id3v2_headfoot(fd, hdr, 1);
 
-    if (retval == 0 && hdr->version != 4)
+    if (ret == 0 && hdr->version != 4)
     {
         print(OS_WARN, "id3v2 appended tag is not allowed for id3v2.%d",
-                hdr->version);
+                       hdr->version);
         return -1;
     }
 
-    return retval;
+    return ret;
+}
+
+/*
+ * Pack functions
+ */
+
+static size_t pack_id3v2_frame(char *buf, size_t size,
+                               const struct id3v2_header *hdr,
+                               const struct id3v2_frame *frame)
+{
+    size_t hdrsize = hdr->version == 2 ? 6 : 10;
+
+    if (size < hdrsize + frame->size)
+        return hdrsize + frame->size;
+
+    if (hdr->version == 2)
+    {
+        memcpy(buf, frame->id, 3);
+        buf[3] = (uint8_t)((frame->size >> 4) & 0xFF);
+        buf[4] = (uint8_t)((frame->size >> 2) & 0xFF);
+        buf[5] = (uint8_t)(frame->size & 0xFF);
+        buf += hdrsize;
+    }
+    else
+    {
+        memcpy(buf, frame->id, 4);
+        *(uint32_t *)(&buf[4]) = (hdr->version == 4)
+                                 ? htonl(unsync_uint32(frame->size))
+                                 : htonl(frame->size);
+        buf[8] = frame->status_flags;
+        buf[9] = frame->format_flags;
+        buf += hdrsize;
+    }
+
+    if (hdr->version == 4 && (hdr->flags & ID3V24_FRM_FMT_FLAG_UNSYNC))
+        return hdrsize + unsync_buf(buf, size - hdrsize,
+                                    frame->data, frame->size);
+    else
+        memcpy(buf, frame->data, frame->size);
+
+    return hdrsize + frame->size;
+}
+
+ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
+{
+    size_t bufsize = BLOCK_SIZE;
+    size_t pos = ID3V2_HEADER_LEN;
+    struct id3v2_frame_list *frame = tag->frame_head.next;
+    size_t frame_size;
+    uint32_t newsize;
+
+    *buf = (char *)malloc(bufsize);
+
+    if (!*buf)
+        goto oom;
+
+    while (frame != &tag->frame_head)
+    {
+        frame_size = pack_id3v2_frame(*buf + pos, bufsize - pos, &tag->header,
+                                      &frame->frame);
+        if (frame_size > bufsize - pos)
+        {
+            char *newbuf;
+            size_t newbufsize = 2*bufsize;
+
+            while (newbufsize < pos + frame_size)
+                newbufsize *= 2;
+
+            newbuf = (char *)realloc((void *)*buf, newbufsize);
+
+            if (newbuf)
+            {
+                bufsize = newbufsize;
+                *buf = newbuf;
+            }
+            else
+                goto oom;
+
+            continue;
+        }
+
+        pos += frame_size;
+        frame = frame->next;
+    }
+
+    if (IS_WHOLE_TAG_UNSYNC(tag->header))
+    {
+        size_t reqbufsize = ID3V2_HEADER_LEN +
+                            unsync_buf(NULL, 0, *buf + ID3V2_HEADER_LEN,
+                                       pos - ID3V2_HEADER_LEN);
+
+        if (reqbufsize != bufsize)
+        {
+            char *newbuf = (char *)malloc(reqbufsize);
+
+            if (newbuf)
+            {
+                (void)unsync_buf(newbuf + ID3V2_HEADER_LEN,
+                                 reqbufsize - ID3V2_HEADER_LEN,
+                                 *buf, pos - ID3V2_HEADER_LEN);
+                memcpy(newbuf, *buf, ID3V2_HEADER_LEN);
+                free(*buf);
+                bufsize = reqbufsize;
+                *buf = newbuf;
+            }
+            else
+                goto oom;
+        }
+    }
+
+    /* if new tag size has not been specified, we will try to use old tag 
+     * space not changed */
+
+    newsize = g_config.options & ID3T_CHANGE_SIZE
+        ? g_config.size : tag->header.size + ID3V2_HEADER_LEN;
+
+    if (pos <= newsize)
+    {
+        /* it seems there should be a padding, so fill it with null bytes */
+
+        if (bufsize < newsize)
+        {
+            /* damn, the current buffer is not large enough; need to
+             * enlarge it */
+
+            char *tmp = (char *)realloc(*buf, newsize);
+
+            if (tmp)
+                *buf = tmp;
+            else
+                goto oom;
+        }
+
+        memset(*buf + pos, '\0', newsize - pos);
+        pos = newsize;
+    }
+
+    strcpy(*buf, "ID3");
+    (*buf)[3] = tag->header.version;
+    (*buf)[4] = tag->header.revision;
+    (*buf)[5] = tag->header.flags;
+    *(uint32_t *)&((*buf)[6]) = htonl(unsync_uint32(pos - ID3V2_HEADER_LEN));
+
+    return pos;
+
+oom:
+
+    free(*buf);
+    *buf = NULL;
+    print(OS_ERROR, "out of memory");
+    return -1;
 }

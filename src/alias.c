@@ -17,14 +17,13 @@ static const struct
 }
 map[] =
 {
-    { 'a', "TP1", "TPE1", "TPE1", OFFV1(artist),  SIZV1(artist)  },
-    { 'c', "COM", "COMM", "COMM", OFFV1(comment), SIZV1(comment) },
-    { 'g', "TCO", "TCON", "TCON", OFFV1(genre),   SIZV1(genre)   },
-    { 'G', "TCO", "TCON", "TCON", OFFV1(genre),   SIZV1(genre)   },
-    { 'l', "TAL", "TALB", "TALB", OFFV1(album),   SIZV1(album)   },
-    { 'n', "TRK", "TRCK", "TRCK", OFFV1(track),   SIZV1(track)   },
-    { 't', "TT2", "TIT2", "TIT2", OFFV1(title),   SIZV1(title)   },
-    { 'y', "TYE", "TYER", "TDRC", OFFV1(year),    SIZV1(year)    }
+    { 'a', "TP1", "TPE1", "TPE1", OFFV1(artist),   SIZV1(artist)   },
+    { 'c', "COM", "COMM", "COMM", OFFV1(comment),  SIZV1(comment)  },
+    { 'g', "TCO", "TCON", "TCON", OFFV1(genre_id), SIZV1(genre_id) },
+    { 'l', "TAL", "TALB", "TALB", OFFV1(album),    SIZV1(album)    },
+    { 'n', "TRK", "TRCK", "TRCK", OFFV1(track),    SIZV1(track)    },
+    { 't', "TT2", "TIT2", "TIT2", OFFV1(title),    SIZV1(title)    },
+    { 'y', "TYE", "TYER", "TDRC", OFFV1(year),     SIZV1(year)     }
 };
 
 const char *alias_to_frame_id(char alias, unsigned version)
