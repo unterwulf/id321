@@ -74,8 +74,13 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
             id = alias_to_frame_id(map[i].alias, tag2->header.version);
             strncpy(frame.id, id, 4);
-            buf = iconv_buf("UTF-8", g_config.enc_iso8859_1,
-                    strlen(map[i].data), map[i].data, &bufsize);
+
+            ret = iconv_alloc("UTF-8", g_config.enc_iso8859_1,
+                              map[i].data, strlen(map[i].data),
+                              &buf, &bufsize);
+
+            if (ret != 0)
+                return -1;
 
             frame.size = bufsize + 1;
             frame.data = malloc(frame.size);

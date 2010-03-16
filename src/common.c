@@ -100,18 +100,33 @@ iconv_t xiconv_open(const char *tocode, const char *fromcode)
     return cd;
 }
 
-char *iconv_buf(const char *tocode, const char *fromcode,
-                size_t size, const char *str, size_t *retsize)
+/*
+ * Function:     iconv_alloc
+ *
+ * Description:  Converts src buffer from fromcode to tocode and places
+ *               result into internally allocated memory area. *dst will
+ *               be pointing to the result, and *dstsize will contain its
+ *               size.
+ *
+ *               *dst must be freed with free() after use.
+ *
+ * Return value: 0 on success, -1 on any error
+ *
+ */
+
+int iconv_alloc(const char *tocode, const char *fromcode,
+                const char *src, size_t srcsize,
+                char **dst, size_t *dstsize)
 {
     iconv_t      cd;
     char        *buf;
     char        *tmp;
     char        *out;
     size_t       tmppos;
-    const char  *in = str;
-    size_t       outsize = size;
-    size_t       inbytesleft = size;
-    size_t       outbytesleft = outsize;
+    const char  *in = src;
+    size_t       outsize = srcsize;
+    size_t       inbytesleft = srcsize;
+    size_t       outbytesleft;
     size_t       ret;
 
     print(OS_DEBUG, "to: %s, from: %s!", tocode, fromcode);
@@ -124,6 +139,7 @@ char *iconv_buf(const char *tocode, const char *fromcode,
 
     buf[0] = '\0';
     out = buf;
+    outbytesleft = outsize;
 
     do {
         errno = 0;
@@ -150,22 +166,22 @@ char *iconv_buf(const char *tocode, const char *fromcode,
                     }
                     buf = tmp;
                     out = buf + tmppos;
-                    out[0] = '\0';
-                    outbytesleft = outsize*2 - tmppos;
+                    outbytesleft += outsize;
                     outsize *= 2;
+                    out[0] = '\0';
                     continue;
             }
         }
     } while (inbytesleft > 0);
 
     iconv_close(cd);
-
-    *retsize = out - buf;
-    return buf;
+    *dst = buf;
+    *dstsize = out - buf;
+    return 0;
 
 oom:
 
     iconv_close(cd);
     print(OS_ERROR, "out of memory");
-    return NULL;
+    return -1;
 }

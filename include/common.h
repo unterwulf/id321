@@ -28,7 +28,9 @@ const char *locale_encoding();
 int str_to_long(const char *nptr, long *ret);
 
 iconv_t xiconv_open(const char *tocode, const char *fromcode);
-char *iconv_buf(const char *tocode, const char *fromcode,
-                size_t size, const char *str, size_t *retsize);
+
+int iconv_alloc(const char *tocode, const char *fromcode,
+                const char *src, size_t srcsize,
+                char **dst, size_t *dstsize);
 
 #endif /* COMMON_H */

@@ -19,22 +19,24 @@
 
 static char *istrncpy(char *dst, const char *src, size_t size)
 {
-    char *ret = NULL;
+    char *res = NULL;
     size_t bufsize;
-    char *buf = iconv_buf(g_config.enc_iso8859_1, locale_encoding(),
-                          strlen(src), src, &bufsize);
+    char *buf;
+    int ret;
+    
+    ret = iconv_alloc(g_config.enc_iso8859_1, locale_encoding(),
+                      src, strlen(src), &buf, &bufsize);
 
-    if (buf)
+    if (ret == 0)
     {
-        print(OS_ERROR, "src: %s, dst: %s, size: %d!", src, buf, bufsize);
         /* size is a field length - 1, so the field will be null terminated */
         if (bufsize > size)
             bufsize = size;
-        ret = strncpy(dst, buf, bufsize);
+        res = strncpy(dst, buf, bufsize);
         free(buf);
     }
 
-    return ret;
+    return res;
 }
 
 int modify_tags(const char *filename)
@@ -149,8 +151,13 @@ int modify_tags(const char *filename)
 
                 id = alias_to_frame_id(map[i].alias, tag2->header.version);
                 strncpy(frame.id, id, 4);
-                buf = iconv_buf(frame_enc, locale_encoding(),
-                                strlen(map[i].data), map[i].data, &bufsize);
+
+                ret = iconv_alloc(frame_enc, locale_encoding(),
+                                  map[i].data, strlen(map[i].data),
+                                  &buf, &bufsize);
+
+                if (ret != 0)
+                    goto err; /* iconv_alloc itself reports about an error */
 
                 frame.size = bufsize + 1;
                 frame.data = malloc(frame.size);
@@ -184,8 +191,11 @@ int modify_tags(const char *filename)
 
 oom:
 
+    print(OS_ERROR, "out of memory");
+
+err:
+
     free(tag1);
     free_id3v2_tag(tag2);
-    print(OS_ERROR, "out of memory");
     return -1;
 }
