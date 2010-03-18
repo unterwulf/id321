@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
+#include <iconv.h>
 #include "params.h"
 #include "output.h"
 #include "id3v1.h"
@@ -14,12 +15,84 @@
 #define OPT_START_TIME 2
 #define OPT_END_TIME   3
 
+/*
+ * Function:     setup_encodings
+ *
+ * Description:  Setups encodings in g_config from a colon-separated list of
+ *               encodings passed in enc_str and checks if they are supported
+ *               by iconv.
+ *
+ * Return value: On success, 0 is returned. On error, -1 is returned.
+ *
+ * Notes:        This function reports about errors itself.
+ */
+
+static int setup_encodings(char *enc_str)
+{
+    unsigned i;
+    char *cur = NULL;
+    char *pos = enc_str;
+    char *new_pos;
+    iconv_t cd;
+    static char const **enc[] =
+    {
+        &g_config.enc_v1,
+        &g_config.enc_iso8859_1,
+        &g_config.enc_ucs2,
+        &g_config.enc_utf16,
+        &g_config.enc_utf16be,
+        &g_config.enc_utf8,
+    };
+
+    for_each (i, enc)
+    {
+        new_pos = strchr(pos, ':');
+
+        if (!new_pos)
+        {
+            if (strlen(pos) != 0)
+                (*enc)[i] = pos;
+            else if (cur && strlen(cur) != 0)
+            {
+                (*enc)[i] = cur;
+                continue;
+            }
+            break;
+        }
+        else
+        {
+            *new_pos = '\0';
+            if (strlen(pos) != 0)
+                (*enc)[i] = pos;
+            cur = pos;
+            pos = new_pos + 1;
+        }
+    }
+
+    for_each (i, enc)
+    {
+        print(OS_DEBUG, "%u: %s", i, (*enc)[i]);
+        cd = iconv_open((*enc)[i], (*enc)[i]);
+        if (cd == (iconv_t)-1)
+        {
+            print(OS_ERROR, "codeset `%s' is not supported by your iconv",
+                  (*enc)[i]);
+            return -1;
+        }
+        else
+            iconv_close(cd);
+    }
+
+    return 0;
+}
+
 int init_config(int *argc, char ***argv)
 {
-    int      c;
-    long     long_val;
-    int      ret;
-    uint16_t debug_mask = OS_ERROR | OS_WARN;
+    int       c;
+    long      long_val;
+    int       ret;
+    uint16_t  debug_mask = OS_ERROR | OS_WARN;
+    char     *enc_str = NULL;
 
     static const struct option long_opts[] =
     {
@@ -55,10 +128,11 @@ int init_config(int *argc, char ***argv)
     g_config.ver.major = NOT_SET;
     g_config.ver.minor = NOT_SET;
 
-    g_config.enc_iso8859_1 = "ISO-8859-1";
-    g_config.enc_utf8 = "UTF-8";
+    g_config.enc_v1 = g_config.enc_iso8859_1 = "ISO-8859-1";
+    g_config.enc_ucs2 = "UCS-2";
     g_config.enc_utf16 = "UTF-16";
     g_config.enc_utf16be = "UTF-16BE";
+    g_config.enc_utf8 = "UTF-8";
 
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')
@@ -195,9 +269,10 @@ int init_config(int *argc, char ***argv)
             case 'F': g_config.frame = optarg; break;
 
             case 'e':
-                g_config.enc_iso8859_1 = g_config.enc_utf8 =
-                    g_config.enc_utf16 = g_config.enc_utf16be =
-                    optarg ? optarg : locale_encoding();
+                if (!optarg)
+                    g_config.enc_v1 = locale_encoding();
+                else
+                    enc_str = optarg;
                 break;
 
             case 'v': debug_mask |= OS_INFO | OS_DEBUG; break;
@@ -221,6 +296,13 @@ int init_config(int *argc, char ***argv)
                 break;
         }
     }
+
+    /* no debug output before this line is possible (i.e. only errors) */
+    init_output(debug_mask);
+
+    ret = setup_encodings(enc_str ? enc_str : "");
+    if (ret != 0)
+        return -1;
     
     if (!(g_config.options & ID3T_EXPERT))
     {
@@ -256,7 +338,6 @@ int init_config(int *argc, char ***argv)
 
     }
 
-    init_output(debug_mask);
     *argc -= optind;
     *argv += optind;
 

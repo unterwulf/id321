@@ -24,7 +24,7 @@ static char *istrncpy(char *dst, const char *src, size_t size)
     char *buf;
     int ret;
     
-    ret = iconv_alloc(g_config.enc_iso8859_1, locale_encoding(),
+    ret = iconv_alloc(g_config.enc_v1, locale_encoding(),
                       src, strlen(src), &buf, &bufsize);
 
     if (ret == 0)
@@ -127,11 +127,11 @@ int modify_tags(const char *filename)
         switch (tag2->header.version)
         {
             case 2:
-                frame_enc = g_config.enc_utf16;
+                frame_enc = g_config.enc_ucs2;
                 frame_enc_byte = ID3V22_STR_UCS2;
                 break;
             case 3:
-                frame_enc = g_config.enc_utf16;
+                frame_enc = g_config.enc_ucs2;
                 frame_enc_byte = ID3V23_STR_UCS2;
                 break;
             case 4:

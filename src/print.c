@@ -23,13 +23,13 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag)
     if (size == 1)
         printf("%u", *(const uint8_t *)buf);
     else
-        lprint(g_config.enc_iso8859_1, (const char *)buf);
+        lprint(g_config.enc_v1, (const char *)buf);
 }
 
 static void print_id3v1_tag_field(const char *name, const char *value)
 {
     printf("%s: ", name);
-    lprint(g_config.enc_iso8859_1, value);
+    lprint(g_config.enc_v1, value);
     printf("\n");
 }
 

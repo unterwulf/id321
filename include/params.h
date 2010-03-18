@@ -33,10 +33,12 @@ struct
     struct version  ver;
     const char     *fmtstr;
     const char     *frame;
+    const char     *enc_v1;
     const char     *enc_iso8859_1;
-    const char     *enc_utf8;
+    const char     *enc_ucs2;
     const char     *enc_utf16;
     const char     *enc_utf16be;
+    const char     *enc_utf8;
 
     const char     *artist;
     const char     *album;

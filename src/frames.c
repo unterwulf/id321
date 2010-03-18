@@ -35,7 +35,7 @@ static void print_v22_str_frame(const struct id3v2_frame *frame)
     switch (frame->data[0])
     {
         case ID3V22_STR_ISO88591: from_enc = g_config.enc_iso8859_1; break;
-        case ID3V22_STR_UCS2:     from_enc = g_config.enc_utf16; break;
+        case ID3V22_STR_UCS2:     from_enc = g_config.enc_ucs2; break;
         default:
             print(OS_WARN, "invalid string encoding `%u' in frame `%.4s'",
                   frame->data[0], frame->id);
