@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>  /* sscanf() */
 #include <string.h>
+#include <assert.h>
 #include "common.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
@@ -9,6 +10,7 @@
 #include "output.h"
 #include "alias.h"
 #include "framelist.h"
+#include "frames.h"
 
 #define copy_if_not_null(field, dst, src) \
     if ((src).field) \
@@ -106,8 +108,8 @@ int modify_tags(const char *filename)
         char       *buf;
         unsigned    i;
         size_t      bufsize;
-        const char *frame_enc;
         char        frame_enc_byte;
+        const char *frame_enc_name;
         struct 
         {
             char        alias;
@@ -124,24 +126,15 @@ int modify_tags(const char *filename)
             { 'g', g_config.genre_str },
         };
 
-        switch (tag2->header.version)
-        {
-            case 2:
-                frame_enc = g_config.enc_ucs2;
-                frame_enc_byte = ID3V22_STR_UCS2;
-                break;
-            case 3:
-                frame_enc = g_config.enc_ucs2;
-                frame_enc_byte = ID3V23_STR_UCS2;
-                break;
-            case 4:
-                frame_enc = g_config.enc_utf8;
-                frame_enc_byte = ID3V24_STR_UTF8;
-                break;
-            default:
-                print(OS_ERROR, "you found a bug");
-                exit(EXIT_FAILURE);
-        }
+        assert(tag2->header.version == 2 ||
+               tag2->header.version == 3 ||
+               tag2->header.version == 4);
+
+        frame_enc_byte = g_config.v2_def_encs[tag2->header.version];
+        frame_enc_name = get_id3v2_tag_encoding_name(tag2->header.version,
+                                                     frame_enc_byte);
+
+        assert(frame_enc_name);
 
         for_each (i, map)
         {
@@ -152,7 +145,7 @@ int modify_tags(const char *filename)
                 id = alias_to_frame_id(map[i].alias, tag2->header.version);
                 strncpy(frame.id, id, 4);
 
-                ret = iconv_alloc(frame_enc, locale_encoding(),
+                ret = iconv_alloc(frame_enc_name, locale_encoding(),
                                   map[i].data, strlen(map[i].data),
                                   &buf, &bufsize);
 

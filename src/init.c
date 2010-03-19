@@ -94,6 +94,13 @@ int init_config(int *argc, char ***argv)
     uint16_t  debug_mask = OS_ERROR | OS_WARN;
     char     *enc_str = NULL;
 
+    static char v2_def_encs[] =
+    {
+        [2] = ID3V22_STR_UCS2,
+        [3] = ID3V23_STR_UCS2,
+        [4] = ID3V24_STR_UTF8,
+    };
+
     static const struct option long_opts[] =
     {
         { "title",      1, 0, 't' },
@@ -133,6 +140,8 @@ int init_config(int *argc, char ***argv)
     g_config.enc_utf16 = "UTF-16";
     g_config.enc_utf16be = "UTF-16BE";
     g_config.enc_utf8 = "UTF-8";
+
+    g_config.v2_def_encs = v2_def_encs;
 
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')

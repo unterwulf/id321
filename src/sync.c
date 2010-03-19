@@ -2,6 +2,7 @@
 #include <stdio.h>        /* sscanf() */
 #include <string.h>
 #include <inttypes.h>
+#include <assert.h>
 #include "common.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
@@ -48,6 +49,8 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     size_t      bufsize;
     char        trackno[4];
     int32_t     time;
+    char        frame_enc_byte;
+    const char *frame_enc_name;
     struct 
     {
         char        alias;
@@ -66,6 +69,16 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     if (tag1->track)
         snprintf(trackno, sizeof(trackno), "%u", tag1->track);
 
+    assert(tag2->header.version == 2 ||
+           tag2->header.version == 3 ||
+           tag2->header.version == 4);
+
+    frame_enc_byte = g_config.v2_def_encs[tag2->header.version];
+    frame_enc_name = get_id3v2_tag_encoding_name(tag2->header.version,
+                                                 frame_enc_byte);
+
+    assert(frame_enc_name);
+
     for_each (i, map)
     {
         if (map[i].data)
@@ -75,7 +88,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
             id = alias_to_frame_id(map[i].alias, tag2->header.version);
             strncpy(frame.id, id, 4);
 
-            ret = iconv_alloc("UTF-8", g_config.enc_v1,
+            ret = iconv_alloc(frame_enc_name, g_config.enc_v1,
                               map[i].data, strlen(map[i].data),
                               &buf, &bufsize);
 
@@ -92,7 +105,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
                 return -1;
             }
 
-            frame.data[0] = ID3V24_STR_UTF8;
+            frame.data[0] = frame_enc_byte;
             memcpy(frame.data + 1, buf, frame.size - 1);
 
             ret = update_id3v2_tag_frame(tag2, &frame);

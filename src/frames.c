@@ -2,6 +2,7 @@
 #include <stdio.h>        /* snprintf() */
 #include <inttypes.h>
 #include <string.h>
+#include <assert.h>
 #include "id3v1_genres.h"
 #include "id3v2.h"
 #include "output.h"
@@ -9,20 +10,61 @@
 #include "common.h"
 #include "alias.h"        /* alias_to_frame_id() */
 
-static void print_v24_str_frame(const struct id3v2_frame *frame)
-{
-    const char *from_enc;
+/*
+ * Function:     get_id3v2_tag_encoding
+ *
+ * Description:  gets v2.@minor tag frame encoding name by encoding byte @enc
+ *
+ * Return value: On success, string with encoding name is returned.
+ *               On error, NULL is returned.
+ */
 
-    switch (frame->data[0])
+const char *get_id3v2_tag_encoding_name(unsigned minor, char enc)
+{
+    switch (minor)
     {
-        case ID3V24_STR_ISO88591: from_enc = g_config.enc_iso8859_1; break;
-        case ID3V24_STR_UTF16:    from_enc = g_config.enc_utf16; break;
-        case ID3V24_STR_UTF16BE:  from_enc = g_config.enc_utf16be; break;
-        case ID3V24_STR_UTF8:     from_enc = g_config.enc_utf8; break;
+        case 2:
+            switch (enc)
+            {
+                case ID3V22_STR_ISO88591: return g_config.enc_iso8859_1;
+                case ID3V22_STR_UCS2:     return g_config.enc_ucs2;
+            }
+            break;
+
+        case 3:
+            switch (enc)
+            {
+                case ID3V23_STR_ISO88591: return g_config.enc_iso8859_1;
+                case ID3V23_STR_UCS2:     return g_config.enc_ucs2;
+            }
+            break;
+
+        case 4:
+            switch (enc)
+            {
+                case ID3V24_STR_ISO88591: return g_config.enc_iso8859_1;
+                case ID3V24_STR_UTF16:    return g_config.enc_utf16;
+                case ID3V24_STR_UTF16BE:  return g_config.enc_utf16be;
+                case ID3V24_STR_UTF8:     return g_config.enc_utf8;
+            }
+            break;
+
         default:
-            print(OS_WARN, "invalid string encoding `%u' in frame `%.4s'",
-                  frame->data[0], frame->id);
-            return;
+            assert(1);
+    }
+
+    return NULL;
+}
+
+static void print_str_frame(unsigned minor, const struct id3v2_frame *frame)
+{
+    const char *from_enc = get_id3v2_tag_encoding_name(minor, frame->data[0]);
+
+    if (!from_enc)
+    {
+        print(OS_WARN, "invalid string encoding `%u' in frame `%.4s'",
+                       frame->data[0], frame->id);
+        return;
     }
     
     lnprint(from_enc, frame->size - 1, frame->data + 1);
@@ -30,19 +72,12 @@ static void print_v24_str_frame(const struct id3v2_frame *frame)
 
 static void print_v22_str_frame(const struct id3v2_frame *frame)
 {
-    const char *from_enc;
+    print_str_frame(2, frame);
+}
 
-    switch (frame->data[0])
-    {
-        case ID3V22_STR_ISO88591: from_enc = g_config.enc_iso8859_1; break;
-        case ID3V22_STR_UCS2:     from_enc = g_config.enc_ucs2; break;
-        default:
-            print(OS_WARN, "invalid string encoding `%u' in frame `%.4s'",
-                  frame->data[0], frame->id);
-            return;
-    }
-    
-    lnprint(from_enc, frame->size - 1, frame->data + 1);
+static void print_v24_str_frame(const struct id3v2_frame *frame)
+{
+    print_str_frame(4, frame);
 }
 
 static void print_url_frame(const struct id3v2_frame *frame)

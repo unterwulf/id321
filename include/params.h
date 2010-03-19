@@ -31,6 +31,7 @@ struct
     uint32_t        options;
     uint32_t        size;
     struct version  ver;
+    const char     *v2_def_encs;
     const char     *fmtstr;
     const char     *frame;
     const char     *enc_v1;
