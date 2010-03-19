@@ -85,16 +85,12 @@ static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
                                      const unsigned char *buf,
                                      unsigned char version)
 {
-    const char *frame_id;
-
     if (version == 2)
     {
-        uint8_t size[4] = { };
-
         memcpy(frame->id, buf, 3);
-        /* size array will contain 4-byte word in network byte order */
-        memcpy(size + 1, buf + 3, 3);
-        frame->size = ntohl(*((uint32_t *)size));
+        frame->size = ((uint32_t)buf[3] << 16) |
+                      ((uint32_t)buf[4] << 8) |
+                      (uint32_t)buf[5];
         frame->status_flags = 0;
         frame->format_flags = 0;
     }
@@ -372,9 +368,10 @@ static size_t pack_id3v2_frame(char *buf, size_t size,
 
     if (hdr->version == 2)
     {
+        /* TODO: check max frame size */
         memcpy(buf, frame->id, 3);
-        buf[3] = (uint8_t)((frame->size >> 4) & 0xFF);
-        buf[4] = (uint8_t)((frame->size >> 2) & 0xFF);
+        buf[3] = (uint8_t)((frame->size >> 16) & 0xFF);
+        buf[4] = (uint8_t)((frame->size >> 8) & 0xFF);
         buf[5] = (uint8_t)(frame->size & 0xFF);
         buf += hdrsize;
     }
