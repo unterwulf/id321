@@ -75,6 +75,11 @@ static void print_v22_str_frame(const struct id3v2_frame *frame)
     print_str_frame(2, frame);
 }
 
+static void print_v23_str_frame(const struct id3v2_frame *frame)
+{
+    print_str_frame(3, frame);
+}
+
 static void print_v24_str_frame(const struct id3v2_frame *frame)
 {
     print_str_frame(4, frame);
@@ -82,45 +87,35 @@ static void print_v24_str_frame(const struct id3v2_frame *frame)
 
 static void print_url_frame(const struct id3v2_frame *frame)
 {
-    lnprint(g_config.enc_iso8859_1, frame->size, frame->data);
+    size_t len = strnlen(frame->data, frame->size);
+
+    lnprint(g_config.enc_iso8859_1, len, frame->data);
 }
 
 static void print_hex_frame(const struct id3v2_frame *frame)
 {
 }
 
-id3_frame_handler_table_t v22_frames[] = {
-    /*
-       4.19  BUF Recommended buffer size
-
-       4.17  CNT Play counter
-       */
+id3_frame_handler_table_t v22_frames[] =
+{
+    { "BUF", NULL, "Recommended buffer size" },
+    { "CNT", NULL, "Play counter" },
     { "COM", print_v22_str_frame, "Comments" },
-    /*
-       4.21  CRA Audio encryption
-       4.20  CRM Encrypted meta frame
-
-       4.6   ETC Event timing codes
-       4.13  EQU Equalization
-
-       4.16  GEO General encapsulated object
-
-       4.4   IPL Involved people list
-
-       4.22  LNK Linked information
-
-       4.5   MCI Music CD Identifier
-       4.7   MLL MPEG location lookup table
-
-       4.15  PIC Attached picture
-       4.18  POP Popularimeter
-
-       4.14  REV Reverb
-       4.12  RVA Relative volume adjustment
-
-       4.10  SLT Synchronized lyric/text
-       4.8   STC Synced tempo codes
-       */
+    { "CRA", NULL, "Audio encryption" },
+    { "CRM", NULL, "Encrypted meta frame" },
+    { "ETC", NULL, "Event timing codes" },
+    { "EQU", NULL, "Equalization" },
+    { "GEO", NULL, "General encapsulated object" },
+    { "IPL", NULL, "Involved people list" },
+    { "LNK", NULL, "Linked information" },
+    { "MCI", NULL, "Music CD Identifier" },
+    { "MLL", NULL, "MPEG location lookup table" },
+    { "PIC", NULL, "Attached picture" },
+    { "POP", NULL, "Popularimeter" },
+    { "REV", NULL, "Reverb" },
+    { "RVA", NULL, "Relative volume adjustment" },
+    { "SLT", NULL, "Synchronized lyric/text" },
+    { "STC", NULL, "Synced tempo codes" },
     { "TAL", print_v22_str_frame, "Album/Movie/Show title" },
     { "TBP", print_v22_str_frame, "BPM (Beats Per Minute)" },
     { "TCM", print_v22_str_frame, "Composer" },
@@ -157,12 +152,8 @@ id3_frame_handler_table_t v22_frames[] = {
     { "TXT", print_v22_str_frame, "Lyricist/text writer" },
     { "TXX", print_v22_str_frame, "User defined text information frame" },
     { "TYE", print_v22_str_frame, "Year" },
-
-    /*
-       UFI Unique file identifier
-       ULT Unsychronized lyric/text transcription
-       */
-
+    { "UFI", NULL, "Unique file identifier" },
+    { "ULT", NULL, "Unsychronized lyric/text transcription" },
     { "WAF", print_url_frame, "Official audio file webpage" },
     { "WAR", print_url_frame, "Official artist/performer webpage" },
     { "WAS", print_url_frame, "Official audio source webpage" },
@@ -170,46 +161,114 @@ id3_frame_handler_table_t v22_frames[] = {
     { "WCP", print_url_frame, "Copyright/Legal information" },
     { "WPB", print_url_frame, "Publishers official webpage" },
     { "WXX", print_url_frame, "User defined URL link frame" },
-    { NULL,   NULL,            NULL }
+    { NULL,  NULL,            NULL }
+};
+
+id3_frame_handler_table_t v23_frames[] =
+{
+    { "AENC", NULL, "Audio encryption" },
+    { "APIC", NULL, "Attached picture" },
+    { "COMM", print_v23_str_frame, "Comments" },
+    { "COMR", NULL, "Commercial frame" },
+    { "ENCR", NULL, "Encryption method registration" },
+    { "EQUA", NULL, "Equalization" },
+    { "ETCO", NULL, "Event timing codes" },
+    { "GEOB", NULL, "General encapsulated object" },
+    { "GRID", NULL, "Group identification registration" },
+    { "IPLS", print_v23_str_frame, "Involved people list" },
+    { "LINK", NULL, "Linked information" },
+    { "MCDI", NULL, "Music CD identifier" },
+    { "MLLT", NULL, "MPEG location lookup table" },
+    { "OWNE", NULL, "Ownership frame" },
+    { "PRIV", NULL, "Private frame" },
+    { "PCNT", NULL, "Play counter" },
+    { "POPM", NULL, "Popularimeter" },
+    { "POSS", NULL, "Position synchronisation frame" },
+    { "RBUF", NULL, "Recommended buffer size" },
+    { "RVAD", NULL, "Relative volume adjustment" },
+    { "RVRB", NULL, "Reverb" },
+    { "SYLT", NULL, "Synchronized lyric/text" },
+    { "SYTC", NULL, "Synchronized tempo codes" },
+    { "TALB", print_v23_str_frame, "Album/Movie/Show title" },
+    { "TBPM", print_v23_str_frame, "BPM (beats per minute)" },
+    { "TCOM", print_v23_str_frame, "Composer" },
+    { "TCON", print_v23_str_frame, "Content type" },
+    { "TCOP", print_v23_str_frame, "Copyright message" },
+    { "TDAT", print_v23_str_frame, "Date" },
+    { "TDLY", print_v23_str_frame, "Playlist delay" },
+    { "TENC", print_v23_str_frame, "Encoded by" },
+    { "TEXT", print_v23_str_frame, "Lyricist/Text writer" },
+    { "TFLT", print_v23_str_frame, "File type" },
+    { "TIME", print_v23_str_frame, "Time" },
+    { "TIT1", print_v23_str_frame, "Content group description" },
+    { "TIT2", print_v23_str_frame, "Title/songname/content description" },
+    { "TIT3", print_v23_str_frame, "Subtitle/Description refinement" },
+    { "TKEY", print_v23_str_frame, "Initial key" },
+    { "TLAN", print_v23_str_frame, "Language(s)" },
+    { "TLEN", print_v23_str_frame, "Length" },
+    { "TMED", print_v23_str_frame, "Media type" },
+    { "TOAL", print_v23_str_frame, "Original album/movie/show title" },
+    { "TOFN", print_v23_str_frame, "Original filename" },
+    { "TOLY", print_v23_str_frame, "Original lyricist(s)/text writer(s)" },
+    { "TOPE", print_v23_str_frame, "Original artist(s)/performer(s)" },
+    { "TORY", print_v23_str_frame, "Original release year" },
+    { "TOWN", print_v23_str_frame, "File owner/licensee" },
+    { "TPE1", print_v23_str_frame, "Lead performer(s)/Soloist(s)" },
+    { "TPE2", print_v23_str_frame, "Band/orchestra/accompaniment" },
+    { "TPE3", print_v23_str_frame, "Conductor/performer refinement" },
+    { "TPE4", print_v23_str_frame, "Interpreted, remixed, or otherwise modified by" },
+    { "TPOS", print_v23_str_frame, "Part of a set" },
+    { "TPUB", print_v23_str_frame, "Publisher" },
+    { "TRCK", print_v23_str_frame, "Track number/Position in set" },
+    { "TRDA", print_v23_str_frame, "Recording dates" },
+    { "TRSN", print_v23_str_frame, "Internet radio station name" },
+    { "TRSO", print_v23_str_frame, "Internet radio station owner" },
+    { "TSIZ", print_v23_str_frame, "Size" },
+    { "TSRC", print_v23_str_frame, "ISRC (international standard recording code)" },
+    { "TSSE", print_v23_str_frame, "Software/Hardware and settings used for encoding" },
+    { "TYER", print_v23_str_frame, "Year" },
+    { "TXXX", print_v23_str_frame, "User defined text information frame" },
+    { "UFID", NULL, "Unique file identifier" },
+    { "USER", NULL, "Terms of use" },
+    { "USLT", NULL, "Unsychronized lyric/text transcription" },
+    { "WCOM", print_url_frame, "Commercial information" },
+    { "WCOP", print_url_frame, "Copyright/Legal information" },
+    { "WOAF", print_url_frame, "Official audio file webpage" },
+    { "WOAR", print_url_frame, "Official artist/performer webpage" },
+    { "WOAS", print_url_frame, "Official audio source webpage" },
+    { "WORS", print_url_frame, "Official internet radio station homepage" },
+    { "WPAY", print_url_frame, "Payment" },
+    { "WPUB", print_url_frame, "Publishers official webpage" },
+    { "WXXX", NULL, "User defined URL link frame" },
+    { NULL,   NULL, NULL }
 };
 
 id3_frame_handler_table_t v24_frames[] = {
-    /*
-       4.19  AENC Audio encryption
-       4.14  APIC Attached picture
-       4.30  ASPI Audio seek point index
-
-       4.10  COMM Comments
-       4.24  COMR Commercial frame
-
-       4.25  ENCR Encryption method registration
-       4.12  EQU2 Equalisation (2)
-       4.5   ETCO Event timing codes
-
-       4.15  GEOB General encapsulated object
-       4.26  GRID Group identification registration
-
-       4.20  LINK Linked information
-
-       4.4   MCDI Music CD identifier
-       4.6   MLLT MPEG location lookup table
-
-       4.23  OWNE Ownership frame
-
-       4.27  PRIV Private frame
-       4.16  PCNT Play counter
-       4.17  POPM Popularimeter
-       4.21  POSS Position synchronisation frame
-
-       4.18  RBUF Recommended buffer size
-       4.11  RVA2 Relative volume adjustment (2)
-       4.13  RVRB Reverb
-
-       4.29  SEEK Seek frame
-       4.28  SIGN Signature frame
-       4.9   SYLT Synchronised lyric/text
-       4.7   SYTC Synchronised tempo codes
-       */
+    { "AENC", NULL, "Audio encryption" },
+    { "APIC", NULL, "Attached picture" },
+    { "ASPI", NULL, "Audio seek point index" },
+    { "COMM", NULL, "Comments" },
+    { "COMR", NULL, "Commercial frame" },
+    { "ENCR", NULL, "Encryption method registration" },
+    { "EQU2", NULL, "Equalisation (2)" },
+    { "ETCO", NULL, "Event timing codes" },
+    { "GEOB", NULL, "General encapsulated object" },
+    { "GRID", NULL, "Group identification registration" },
+    { "LINK", NULL, "Linked information" },
+    { "MCDI", NULL, "Music CD identifier" },
+    { "MLLT", NULL, "MPEG location lookup table" },
+    { "OWNE", NULL, "Ownership frame" },
+    { "PRIV", NULL, "Private frame" },
+    { "PCNT", NULL, "Play counter" },
+    { "POPM", NULL, "Popularimeter" },
+    { "POSS", NULL, "Position synchronisation frame" },
+    { "RBUF", NULL, "Recommended buffer size" },
+    { "RVA2", NULL, "Relative volume adjustment (2)" },
+    { "RVRB", NULL, "Reverb" },
+    { "SEEK", NULL, "Seek frame" },
+    { "SIGN", NULL, "Signature frame" },
+    { "SYLT", NULL, "Synchronised lyric/text" },
+    { "SYTC", NULL, "Synchronised tempo codes" },
     { "TALB", print_v24_str_frame, "Album/Movie/Show title" },
     { "TBPM", print_v24_str_frame, "BPM (beats per minute)" },
     { "TCOM", print_v24_str_frame, "Composer" },
@@ -256,13 +315,9 @@ id3_frame_handler_table_t v24_frames[] = {
     { "TSSE", print_v24_str_frame, "Software/Hardware and settings used for encoding" },
     { "TSST", print_v24_str_frame, "Set subtitle" },
     { "TXXX", print_v24_str_frame, "User defined text information frame" },
-
-    /*
-       4.1   UFID Unique file identifier
-       4.22  USER Terms of use
-       4.8   USLT Unsynchronised lyric/text transcription
-     */
-
+    { "UFID", NULL, "Unique file identifier" },
+    { "USER", NULL, "Terms of use" },
+    { "USLT", NULL, "Unsynchronised lyric/text transcription" },
     { "WCOM", print_url_frame, "Commercial information" },
     { "WCOP", print_url_frame, "Copyright/Legal information" },
     { "WOAF", print_url_frame, "Official audio file webpage" },
@@ -285,7 +340,7 @@ void print_frame_data(const struct id3v2_tag *tag,
     switch (tag->header.version)
     {
         case 2: table = v22_frames; break;
-        case 3: table = v24_frames; break;
+        case 3: table = v23_frames; break;
         case 4: table = v24_frames; break;
         default: return; /* no need to report error here */
     }
@@ -294,7 +349,10 @@ void print_frame_data(const struct id3v2_tag *tag,
     {
         if (!memcmp(table[i].id, frame->id, idlen))
         {
-            table[i].print(frame);
+            if (table[i].print)
+                table[i].print(frame);
+            else
+                printf("[no parser for this frame implemented yet]\n");
             break;
         }
     }
