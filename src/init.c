@@ -225,7 +225,7 @@ int init_config(int *argc, char ***argv)
                 if (ret == 0 && long_val >= 0)
                 {
                     g_config.size = long_val;
-                    g_config.options |= ID3T_CHANGE_SIZE;
+                    g_config.options |= ID321_OPT_CHANGE_SIZE;
                 }
                 else
                 {
@@ -253,7 +253,7 @@ int init_config(int *argc, char ***argv)
                 if (ret == 0 && long_val >= 0 && long_val <= 0xFF)
                 {
                     g_config.genre_id = long_val;
-                    g_config.options |= ID3T_SET_GENRE_ID;
+                    g_config.options |= ID321_OPT_SET_GENRE_ID;
                 }
                 else
                 {
@@ -264,7 +264,7 @@ int init_config(int *argc, char ***argv)
                         return -1;
                     }
 
-                    g_config.options |= ID3T_SET_GENRE_ID;
+                    g_config.options |= ID321_OPT_SET_GENRE_ID;
                 }
                 break;
             }
@@ -286,7 +286,7 @@ int init_config(int *argc, char ***argv)
 
             case 'v': debug_mask |= OS_INFO | OS_DEBUG; break;
             case 'f': g_config.fmtstr = optarg; break;
-            case 'E': g_config.options |= ID3T_EXPERT; break;
+            case 'E': g_config.options |= ID321_OPT_EXPERT; break;
 
             case OPT_SPEED:
                 g_config.speed = get_id3v1e_speed_id(optarg);
@@ -301,7 +301,7 @@ int init_config(int *argc, char ***argv)
                         return -1;
                     }
                 }
-                g_config.options |= ID3T_SET_SPEED;
+                g_config.options |= ID321_OPT_SET_SPEED;
                 break;
         }
     }
@@ -313,7 +313,7 @@ int init_config(int *argc, char ***argv)
     if (ret != 0)
         return -1;
     
-    if (!(g_config.options & ID3T_EXPERT))
+    if (!(g_config.options & ID321_OPT_EXPERT))
     {
         if (g_config.action == ID3_DELETE
             && (g_config.ver.minor == 0 || g_config.ver.minor == 1
@@ -327,7 +327,7 @@ int init_config(int *argc, char ***argv)
             return -1;
         }
 
-        if ((g_config.options & ID3T_SET_SPEED)
+        if ((g_config.options & ID321_OPT_SET_SPEED)
             && !(is_valid_id3v1e_speed_id(g_config.speed)))
         {
             print(OS_ERROR, "non standard speed value `%u' specified; "
@@ -336,7 +336,7 @@ int init_config(int *argc, char ***argv)
             return -1;
         }
 
-        if ((g_config.options & ID3T_SET_GENRE_ID)
+        if ((g_config.options & ID321_OPT_SET_GENRE_ID)
             && g_config.genre_id > ID3V1_GENRE_ID_MAX)
         {
             print(OS_ERROR, "non standard genre id `%u' specified; "

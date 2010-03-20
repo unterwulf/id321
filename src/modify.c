@@ -92,13 +92,13 @@ int modify_tags(const char *filename)
         copy_if_not_null(comment,   *tag1, g_config);
         copy_if_not_null(genre_str, *tag1, g_config);
 
-        if (g_config.options & ID3T_SET_GENRE_ID)
+        if (g_config.options & ID321_OPT_SET_GENRE_ID)
             tag1->genre_id = g_config.genre_id;
 
         if (g_config.track && sscanf(g_config.track, "%u", &track))
             tag1->track = (track <= 0xFF) ? track : 0;
 
-        if (g_config.options & ID3T_SET_SPEED)
+        if (g_config.options & ID321_OPT_SET_SPEED)
             tag1->speed = g_config.speed;
     }
 

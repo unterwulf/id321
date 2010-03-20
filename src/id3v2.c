@@ -465,7 +465,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     /* if new tag size has not been specified, we will try to use old tag 
      * space not changed */
 
-    newsize = g_config.options & ID3T_CHANGE_SIZE
+    newsize = g_config.options & ID321_OPT_CHANGE_SIZE
         ? g_config.size : tag->header.size + ID3V2_HEADER_LEN;
 
     if (pos <= newsize)

@@ -3,10 +3,10 @@
 
 #include <inttypes.h>
 
-#define ID3T_SET_GENRE_ID 0x1
-#define ID3T_SET_SPEED    0x2
-#define ID3T_CHANGE_SIZE  0x4
-#define ID3T_EXPERT       0x8
+#define ID321_OPT_SET_GENRE_ID 0x1
+#define ID321_OPT_SET_SPEED    0x2
+#define ID321_OPT_CHANGE_SIZE  0x4
+#define ID321_OPT_EXPERT       0x8
 
 #define NOT_SET 255
 
