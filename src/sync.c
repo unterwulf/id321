@@ -153,13 +153,14 @@ int sync_tags(const char *filename)
         else
         {
             if (!tag1)
-                tag1 = malloc(sizeof(struct id3v1_tag));
+                tag1 = calloc(1, sizeof(struct id3v1_tag));
 
             if (!tag1)
                 goto oom;
 
-            tag1->version = g_config.ver.minor != NOT_SET
-                ? g_config.ver.minor : 3;
+            tag1->version = (g_config.ver.minor != NOT_SET)
+                            ? g_config.ver.minor : 3;
+            tag1->genre_id = ID3V1_UNKNOWN_GENRE; 
 
             ret = sync_v1_with_v2(tag1, tag2);
 
