@@ -153,6 +153,12 @@ int print_tags(const char *filename)
     if (ret != 0)
         return -1;
 
+    if (!tag1 && !tag2)
+    {
+        print(OS_WARN, "no ID3 tags in `%s'", filename);
+        return 0;
+    }
+
     if (g_config.fmtstr)
         print_tag(tag1, tag2);
     else if (g_config.frame)
