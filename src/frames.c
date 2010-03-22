@@ -1,3 +1,4 @@
+#define _GNU_SOURCE       /* strnlen() */
 #include <stdlib.h>
 #include <stdio.h>        /* snprintf() */
 #include <inttypes.h>
@@ -352,7 +353,7 @@ void print_frame_data(const struct id3v2_tag *tag,
             if (table[i].print)
                 table[i].print(frame);
             else
-                printf("[no parser for this frame implemented yet]\n");
+                printf("[no parser for this frame implemented yet]");
             break;
         }
     }
