@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "alias.h"
 #include "common.h"
 #include "params.h"
@@ -73,73 +74,80 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
     }
 }
 
+static int is_valid_frame_id_str(const char *str, size_t len)
+{
+    unsigned i;
+    int res = 1;
+
+    for (i = 0; i < len; i++)
+        res &= isupper(str[i]) || isdigit(str[i]);
+
+    return res;
+}
+
 static void print_tag(const struct id3v1_tag *tag1,
                       const struct id3v2_tag *tag2)
 {
-    char *curpos;
-    char *newpos;
-    char *fmtstr;
+    const char *curpos;
+    const char *newpos;
     size_t len;
-    struct id3v2_frame *frame = NULL;
+    struct id3v2_frame *frame;
     const char *frame_id;
+    char        local_frame_id[] = "XXXX";
 
     if (!g_config.fmtstr)
         return;
 
     /* let's parse format string */
-    fmtstr = strdup(g_config.fmtstr);
+    len = strlen(g_config.fmtstr);
 
-    if (!fmtstr)
-    {
-        print(OS_ERROR, "out of memory");
-        return;
-    }
-
-    len = strlen(fmtstr);
-
-    for (curpos = fmtstr; (newpos = strchr(curpos, '%')); curpos = newpos)
+    for (curpos = g_config.fmtstr, frame = NULL;
+         (newpos = strchr(curpos, '%')) && (newpos + 1 < g_config.fmtstr + len);
+         curpos = newpos)
     {
         if (newpos > curpos)
+            printf("%.*s", newpos - curpos, curpos);
+
+        if (is_valid_alias(newpos[1]))
         {
-            *newpos = '\0';
-            printf("%s", curpos);
-        }
-
-        if (newpos + 1 <= fmtstr + len)
-        {
-            frame = NULL;
-
-            if (is_valid_alias(newpos[1]))
+            if (tag2)
             {
-                if (tag2)
-                {
-                    frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
-                    frame = find_frame(&tag2->frame_head, frame_id);
-                }
-
-                if (!frame && tag1)
-                    print_id3v1_data(newpos[1], tag1);
-
-                newpos += 2;
-            }
-            else if (tag2 && (newpos + 5 <= fmtstr + len))
-            {
-                frame_id = newpos + 1;
-                newpos += 5;
+                frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
                 frame = find_frame(&tag2->frame_head, frame_id);
             }
 
-            if (frame != NULL)
-                print_frame_data(tag2, frame);
+            if (!frame && tag1)
+                print_id3v1_data(newpos[1], tag1);
+
+            newpos += 2;
+        }
+        else if (tag2 && (newpos + 3 < g_config.fmtstr + len)
+                 && is_valid_frame_id_str(newpos + 1, 3))
+        {
+            size_t frame_id_len =
+                ((newpos + 4 < g_config.fmtstr + len)
+                 && is_valid_frame_id_str(newpos + 4, 1))
+                ? 4 : 3;
+
+            sprintf(local_frame_id, "%.*s", frame_id_len, newpos + 1);
+            frame_id = local_frame_id;
+            newpos += frame_id_len + 1;
+            frame = find_frame(&tag2->frame_head, frame_id);
+        }
+        else /* invalid format sequence, so just print it as is */
+        {
+            printf("%.2s", newpos);
+            newpos += 2;
+        }
+
+        if (frame != NULL)
+        {
+            print_frame_data(tag2, frame);
+            frame = NULL;
         }
     }
 
-    if (curpos < fmtstr + len)
-        printf(curpos);
-
-    printf("\n");
-
-    free(fmtstr);
+    printf("%s\n", curpos);
 }
 
 int print_tags(const char *filename)
