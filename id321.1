@@ -1,7 +1,7 @@
 .\"
 .\" Copyright (c) 2009 Vitaly Sinilin <vs@kp4.ru>
 .\"
-.TH id321 1 "6 March 2010" id321
+.TH id321 1 "25 March 2010" id321
 .SH NAME
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
@@ -79,6 +79,10 @@ a little sense for v1 tags, but it still can be used to retrieve
 raw tag's field value regardless current locale. Only useful with
 .B print
 action.
+.TP
+.B --no-unsync
+Do not unsynchronise v2 tag when writing. By default, v2 tags are being
+unsynchronised.
 .TP
 .B -v
 Be verbose.

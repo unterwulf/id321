@@ -7,6 +7,7 @@
 #define ID321_OPT_SET_SPEED    0x2
 #define ID321_OPT_CHANGE_SIZE  0x4
 #define ID321_OPT_EXPERT       0x8
+#define ID321_OPT_NO_UNSYNC    0x10
 
 #define NOT_SET 255
 

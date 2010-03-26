@@ -64,11 +64,12 @@ size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
         dst[dstpos++] = src[pos];
 
         if (usrc[pos] == 0xFF &&
-            ((pos + 1 < srcsize && (usrc[pos+1] & 0xE0 || usrc[pos+1] == 0x0))
+            ((pos + 1 < srcsize
+              && ((usrc[pos+1] & 0xE0) == 0xE0 || usrc[pos+1] == '\0'))
              || pos + 1 == srcsize))
         {
             if (dstpos < dstsize)
-                dst[dstpos++] = 0x0;
+                dst[dstpos++] = '\0';
             else
                 dstpos++;
         }
@@ -77,7 +78,8 @@ size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
     /* just estimate required buffer size */
     for (dstpos += srcsize - pos; pos < srcsize; pos++)
         if (usrc[pos] == 0xFF &&
-            ((pos + 1 < srcsize && (usrc[pos+1] & 0xE0 || usrc[pos+1] == 0x0))
+            ((pos + 1 < srcsize
+              && ((usrc[pos+1] & 0xE0) == 0xE0 || usrc[pos+1] == '\0'))
              || pos + 1 == srcsize))
             dstpos++;
 

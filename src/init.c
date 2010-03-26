@@ -14,6 +14,7 @@
 #define OPT_SPEED      1
 #define OPT_START_TIME 2
 #define OPT_END_TIME   3
+#define OPT_NO_UNSYNC  4
 
 /*
  * Function:     setup_encodings
@@ -110,6 +111,7 @@ int init_config(int *argc, char ***argv)
         { "comment",    1, 0, 'c' },
         { "genre",      1, 0, 'g' },
         { "size",       1, 0, 's' },
+        { "no-unsync",  0, 0, OPT_NO_UNSYNC },
         { "speed",      1, 0, OPT_SPEED },
         { "start-time", 1, 0, OPT_START_TIME },
         { "end-time",   1, 0, OPT_END_TIME },
@@ -287,6 +289,7 @@ int init_config(int *argc, char ***argv)
             case 'v': debug_mask |= OS_INFO | OS_DEBUG; break;
             case 'f': g_config.fmtstr = optarg; break;
             case 'E': g_config.options |= ID321_OPT_EXPERT; break;
+            case OPT_NO_UNSYNC: g_config.options |= ID321_OPT_NO_UNSYNC; break;
 
             case OPT_SPEED:
                 g_config.speed = get_id3v1e_speed_id(optarg);

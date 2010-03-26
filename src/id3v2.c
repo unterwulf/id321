@@ -358,78 +358,102 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
  */
 
 static size_t pack_id3v2_frame(char *buf, size_t size,
-                               const struct id3v2_header *hdr,
+                               struct id3v2_header *hdr,
                                const struct id3v2_frame *frame)
 {
-    size_t hdrsize = hdr->version == 2 ? 6 : 10;
+    size_t  hdr_size = hdr->version == 2 ? 6 : 10;
+    uint8_t format_flags = frame->format_flags;
+    size_t  payload_size;
+    char   *hdr_buf = buf;
 
-    if (size < hdrsize + frame->size)
-        return hdrsize + frame->size;
+    if (size < hdr_size + frame->size)
+        return hdr_size + frame->size;
+
+    buf += hdr_size;
+
+    if (hdr->version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
+    {
+        payload_size = unsync_buf(buf, size - hdr_size,
+                                  frame->data, frame->size);
+
+        /* check if unsynchronisation has changed the frame payload */
+        if (payload_size != frame->size)
+            format_flags |= ID3V24_FRM_FMT_FLAG_UNSYNC;
+        else
+        {
+            format_flags &= ~ID3V24_FRM_FMT_FLAG_UNSYNC;
+            /* reset the unsync bit in the tag header, as at least one
+             * frame has not been affected by unsynchronisation */
+            hdr->flags &= ~ID3V2_FLAG_UNSYNC;
+        }
+    }
+    else
+    {
+        memcpy(buf, frame->data, frame->size);
+        payload_size = frame->size;
+    }
 
     if (hdr->version == 2)
     {
         /* TODO: check max frame size */
-        memcpy(buf, frame->id, 3);
-        buf[3] = (uint8_t)((frame->size >> 16) & 0xFF);
-        buf[4] = (uint8_t)((frame->size >> 8) & 0xFF);
-        buf[5] = (uint8_t)(frame->size & 0xFF);
-        buf += hdrsize;
+        memcpy(hdr_buf, frame->id, 3);
+        hdr_buf[3] = (uint8_t)((payload_size >> 16) & 0xFF);
+        hdr_buf[4] = (uint8_t)((payload_size >> 8) & 0xFF);
+        hdr_buf[5] = (uint8_t)(payload_size & 0xFF);
     }
     else
     {
-        memcpy(buf, frame->id, 4);
-        *(uint32_t *)(&buf[4]) = (hdr->version == 4)
-                                 ? htonl(unsync_uint32(frame->size))
-                                 : htonl(frame->size);
-        buf[8] = frame->status_flags;
-        buf[9] = frame->format_flags;
-        buf += hdrsize;
+        memcpy(hdr_buf, frame->id, 4);
+        *(uint32_t *)(&hdr_buf[4]) = (hdr->version == 4)
+                                     ? htonl(unsync_uint32(payload_size))
+                                     : htonl(payload_size);
+        hdr_buf[8] = frame->status_flags;
+        hdr_buf[9] = format_flags;
     }
 
-    if (hdr->version == 4 && (hdr->flags & ID3V24_FRM_FMT_FLAG_UNSYNC))
-        return hdrsize + unsync_buf(buf, size - hdrsize,
-                                    frame->data, frame->size);
-    else
-        memcpy(buf, frame->data, frame->size);
-
-    return hdrsize + frame->size;
+    return hdr_size + payload_size;
 }
 
 ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
 {
-    size_t bufsize = BLOCK_SIZE;
-    size_t pos = ID3V2_HEADER_LEN;
+    struct id3v2_header      header = tag->header;
     struct id3v2_frame_list *frame = tag->frame_head.next;
+    size_t bufsize = header.size > BLOCK_SIZE ? header.size : BLOCK_SIZE;
+    size_t pos = ID3V2_HEADER_LEN;
     size_t frame_size;
-    uint32_t newsize;
+    size_t newsize;
 
-    *buf = (char *)malloc(bufsize);
+    *buf = malloc(bufsize);
 
     if (!*buf)
         goto oom;
 
+    if (header.version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
+        header.flags |= ID3V2_FLAG_UNSYNC;
+    else
+        header.flags &= ~ID3V2_FLAG_UNSYNC;
+
     while (frame != &tag->frame_head)
     {
-        frame_size = pack_id3v2_frame(*buf + pos, bufsize - pos, &tag->header,
+        frame_size = pack_id3v2_frame(*buf + pos, bufsize - pos, &header,
                                       &frame->frame);
         if (frame_size > bufsize - pos)
         {
             char *newbuf;
             size_t newbufsize = 2*bufsize;
 
-            while (newbufsize < pos + frame_size)
+            /* one extra byte is reserved for null byte which can
+             * be needed to unsync the last frame ended with 0xFF */
+            while (newbufsize < pos + frame_size + 1)
                 newbufsize *= 2;
 
-            newbuf = (char *)realloc((void *)*buf, newbufsize);
+            newbuf = realloc(*buf, newbufsize);
 
-            if (newbuf)
-            {
-                bufsize = newbufsize;
-                *buf = newbuf;
-            }
-            else
-                goto oom;
+            if (!newbuf)
+                goto oom; /* *buf will be freed there */
 
+            bufsize = newbufsize;
+            *buf = newbuf;
             continue;
         }
 
@@ -437,36 +461,55 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         frame = frame->next;
     }
 
-    if (IS_WHOLE_TAG_UNSYNC(tag->header))
+    if ((header.version == 2 || header.version == 3)
+        && !(g_config.options & ID321_OPT_NO_UNSYNC))
     {
         size_t reqbufsize = ID3V2_HEADER_LEN +
                             unsync_buf(NULL, 0, *buf + ID3V2_HEADER_LEN,
                                        pos - ID3V2_HEADER_LEN);
 
-        if (reqbufsize != bufsize)
+        /* check if unsynchronisation has changed the tag payload */
+        if (reqbufsize != pos)
         {
-            char *newbuf = (char *)malloc(reqbufsize);
+            /* one extra byte is reserved for null byte which can
+             * be needed to unsync the last frame ended with 0xFF */
+            size_t  newbufsize = reqbufsize + 1;
+            char   *newbuf = malloc(newbufsize);
 
-            if (newbuf)
-            {
-                (void)unsync_buf(newbuf + ID3V2_HEADER_LEN,
-                                 reqbufsize - ID3V2_HEADER_LEN,
-                                 *buf, pos - ID3V2_HEADER_LEN);
-                memcpy(newbuf, *buf, ID3V2_HEADER_LEN);
-                free(*buf);
-                bufsize = reqbufsize;
-                *buf = newbuf;
-            }
-            else
+            if (!newbuf)
                 goto oom;
+
+            (void)unsync_buf(newbuf + ID3V2_HEADER_LEN,
+                             reqbufsize - ID3V2_HEADER_LEN,
+                             *buf + ID3V2_HEADER_LEN,
+                             pos - ID3V2_HEADER_LEN);
+
+            memcpy(newbuf, *buf, ID3V2_HEADER_LEN);
+            free(*buf);
+            bufsize = newbufsize;
+            *buf = newbuf;
+            pos = reqbufsize;
+
+            if (reqbufsize > header.size + ID3V2_HEADER_LEN)
+                header.size = reqbufsize - ID3V2_HEADER_LEN;
+
+            header.flags |= ID3V2_FLAG_UNSYNC;
         }
     }
+
+    /* it is time to check if the last byte of the last frame should be
+     * unsynchronised, if so we will do it by adding one byte of padding
+     * space */
+
+    if ((uint8_t)(*buf)[pos - 1] == 0xFF
+        && !(g_config.options & ID321_OPT_NO_UNSYNC))
+        *buf[pos++] = '\0';
 
     /* if new tag size has not been specified, we will try to use old tag 
      * space not changed */
 
     newsize = g_config.options & ID321_OPT_CHANGE_SIZE
-        ? g_config.size : tag->header.size + ID3V2_HEADER_LEN;
+        ? g_config.size : header.size + ID3V2_HEADER_LEN;
 
     if (pos <= newsize)
     {
@@ -476,13 +519,12 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         {
             /* damn, the current buffer is not large enough; need to
              * enlarge it */
+            char *tmp = realloc(*buf, newsize);
 
-            char *tmp = (char *)realloc(*buf, newsize);
+            if (!tmp)
+               goto oom; /* *buf will be freed there */
 
-            if (tmp)
-                *buf = tmp;
-            else
-                goto oom;
+            *buf = tmp;
         }
 
         memset(*buf + pos, '\0', newsize - pos);
@@ -490,9 +532,9 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     }
 
     strcpy(*buf, "ID3");
-    (*buf)[3] = tag->header.version;
-    (*buf)[4] = tag->header.revision;
-    (*buf)[5] = tag->header.flags;
+    (*buf)[3] = header.version;
+    (*buf)[4] = header.revision;
+    (*buf)[5] = header.flags;
     *(uint32_t *)&((*buf)[6]) = htonl(unsync_uint32(pos - ID3V2_HEADER_LEN));
 
     return pos;
