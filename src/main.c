@@ -21,7 +21,7 @@ static int dummy(const char *filename)
 
 static void usage()
 {
-    printf("usage: %s [pr|mo|rm|sy] [-1|-2] [ARGS] FILE...\n", program_name);
+    printf("usage: %s {[pr]|mo|rm|sy} [-1|-2] [ARGS] FILE...\n", program_name);
 }
 
 int main(int argc, char **argv)
@@ -40,14 +40,14 @@ int main(int argc, char **argv)
 
     program_name = argv[0];
 
-    if (argc == 1)
+    if (init_config(&argc, &argv) == -1)
+        return EXIT_FAILURE;
+
+    if (argc == 0)
     {
         usage();
         return EXIT_SUCCESS;
     }
-
-    if (init_config(&argc, &argv) == -1)
-        return EXIT_FAILURE;
 
     for (; argc > 0; argc--, argv++)
         if (actions[g_config.action](*argv) != 0)
