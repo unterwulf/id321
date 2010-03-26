@@ -281,7 +281,8 @@ int init_config(int *argc, char ***argv)
 
             case 'e':
                 if (!optarg)
-                    g_config.enc_v1 = locale_encoding();
+                    g_config.enc_v1 = g_config.enc_iso8859_1 =
+                        locale_encoding();
                 else
                     enc_str = optarg;
                 break;

@@ -1,21 +1,21 @@
 .\"
-.\" Copyright (c) 2009 Vitaly Sinilin <vs@kp4.ru>
+.\" Copyright (c) 2009-2010 Vitaly Sinilin <vs@kp4.ru>
 .\"
-.TH id321 1 "25 March 2010" id321
+.TH id321 1 "26 March 2010" id321
 .SH NAME
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
 .B id321
-[pr[int]] [-1|-2] [-v] [-eENCODING] [-f FORMAT|-F FRAME] FILE...
+[pr[int]] [OPTIONS] [-f FORMAT|-F FRAME] FILE...
 .br
 .B id321
-mo[dify] [-1|-2] [-v] KEY=value FILE...
+mo[dify] [OPTIONS] KEY=value FILE...
 .br
 .B id321
 cp|copy [-1|-2] [-v] SOURCE DEST
 .br
 .B id321
-sy[nc] [-1|-2] [-v] FILE...
+sy[nc] [-1|-2] [-v] [-e[ENCODING]] FILE...
 .br
 .B id321
 rm|delete [-1|-2] [-v] [-E] FILE...
@@ -59,14 +59,31 @@ the scope of the action is any v2 tag.
 Expert mode. Some dangerous actions are allowed in this mode.
 .TP
 .BI -e "ENCODING
-Force tag's data encoding. If
+.RS
+Force tag's data encoding.
+.RI The " ENCODING
+is a colon-separated list of codesets with the following order:
+.RS 7
+
+.B V1ENC:ISO-8859-1:UCS-2:UTF-16:UTF-16BE:UTF-8
+
+.RE
+It defines encoding mapping for v1 (V1ENC), v2.2 and v2.3 (ISO-8859-1, UCS-2),
+and v2.4 (ISO-8859-1, UTF-16, UTF-16BE, UTF-8) tags. If an element of the list
+is an empty string, default codeset value will be used (default codeset for
+V1ENC is ISO-8859-1).
+Incomplete list may be specified. If an incomplete list has a trailing colon,
+its last specified element value will be propagated to all subsequent omitted
+elements. Otherwise, omitted elements will have their default values.
+If whole
 .I ENCODING
-is omitted, it will be taken from the
-current locale. This option does not affect output of
+is omitted, V1ENC and ISO-8859-1 values will be taken from the
+current locale codeset. This option does not affect output of
 .B -F
 option. Note, with
-.B modify
+.BR modify " or " sync
 action this option results in non-standard tags.
+.RE
 .TP
 .BI -f " FORMAT
 Print tags using printf-like format string. Only useful with
