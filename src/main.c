@@ -10,14 +10,9 @@ extern int print_tags(const char *filename);
 extern int delete_tags(const char *filename);
 extern int modify_tags(const char *filename);
 extern int sync_tags(const char *filename);
+extern int copy_tags(int argc, char **argv);
 
 char *program_name;
-
-static int dummy(const char *filename)
-{
-    print(OS_ERROR, "sorry, this has not been implemented yet");
-    exit(EXIT_FAILURE);
-}
 
 static void usage()
 {
@@ -32,7 +27,6 @@ int main(int argc, char **argv)
         [ ID3_MODIFY ] = modify_tags,
         [ ID3_DELETE ] = delete_tags,
         [ ID3_SYNC   ] = sync_tags,
-        [ ID3_COPY   ] = dummy,
     };
 
     /* take care of locale */
@@ -48,6 +42,9 @@ int main(int argc, char **argv)
         usage();
         return EXIT_SUCCESS;
     }
+
+    if (g_config.action == ID3_COPY)
+        return copy_tags(argc, argv);
 
     for (; argc > 0; argc--, argv++)
         if (actions[g_config.action](*argv) != 0)
