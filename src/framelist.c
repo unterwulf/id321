@@ -1,6 +1,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include "id3v2.h"
+
+int append_frame(struct id3v2_frame_list *head,
+                 const struct id3v2_frame *frame)
+{
+    struct id3v2_frame_list *new_node =
+                                 malloc(sizeof(struct id3v2_frame_list));
+
+    if (!new_node)
+        return -1;
+
+    memcpy(&new_node->frame, frame, sizeof(struct id3v2_frame));
+
+    new_node->prev = head->prev;
+    head->prev->next = new_node;
+    new_node->next = head;
+    head->prev = new_node;
+
+    return 0;
+}
  
 struct id3v2_frame *find_frame(const struct id3v2_frame_list *head,
                                const char *name)

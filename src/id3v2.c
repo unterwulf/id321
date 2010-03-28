@@ -20,10 +20,7 @@ struct id3v2_tag *new_id3v2_tag()
     struct id3v2_tag *tag = calloc(1, sizeof(struct id3v2_tag));
 
     if (tag)
-    {
-        tag->frame_head.next = &tag->frame_head;
-        tag->frame_head.prev = &tag->frame_head;
-    }
+        init_frame_list(&tag->frame_head);
 
     return tag;
 }
@@ -40,20 +37,7 @@ void free_id3v2_tag(struct id3v2_tag *tag)
 int append_id3v2_tag_frame(struct id3v2_tag *tag,
                            const struct id3v2_frame *frame)
 {
-    struct id3v2_frame_list *new_node =
-        (struct id3v2_frame_list *)malloc(sizeof(struct id3v2_frame_list));
-
-    if (!new_node)
-        return -1;
-
-    memcpy(&new_node->frame, frame, sizeof(struct id3v2_frame));
-
-    new_node->prev = tag->frame_head.prev;
-    tag->frame_head.prev->next = new_node;
-    new_node->next = &tag->frame_head;
-    tag->frame_head.prev = new_node;
-
-    return 0;
+    return append_frame(&tag->frame_head, frame);
 }
 
 int update_id3v2_tag_frame(struct id3v2_tag *tag,
