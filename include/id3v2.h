@@ -4,6 +4,12 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#ifdef _FRAME_LIST
+#define PRIVATE(type, name) type name
+#else
+#define PRIVATE(type, name) type const name
+#endif
+
 struct id3v2_header
 {
     uint8_t   version;
@@ -21,6 +27,9 @@ struct id3v2_ext_header
 
 struct id3v2_frame
 {
+    PRIVATE(struct id3v2_frame *, prev);
+    PRIVATE(struct id3v2_frame *, next);
+
     char      id[4];
     uint32_t  size;
     uint8_t   status_flags;
@@ -28,18 +37,11 @@ struct id3v2_frame
     char     *data;
 };
 
-struct id3v2_frame_list
-{
-    struct id3v2_frame       frame;
-    struct id3v2_frame_list *prev;
-    struct id3v2_frame_list *next;
-};
-
 struct id3v2_tag
 {
     struct id3v2_header     header;
     struct id3v2_ext_header ext_header;
-    struct id3v2_frame_list frame_head;
+    struct id3v2_frame      frame_head;
 };
 
 typedef void (* id3_frame_handler_t)(const struct id3v2_frame *);
@@ -109,14 +111,10 @@ int unpack_id3v2_header(struct id3v2_header *hdr, const char *buf);
 int read_id3v2_ext_header(int fd, struct id3v2_tag *tag);
 int read_id3v2_frames(int fd, struct id3v2_tag *tag);
 
-int append_id3v2_tag_frame(struct id3v2_tag *tag,
-                           const struct id3v2_frame *frame);
-int update_id3v2_tag_frame(struct id3v2_tag *tag,
-                           const struct id3v2_frame *frame);
-
 ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf);
 
 const char *map_v22_to_v24(const char *v23frame);
 const char *map_v23_to_v24(const char *v23frame);
 
+#undef PRIVATE
 #endif /* ID3V2_H */

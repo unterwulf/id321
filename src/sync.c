@@ -42,11 +42,8 @@ static int32_t get_v1_timestamp(const char *timestamp)
 
 static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 {
-    const char *id;
-    char       *buf;
     unsigned    i;
     int         ret;
-    size_t      bufsize;
     char        trackno[4];
     int32_t     time;
     char        frame_enc_byte;
@@ -83,40 +80,63 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     {
         if (map[i].data)
         {
-            struct id3v2_frame frame = { };
+            const char         *frame_id;
+            char               *buf;
+            size_t              bufsize;
+            struct id3v2_frame *frame;
+            size_t              data_size = strlen(map[i].data);
+            size_t              frame_size;
+            char               *frame_data;
 
-            id = alias_to_frame_id(map[i].alias, tag2->header.version);
-            strncpy(frame.id, id, 4);
+            if (data_size == 0)
+                continue;
 
             ret = iconv_alloc(frame_enc_name, g_config.enc_v1,
-                              map[i].data, strlen(map[i].data),
+                              map[i].data, data_size,
                               &buf, &bufsize);
 
             if (ret != 0)
                 return -1;
 
-            frame.size = bufsize + 1;
-            frame.data = malloc(frame.size);
+            frame_size = bufsize + 1;
+            frame_data = malloc(frame_size);
 
-            if (!frame.data)
+            if (!frame_data)
             {
                 free(buf);
-                print(OS_ERROR, "out of memory");
                 return -1;
             }
 
-            frame.data[0] = frame_enc_byte;
-            memcpy(frame.data + 1, buf, frame.size - 1);
-
-            ret = update_id3v2_tag_frame(tag2, &frame);
-            if (ret != 0)
-                free(frame.data);
-
+            frame_data[0] = frame_enc_byte;
+            memcpy(frame_data + 1, buf, frame_size - 1);
             free(buf);
+
+            frame_id = alias_to_frame_id(map[i].alias, tag2->header.version);
+            frame = peek_frame(&tag2->frame_head, frame_id);
+
+            if (!frame)
+            {
+                frame = calloc(1, sizeof(struct id3v2_frame));
+
+                if (!frame)
+                {
+                    free(frame_data);
+                    return -1;
+                }
+
+                strncpy(frame->id, frame_id, 4);
+                append_frame(&tag2->frame_head, frame);
+            }
+            else
+                free(frame->data);
+
+            frame->size = frame_size;
+            frame->data = frame_data;
         }
     }
 
-    set_id3v2_tag_genre_by_id(tag2, tag1->genre_id);
+    if (tag1->genre_id != ID3V1_UNKNOWN_GENRE)
+        set_id3v2_tag_genre_by_id(tag2, tag1->genre_id);
 
     time = get_v1_timestamp(tag1->starttime);
 //    if (time != -1)
@@ -191,8 +211,10 @@ int sync_tags(const char *filename)
 
             ret = sync_v2_with_v1(tag2, tag1);
 
-            if (ret == 0)
-                write_tags(filename, NULL, tag2);
+            if (ret != 0)
+                goto oom;
+
+            write_tags(filename, NULL, tag2);
         }
     }
 

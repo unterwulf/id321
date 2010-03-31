@@ -70,11 +70,11 @@ int modify_tags(const char *filename)
     {
         tag2 = new_id3v2_tag();
 
-        if (tag2)
-            tag2->header.version = g_config.ver.minor != NOT_SET
-                                   ? g_config.ver.minor : 4;
-        else
+        if (!tag2)
             goto oom;
+
+        tag2->header.version = g_config.ver.minor != NOT_SET
+                                   ? g_config.ver.minor : 4;
     }
 
     if (tag1)
@@ -105,10 +105,7 @@ int modify_tags(const char *filename)
 
     if (tag2)
     {
-        const char *id;
-        char       *buf;
         unsigned    i;
-        size_t      bufsize;
         char        frame_enc_byte;
         const char *frame_enc_name;
         struct 
@@ -141,38 +138,67 @@ int modify_tags(const char *filename)
         {
             if (map[i].data)
             {
-                struct id3v2_frame frame = { };
+                const char         *frame_id;
+                char               *buf;
+                size_t              bufsize;
+                struct id3v2_frame *frame;
+                size_t              data_size = strlen(map[i].data);
+                size_t              frame_size;
+                char               *frame_data;
 
-                id = alias_to_frame_id(map[i].alias, tag2->header.version);
-                strncpy(frame.id, id, 4);
+                frame_id = alias_to_frame_id(map[i].alias,
+                                             tag2->header.version);
+
+                frame = peek_frame(&tag2->frame_head, frame_id);
+
+                if (data_size == 0)
+                {
+                    if (frame)
+                    {
+                        unlink_frame(frame);
+                        free_frame(frame);
+                    }
+                    continue;
+                }
 
                 ret = iconv_alloc(frame_enc_name, locale_encoding(),
-                                  map[i].data, strlen(map[i].data),
+                                  map[i].data, data_size,
                                   &buf, &bufsize);
 
                 if (ret != 0)
                     goto err; /* iconv_alloc itself reports about an error */
 
-                frame.size = bufsize + 1;
-                frame.data = malloc(frame.size);
+                frame_size = bufsize + 1;
+                frame_data = malloc(frame_size);
 
-                if (!frame.data)
+                if (!frame_data)
                 {
                     free(buf);
                     goto oom;
                 }
 
-                frame.data[0] = frame_enc_byte;
-                memcpy(frame.data + 1, buf, frame.size - 1);
-
-                ret = update_id3v2_tag_frame(tag2, &frame);
-                if (ret != 0)
-                {
-                    free(frame.data);
-                    goto oom;
-                }
-
+                frame_data[0] = frame_enc_byte;
+                memcpy(frame_data + 1, buf, frame_size - 1);
                 free(buf);
+
+                if (!frame)
+                {
+                    frame = calloc(1, sizeof(struct id3v2_frame));
+
+                    if (!frame)
+                    {
+                        free(frame_data);
+                        goto oom;
+                    }
+
+                    strncpy(frame->id, frame_id, 4);
+                    append_frame(&tag2->frame_head, frame);
+                }
+                else
+                    free(frame->data);
+
+                frame->size = frame_size;
+                frame->data = frame_data;
             }
         }
     }

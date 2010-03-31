@@ -10,6 +10,7 @@
 #include "params.h"
 #include "common.h"
 #include "alias.h"        /* alias_to_frame_id() */
+#include "framelist.h"
 
 /*
  * Function:     get_id3v2_tag_encoding
@@ -363,9 +364,10 @@ int set_id3v2_tag_genre_by_id(struct id3v2_tag *tag, uint8_t genre_id)
 {
     const char         *genre_str = get_id3v1_genre_str(genre_id);
     const char         *frame_id = alias_to_frame_id('g', tag->header.version);
-    struct id3v2_frame  frame = { };
+    struct id3v2_frame *frame;
+    size_t              frame_size;
+    char               *frame_data;
     const char         *fmt;
-    int                 ret;
 
     if (!genre_str)
         genre_str = "";
@@ -373,15 +375,15 @@ int set_id3v2_tag_genre_by_id(struct id3v2_tag *tag, uint8_t genre_id)
     switch (tag->header.version)
     {
         case 4:
-            frame.size = 1 +
+            frame_size = 1 +
                 snprintf(NULL, 0, "%u", genre_id) + 1 + strlen(genre_str) + 1;
 
-            frame.data = calloc(1, frame.size);
-            if (!frame.data)
+            frame_data = calloc(1, frame_size);
+            if (!frame_data)
                 return -1;
 
-            frame.data[0] = ID3V24_STR_ISO88591; 
-            memcpy(frame.data + 2 + sprintf(frame.data + 1, "%u", genre_id),
+            frame_data[0] = ID3V24_STR_ISO88591;
+            memcpy(frame_data + 2 + sprintf(frame_data + 1, "%u", genre_id),
                    genre_str, strlen(genre_str));
             break;
 
@@ -389,22 +391,37 @@ int set_id3v2_tag_genre_by_id(struct id3v2_tag *tag, uint8_t genre_id)
         case 2:
         case 3:
             fmt = "(%u)%s";
-            frame.size = 1 + snprintf(NULL, 0, fmt, genre_id, genre_str);
-            /* we allocate one extra byte at the end of frame.date to
-             * make snprintf happy; it will place null terminator there  */
-            frame.data = calloc(1, frame.size + 1);
-            if (!frame.data)
+            frame_size = 1 + snprintf(NULL, 0, fmt, genre_id, genre_str);
+            /* we allocate one extra byte at the end of frame_date to
+             * make snprintf happy; it will place null terminator there */
+            frame_data = calloc(1, frame_size + 1);
+            if (!frame_data)
                 return -1;
 
-            snprintf(frame.data + 1, frame.size, fmt, genre_id, genre_str);
-            frame.data[0] = ID3V22_STR_ISO88591;
+            snprintf(frame_data + 1, frame_size, fmt, genre_id, genre_str);
+            frame_data[0] = ID3V22_STR_ISO88591;
     }
 
-    strncpy(frame.id, frame_id, 4);
+    frame = peek_frame(&tag->frame_head, frame_id);
 
-    ret = update_id3v2_tag_frame(tag, &frame);
-    if (ret != 0)
-        free(frame.data);
+    if (!frame)
+    {
+        frame = calloc(1, sizeof(struct id3v2_frame));
 
-    return ret;
+        if (!frame)
+        {
+            free(frame_data);
+            return -1;
+        }
+
+        strncpy(frame->id, frame_id, 4);
+        append_frame(&tag->frame_head, frame);
+    }
+    else
+        free(frame->data);
+
+    frame->size = frame_size;
+    frame->data = frame_data;
+
+    return 0;
 }

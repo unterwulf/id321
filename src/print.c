@@ -62,14 +62,14 @@ static void print_id3v1_tag(const struct id3v1_tag *tag)
 
 static void print_id3v2_tag(const struct id3v2_tag *tag)
 {
-    const struct id3v2_frame_list *frame;
+    const struct id3v2_frame *frame;
 
     for (frame = tag->frame_head.next;
          frame != &tag->frame_head;
          frame = frame->next)
     {
-        printf("%.4s: ", frame->frame.id);
-        print_frame_data(tag, &frame->frame);
+        printf("%.4s: ", frame->id);
+        print_frame_data(tag, frame);
         printf("\n");
     }
 }
@@ -113,7 +113,7 @@ static void print_tag(const struct id3v1_tag *tag1,
             if (tag2)
             {
                 frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
-                frame = find_frame(&tag2->frame_head, frame_id);
+                frame = peek_frame(&tag2->frame_head, frame_id);
             }
 
             if (!frame && tag1)
@@ -132,7 +132,7 @@ static void print_tag(const struct id3v1_tag *tag1,
             sprintf(local_frame_id, "%.*s", frame_id_len, newpos + 1);
             frame_id = local_frame_id;
             newpos += frame_id_len + 1;
-            frame = find_frame(&tag2->frame_head, frame_id);
+            frame = peek_frame(&tag2->frame_head, frame_id);
         }
         else /* invalid format sequence, so just print it as is */
         {
@@ -174,7 +174,7 @@ int print_tags(const char *filename)
         struct id3v2_frame *frame = NULL;
 
         if (tag2)
-            frame = find_frame(&tag2->frame_head, g_config.frame);
+            frame = peek_frame(&tag2->frame_head, g_config.frame);
 
         if (frame)
             fwrite(frame->data, frame->size, 1, stdout);
