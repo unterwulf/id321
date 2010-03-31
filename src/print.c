@@ -68,7 +68,7 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
          frame != &tag->frame_head;
          frame = frame->next)
     {
-        printf("%.4s: ", frame->id);
+        printf("%.*s: ", ID3V2_FRAME_ID_MAX_SIZE, frame->id);
         print_frame_data(tag, frame);
         printf("\n");
     }
@@ -92,8 +92,6 @@ static void print_tag(const struct id3v1_tag *tag1,
     const char *newpos;
     size_t len;
     struct id3v2_frame *frame;
-    const char *frame_id;
-    char        local_frame_id[] = "XXXX";
 
     if (!g_config.fmtstr)
         return;
@@ -106,12 +104,13 @@ static void print_tag(const struct id3v1_tag *tag1,
          curpos = newpos)
     {
         if (newpos > curpos)
-            printf("%.*s", newpos - curpos, curpos);
+            fwrite(curpos, newpos - curpos, 1, stdout);
 
         if (is_valid_alias(newpos[1]))
         {
             if (tag2)
             {
+                const char *frame_id; 
                 frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
                 frame = peek_frame(&tag2->frame_head, frame_id);
             }
@@ -124,19 +123,18 @@ static void print_tag(const struct id3v1_tag *tag1,
         else if (tag2 && (newpos + 3 < g_config.fmtstr + len)
                  && is_valid_frame_id_str(newpos + 1, 3))
         {
-            size_t frame_id_len =
-                ((newpos + 4 < g_config.fmtstr + len)
-                 && is_valid_frame_id_str(newpos + 4, 1))
-                ? 4 : 3;
+            char   local_frame_id[ID3V2_FRAME_ID_MAX_SIZE] = "\0";
+            size_t frame_id_len = ((newpos + 4 < g_config.fmtstr + len)
+                                   && is_valid_frame_id_str(newpos + 4, 1))
+                                  ? 4 : 3;
 
-            sprintf(local_frame_id, "%.*s", frame_id_len, newpos + 1);
-            frame_id = local_frame_id;
+            strncpy(local_frame_id, newpos + 1, frame_id_len);
             newpos += frame_id_len + 1;
-            frame = peek_frame(&tag2->frame_head, frame_id);
+            frame = peek_frame(&tag2->frame_head, local_frame_id);
         }
         else /* invalid format sequence, so just print it as is */
         {
-            printf("%.2s", newpos);
+            fwrite(newpos, 2, 1, stdout);
             newpos += 2;
         }
 

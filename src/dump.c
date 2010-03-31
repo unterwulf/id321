@@ -1,5 +1,4 @@
 #include "id3v2.h"
-#include "frames.h"
 #include "output.h"
 
 void dump_id3_header(const struct id3v2_header *hdr)
@@ -10,5 +9,6 @@ void dump_id3_header(const struct id3v2_header *hdr)
 
 void dump_frame(const struct id3v2_frame *frame)
 {
-    print(OS_DEBUG, "frame %.4s, len=%u", frame->id, frame->size);
+    print(OS_DEBUG, "frame %.*s, len=%u", ID3V2_FRAME_ID_MAX_SIZE, frame->id,
+                                          frame->size);
 }

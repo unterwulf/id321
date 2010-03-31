@@ -10,53 +10,11 @@
 #define PRIVATE(type, name) type const name
 #endif
 
-struct id3v2_header
-{
-    uint8_t   version;
-    uint8_t   revision;
-    uint8_t   flags;
-    uint32_t  size;
-};
-
-struct id3v2_ext_header
-{
-    uint32_t  size;   /* can never has a size of fewer than six bytes */
-    uint8_t   number; /* 01 */
-    uint8_t   flags;
-};
-
-struct id3v2_frame
-{
-    PRIVATE(struct id3v2_frame *, prev);
-    PRIVATE(struct id3v2_frame *, next);
-
-    char      id[4];
-    uint32_t  size;
-    uint8_t   status_flags;
-    uint8_t   format_flags;
-    char     *data;
-};
-
-struct id3v2_tag
-{
-    struct id3v2_header     header;
-    struct id3v2_ext_header ext_header;
-    struct id3v2_frame      frame_head;
-};
-
-typedef void (* id3_frame_handler_t)(const struct id3v2_frame *);
-
-typedef struct id3_frame_handler_table_t
-{
-    const char          *id;
-    id3_frame_handler_t  print;
-    const char          *desc;
-} id3_frame_handler_table_t;
-
 #define ID3V2_HEADER_LEN            10
 #define ID3V2_FOOTER_LEN            10
 #define ID3V2_FRAME_HEADER_SIZE     10
 #define ID3V22_FRAME_HEADER_SIZE    6
+#define ID3V2_FRAME_ID_MAX_SIZE     4
 
 #define ID3V22_FLAG_MASK            0xC0
 #define ID3V23_FLAG_MASK            0xE0
@@ -101,6 +59,49 @@ typedef struct id3_frame_handler_table_t
 #define ID3V24_STR_UTF16            1
 #define ID3V24_STR_UTF16BE          2
 #define ID3V24_STR_UTF8             3
+
+struct id3v2_header
+{
+    uint8_t   version;
+    uint8_t   revision;
+    uint8_t   flags;
+    uint32_t  size;
+};
+
+struct id3v2_ext_header
+{
+    uint32_t  size;   /* can never has a size of fewer than six bytes */
+    uint8_t   number; /* 01 */
+    uint8_t   flags;
+};
+
+struct id3v2_frame
+{
+    PRIVATE(struct id3v2_frame *, prev);
+    PRIVATE(struct id3v2_frame *, next);
+
+    char      id[ID3V2_FRAME_ID_MAX_SIZE];
+    uint32_t  size;
+    uint8_t   status_flags;
+    uint8_t   format_flags;
+    char     *data;
+};
+
+struct id3v2_tag
+{
+    struct id3v2_header     header;
+    struct id3v2_ext_header ext_header;
+    struct id3v2_frame      frame_head;
+};
+
+typedef void (* id3_frame_handler_t)(const struct id3v2_frame *);
+
+typedef struct id3_frame_handler_table_t
+{
+    const char          *id;
+    id3_frame_handler_t  print;
+    const char          *desc;
+} id3_frame_handler_table_t;
 
 struct id3v2_tag *new_id3v2_tag();
 void free_id3v2_tag(struct id3v2_tag *tag);

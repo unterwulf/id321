@@ -191,7 +191,7 @@ int modify_tags(const char *filename)
                         goto oom;
                     }
 
-                    strncpy(frame->id, frame_id, 4);
+                    strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
                     append_frame(&tag2->frame_head, frame);
                 }
                 else

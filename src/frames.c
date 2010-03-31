@@ -414,7 +414,7 @@ int set_id3v2_tag_genre_by_id(struct id3v2_tag *tag, uint8_t genre_id)
             return -1;
         }
 
-        strncpy(frame->id, frame_id, 4);
+        strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
         append_frame(&tag->frame_head, frame);
     }
     else

@@ -124,7 +124,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
                     return -1;
                 }
 
-                strncpy(frame->id, frame_id, 4);
+                strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
                 append_frame(&tag2->frame_head, frame);
             }
             else
