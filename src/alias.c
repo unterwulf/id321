@@ -57,7 +57,9 @@ const void *alias_to_v1_data(char alias, const struct id3v1_tag *tag,
     {
         if (alias == map[i].alias)
         {
-            *size = map[i].v1size;
+            if (size)
+                *size = map[i].v1size;
+
             return (void *)tag + map[i].v1offset;
         }
     }

@@ -42,26 +42,12 @@ static int32_t get_v1_timestamp(const char *timestamp)
 
 static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 {
-    unsigned    i;
-    int         ret;
-    char        trackno[4];
+    char        trackno[4] = "\0";
     int32_t     time;
     char        frame_enc_byte;
     const char *frame_enc_name;
-    struct 
-    {
-        char        alias;
-        const char *data;
-    }
-    map[] =
-    {
-        { 't', tag1->title },
-        { 'a', tag1->artist },
-        { 'l', tag1->album },
-        { 'y', tag1->year },
-        { 'n', tag1->track ? trackno : NULL },
-        { 'c', tag1->comment }
-    };
+    const char  fields[] = "talync";
+    const char *field_alias;
 
     if (tag1->track)
         snprintf(trackno, sizeof(trackno), "%u", tag1->track);
@@ -76,63 +62,42 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
     assert(frame_enc_name);
 
-    for_each (i, map)
+    for (field_alias = fields; *field_alias != '\0'; field_alias++)
     {
-        if (map[i].data)
-        {
-            const char         *frame_id;
-            char               *buf;
-            size_t              bufsize;
-            struct id3v2_frame *frame;
-            size_t              data_size = strlen(map[i].data);
-            size_t              frame_size;
-            char               *frame_data;
+        char       *buf;
+        size_t      bufsize;
+        size_t      data_size;
+        const char *frame_id;
+        const char *field_data;
+        int         ret;
 
-            if (data_size == 0)
-                continue;
+        field_data = (*field_alias == 'n')
+                     ? trackno
+                     : alias_to_v1_data(*field_alias, tag1, NULL);
 
-            ret = iconv_alloc(frame_enc_name, g_config.enc_v1,
-                              map[i].data, data_size,
-                              &buf, &bufsize);
+        assert(field_data);
+        data_size = strlen(field_data);
 
-            if (ret != 0)
-                return -1;
+        if (data_size == 0)
+            continue;
 
-            frame_size = bufsize + 1;
-            frame_data = malloc(frame_size);
+        ret = iconv_alloc(frame_enc_name, g_config.enc_v1,
+                          field_data, data_size,
+                          &buf, &bufsize);
 
-            if (!frame_data)
-            {
-                free(buf);
-                return -1;
-            }
+        if (ret != 0)
+            return -1;
 
-            frame_data[0] = frame_enc_byte;
-            memcpy(frame_data + 1, buf, frame_size - 1);
-            free(buf);
+        frame_id = alias_to_frame_id(*field_alias, tag2->header.version);
+        assert(frame_id);
 
-            frame_id = alias_to_frame_id(map[i].alias, tag2->header.version);
-            frame = peek_frame(&tag2->frame_head, frame_id);
+        ret = update_id3v2_tag_text_frame(tag2, frame_id, frame_enc_byte,
+                                          buf, bufsize);
+        
+        free(buf);
 
-            if (!frame)
-            {
-                frame = calloc(1, sizeof(struct id3v2_frame));
-
-                if (!frame)
-                {
-                    free(frame_data);
-                    return -1;
-                }
-
-                strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
-                append_frame(&tag2->frame_head, frame);
-            }
-            else
-                free(frame->data);
-
-            frame->size = frame_size;
-            frame->data = frame_data;
-        }
+        if (ret != 0)
+            return -1;
     }
 
     if (tag1->genre_id != ID3V1_UNKNOWN_GENRE)

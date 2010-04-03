@@ -16,7 +16,8 @@
     if ((src).field) \
     { \
         memset((dst).field, '\0', sizeof((dst).field)); \
-        istrncpy((dst).field, (src).field, sizeof((dst).field) - 1); \
+        if (!istrncpy((dst).field, (src).field, sizeof((dst).field) - 1)) \
+            goto oom; \
     }
 
 static char *istrncpy(char *dst, const char *src, size_t size)
@@ -39,6 +40,85 @@ static char *istrncpy(char *dst, const char *src, size_t size)
     }
 
     return res;
+}
+
+static int modify_v2_tag(struct id3v2_tag *tag)
+{
+    unsigned    i;
+    char        frame_enc_byte;
+    const char *frame_enc_name;
+    struct 
+    {
+        char        alias;
+        const char *data;
+    }
+    map[] =
+    {
+        { 't', g_config.title },
+        { 'a', g_config.artist },
+        { 'l', g_config.album },
+        { 'y', g_config.year },
+        { 'c', g_config.comment },
+        { 'n', g_config.track },
+        { 'g', g_config.genre_str },
+    };
+
+    assert(tag->header.version == 2 ||
+           tag->header.version == 3 ||
+           tag->header.version == 4);
+
+    frame_enc_byte = g_config.v2_def_encs[tag->header.version];
+    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
+                                                 frame_enc_byte);
+
+    assert(frame_enc_name);
+
+    for_each (i, map)
+    {
+        if (map[i].data)
+        {
+            const char *frame_id;
+            char       *buf;
+            size_t      bufsize;
+            size_t      data_size = strlen(map[i].data);
+            int         ret;
+
+            frame_id = alias_to_frame_id(map[i].alias, tag->header.version);
+            assert(frame_id);
+
+            if (data_size == 0)
+            {
+                struct id3v2_frame *frame;
+
+                /* need to delete frame if it exists */
+                frame = peek_frame(&tag->frame_head, frame_id);
+
+                if (frame)
+                {
+                    unlink_frame(frame);
+                    free_frame(frame);
+                }
+                continue;
+            }
+
+            ret = iconv_alloc(frame_enc_name, locale_encoding(),
+                              map[i].data, data_size,
+                              &buf, &bufsize);
+
+            if (ret != 0)
+                return -1;
+
+            ret = update_id3v2_tag_text_frame(tag, frame_id, frame_enc_byte,
+                                              buf, bufsize);
+
+            free(buf);
+
+            if (ret != 0)
+                return -1;
+        }
+    }
+
+    return 0;
 }
 
 int modify_tags(const char *filename)
@@ -105,102 +185,10 @@ int modify_tags(const char *filename)
 
     if (tag2)
     {
-        unsigned    i;
-        char        frame_enc_byte;
-        const char *frame_enc_name;
-        struct 
-        {
-            char        alias;
-            const char *data;
-        }
-        map[] =
-        {
-            { 't', g_config.title },
-            { 'a', g_config.artist },
-            { 'l', g_config.album },
-            { 'y', g_config.year },
-            { 'c', g_config.comment },
-            { 'n', g_config.track },
-            { 'g', g_config.genre_str },
-        };
+        ret = modify_v2_tag(tag2);
 
-        assert(tag2->header.version == 2 ||
-               tag2->header.version == 3 ||
-               tag2->header.version == 4);
-
-        frame_enc_byte = g_config.v2_def_encs[tag2->header.version];
-        frame_enc_name = get_id3v2_tag_encoding_name(tag2->header.version,
-                                                     frame_enc_byte);
-
-        assert(frame_enc_name);
-
-        for_each (i, map)
-        {
-            if (map[i].data)
-            {
-                const char         *frame_id;
-                char               *buf;
-                size_t              bufsize;
-                struct id3v2_frame *frame;
-                size_t              data_size = strlen(map[i].data);
-                size_t              frame_size;
-                char               *frame_data;
-
-                frame_id = alias_to_frame_id(map[i].alias,
-                                             tag2->header.version);
-
-                frame = peek_frame(&tag2->frame_head, frame_id);
-
-                if (data_size == 0)
-                {
-                    if (frame)
-                    {
-                        unlink_frame(frame);
-                        free_frame(frame);
-                    }
-                    continue;
-                }
-
-                ret = iconv_alloc(frame_enc_name, locale_encoding(),
-                                  map[i].data, data_size,
-                                  &buf, &bufsize);
-
-                if (ret != 0)
-                    goto err; /* iconv_alloc itself reports about an error */
-
-                frame_size = bufsize + 1;
-                frame_data = malloc(frame_size);
-
-                if (!frame_data)
-                {
-                    free(buf);
-                    goto oom;
-                }
-
-                frame_data[0] = frame_enc_byte;
-                memcpy(frame_data + 1, buf, frame_size - 1);
-                free(buf);
-
-                if (!frame)
-                {
-                    frame = calloc(1, sizeof(struct id3v2_frame));
-
-                    if (!frame)
-                    {
-                        free(frame_data);
-                        goto oom;
-                    }
-
-                    strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
-                    append_frame(&tag2->frame_head, frame);
-                }
-                else
-                    free(frame->data);
-
-                frame->size = frame_size;
-                frame->data = frame_data;
-            }
-        }
+        if (ret != 0)
+            goto oom;
     }
 
     write_tags(filename, tag1, tag2);
@@ -212,9 +200,6 @@ int modify_tags(const char *filename)
 oom:
 
     print(OS_ERROR, "out of memory");
-
-err:
-
     free(tag1);
     free_id3v2_tag(tag2);
     return -1;

@@ -103,12 +103,12 @@ iconv_t xiconv_open(const char *tocode, const char *fromcode)
 /*
  * Function:     iconv_alloc
  *
- * Description:  Converts src buffer from fromcode to tocode and places
- *               result into internally allocated memory area. *dst will
- *               be pointing to the result, and *dstsize will contain its
+ * Description:  Converts @src buffer from @fromcode to @tocode and places
+ *               result into internally allocated memory area. *@dst will
+ *               be pointing to the result, and *@dstsize will contain its
  *               size.
  *
- *               *dst must be freed with free() after use.
+ *               *@dst must be freed with free() after use.
  *
  * Return value: 0 on success, -1 on any error
  *
@@ -182,6 +182,5 @@ int iconv_alloc(const char *tocode, const char *fromcode,
 oom:
 
     iconv_close(cd);
-    print(OS_ERROR, "out of memory");
     return -1;
 }

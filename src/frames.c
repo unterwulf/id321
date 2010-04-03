@@ -425,3 +425,40 @@ int set_id3v2_tag_genre_by_id(struct id3v2_tag *tag, uint8_t genre_id)
 
     return 0;
 }
+
+int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
+                                char frame_enc_byte, char *data, size_t size)
+{
+    size_t              frame_size = size + 1;
+    char               *frame_data = malloc(frame_size);
+    struct id3v2_frame *frame;
+
+    if (!frame_data)
+        return -1;
+
+    frame_data[0] = frame_enc_byte;
+    memcpy(frame_data + 1, data, frame_size - 1);
+
+    frame = peek_frame(&tag->frame_head, frame_id);
+
+    if (!frame)
+    {
+        frame = calloc(1, sizeof(struct id3v2_frame));
+
+        if (!frame)
+        {
+            free(frame_data);
+            return -1;
+        }
+
+        strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
+        append_frame(&tag->frame_head, frame);
+    }
+    else
+        free(frame->data);
+
+    frame->size = frame_size;
+    frame->data = frame_data;
+
+    return 0;
+}
