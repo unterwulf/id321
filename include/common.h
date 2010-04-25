@@ -8,6 +8,7 @@
 #include "params.h"
 
 #define BLOCK_SIZE 4096
+#define WCHAR_CODESET "WCHAR_T"
 
 #define READORDIE(fd, buf, size) \
     if (readordie(fd, buf, size) != (ssize_t)(size)) \
@@ -29,8 +30,14 @@ int str_to_long(const char *nptr, long *ret);
 
 iconv_t xiconv_open(const char *tocode, const char *fromcode);
 
+ssize_t iconvordie(const char *tocode, const char *fromcode,
+                   const char *src, size_t srcsize,
+                   char *dst, size_t dstsize);
+
 int iconv_alloc(const char *tocode, const char *fromcode,
                 const char *src, size_t srcsize,
                 char **dst, size_t *dstsize);
+
+int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...);
 
 #endif /* COMMON_H */

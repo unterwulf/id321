@@ -1,9 +1,12 @@
 #include <unistd.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iconv.h>
+#include <wchar.h>
+#include "common.h"
 #include "output.h"
 
 /*
@@ -101,12 +104,63 @@ iconv_t xiconv_open(const char *tocode, const char *fromcode)
 }
 
 /*
+ * Function:     iconvordie
+ *
+ * Description:  Converts @src buffer of size @srcsize from @fromcode to
+ *               @tocode and places result into @dst buffer of size @dstsize.
+ *
+ * Return value: number of bytes written is returned
+ *
+ */
+
+ssize_t iconvordie(const char *tocode, const char *fromcode,
+                   const char *src, size_t srcsize,
+                   char *dst, size_t dstsize)
+{
+    iconv_t      cd;
+    const char  *in = src;
+    char        *out = dst;
+    size_t       inbytesleft = srcsize;
+    size_t       outbytesleft = dstsize;
+    size_t       ret;
+
+    cd = xiconv_open(tocode, fromcode);
+
+    do {
+        errno = 0;
+        ret = iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
+
+        if (ret == (size_t)(-1))
+        {
+            switch (errno)
+            {
+                case EILSEQ:
+                case EINVAL:
+                    /* skip invalid character */
+                    in++;
+                    inbytesleft--;
+                    continue;
+
+                case E2BIG:
+                    break;
+            }
+        }
+    } while (inbytesleft > 0);
+
+    iconv_close(cd);
+    return out - dst;
+}
+
+/*
  * Function:     iconv_alloc
  *
  * Description:  Converts @src buffer from @fromcode to @tocode and places
  *               result into internally allocated memory area. *@dst will
  *               be pointing to the result, and *@dstsize will contain its
  *               size.
+ *
+ *               If @tocode is WCHAR_CODESET, resulting wcstring will be
+ *               null-terminated even if @src is not.
  *
  *               *@dst must be freed with free() after use.
  *
@@ -174,13 +228,80 @@ int iconv_alloc(const char *tocode, const char *fromcode,
         }
     } while (inbytesleft > 0);
 
+    if (!strcmp(tocode, WCHAR_CODESET) &&
+        !(out - buf > (ptrdiff_t)sizeof(wchar_t) &&
+          ((wchar_t *)out)[-1] == L'\0'))
+    {
+        /* make sure that resulting wcstring will be null-terminated */
+
+        if (outbytesleft < sizeof(wchar_t))
+        {
+            tmppos = out - buf;
+            tmp = realloc(buf, outsize + sizeof(wchar_t) - outbytesleft);
+            if (!tmp)
+            {
+                free(buf);
+                goto oom;
+            }
+            buf = tmp;
+            out = buf + tmppos;
+        }
+
+        *(wchar_t *)out = L'\0';
+        out += sizeof(wchar_t);
+    }
+
     iconv_close(cd);
     *dst = buf;
-    *dstsize = out - buf;
+    if (dstsize)
+        *dstsize = out - buf;
     return 0;
 
 oom:
 
     iconv_close(cd);
     return -1;
+}
+
+int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...)
+{
+    wchar_t *wdata;
+    size_t   wsize = 4096;
+    int      ret;
+    va_list  args;
+
+    wdata = malloc(wsize*sizeof(wchar_t));
+    if (!wdata)
+        return -1;
+
+    do {
+        va_start(args, fmt);
+        ret = vswprintf(wdata, wsize, fmt, args);
+        va_end(args);
+
+        if (ret == -1)
+        {
+            free(wdata);
+            return -1;
+        }
+        else if ((size_t)ret == wsize)
+        {
+            wchar_t *tmp;
+
+            wsize *= 2;
+            tmp = realloc(wdata, wsize);
+
+            if (!tmp)
+            {
+                free(wdata);
+                return -1;
+            }
+
+            wdata = tmp;
+        }
+    } while ((size_t)ret == wsize);
+
+    *wcs = wdata;
+
+    return ret;
 }

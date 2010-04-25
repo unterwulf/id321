@@ -3,6 +3,8 @@
 #include <stdio.h>        /* snprintf() */
 #include <inttypes.h>
 #include <string.h>
+#include <wchar.h>
+#include <errno.h>
 #include <assert.h>
 #include "id3v1_genres.h"
 #include "id3v2.h"
@@ -360,72 +362,6 @@ void print_frame_data(const struct id3v2_tag *tag,
     }
 }
 
-int set_id3v2_tag_genre_by_id(struct id3v2_tag *tag, uint8_t genre_id)
-{
-    const char         *genre_str = get_id3v1_genre_str(genre_id);
-    const char         *frame_id = alias_to_frame_id('g', tag->header.version);
-    struct id3v2_frame *frame;
-    size_t              frame_size;
-    char               *frame_data;
-    const char         *fmt;
-
-    if (!genre_str)
-        genre_str = "";
-
-    switch (tag->header.version)
-    {
-        case 4:
-            frame_size = 1 +
-                snprintf(NULL, 0, "%u", genre_id) + 1 + strlen(genre_str) + 1;
-
-            frame_data = calloc(1, frame_size);
-            if (!frame_data)
-                return -1;
-
-            frame_data[0] = ID3V24_STR_ISO88591;
-            memcpy(frame_data + 2 + sprintf(frame_data + 1, "%u", genre_id),
-                   genre_str, strlen(genre_str));
-            break;
-
-        default:
-        case 2:
-        case 3:
-            fmt = "(%u)%s";
-            frame_size = 1 + snprintf(NULL, 0, fmt, genre_id, genre_str);
-            /* we allocate one extra byte at the end of frame_date to
-             * make snprintf happy; it will place null terminator there */
-            frame_data = calloc(1, frame_size + 1);
-            if (!frame_data)
-                return -1;
-
-            snprintf(frame_data + 1, frame_size, fmt, genre_id, genre_str);
-            frame_data[0] = ID3V22_STR_ISO88591;
-    }
-
-    frame = peek_frame(&tag->frame_head, frame_id);
-
-    if (!frame)
-    {
-        frame = calloc(1, sizeof(struct id3v2_frame));
-
-        if (!frame)
-        {
-            free(frame_data);
-            return -1;
-        }
-
-        strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
-        append_frame(&tag->frame_head, frame);
-    }
-    else
-        free(frame->data);
-
-    frame->size = frame_size;
-    frame->data = frame_data;
-
-    return 0;
-}
-
 int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
                                 char frame_enc_byte, char *data, size_t size)
 {
@@ -461,4 +397,201 @@ int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
     frame->data = frame_data;
 
     return 0;
+}
+
+int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
+                        wchar_t *genre_wcs)
+{
+    const char *frame_id = alias_to_frame_id('g', tag->header.version);
+    wchar_t    *wdata;
+    int         wsize;
+    char       *frame_data;
+    size_t      frame_size;
+    char        frame_enc_byte;
+    const char *frame_enc_name;
+    int         ret;
+
+    assert(frame_id);
+
+    if (genre_id != ID3V1_UNKNOWN_GENRE)
+    {
+        if (!genre_wcs)
+            genre_wcs = L"";
+
+        switch (tag->header.version)
+        {
+            case 4:
+                wsize = swprintf_alloc(&wdata, L"%u%lc%ls",
+                                       genre_id, L'\0', genre_wcs) -
+                        (genre_wcs[0] == L'\0');
+                break;
+
+            default:
+            case 2:
+            case 3:
+                wsize = swprintf_alloc(&wdata, L"(%u)%ls",
+                                       genre_id, genre_wcs);
+        }
+
+        if (wsize < 0)
+            return -1;
+    }
+    else if (genre_wcs && genre_wcs[0] != L'\0')
+    {
+        wdata = genre_wcs;
+        wsize = wcslen(genre_wcs);
+    }
+    else
+        return 0;
+
+    frame_enc_byte = g_config.v2_def_encs[tag->header.version];
+    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
+                                                 frame_enc_byte);
+
+    assert(frame_enc_name);
+
+    ret = iconv_alloc(frame_enc_name, WCHAR_CODESET,
+                      (char *)wdata, wsize*sizeof(wchar_t),
+                      &frame_data, &frame_size);
+
+    free(wdata);
+
+    if (ret != 0)
+        return -1;
+
+    ret = update_id3v2_tag_text_frame(tag, frame_id, frame_enc_byte,
+                                      frame_data, frame_size);
+
+    free(frame_data);
+
+    return ret;
+}
+
+
+int get_id3v2_tag_trackno(const struct id3v2_tag *tag)
+{
+    const char         *frame_id;
+    struct id3v2_frame *frame;
+    const char         *frame_enc_name;
+    char               *buf;
+    size_t              bufsize;
+    long                trackno;
+    int                 ret;
+
+    frame_id = alias_to_frame_id('n', tag->header.version);
+
+    if (!frame_id)
+        return -1;
+
+    frame = peek_frame(&tag->frame_head, frame_id);
+
+    if (!frame)
+        return -1;
+
+    if (frame->size <= 1)
+        return -1;
+
+    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
+                                                 frame->data[0]);
+
+    ret = iconv_alloc(WCHAR_CODESET, frame_enc_name,
+                      frame->data + 1, frame->size - 1,
+                      &buf, &bufsize);
+
+    if (ret != 0)
+        return -1;
+
+    errno = 0;
+    trackno = wcstol((wchar_t *)buf, NULL, 10);
+    free(buf);
+
+    if (errno == 0 && trackno >= 0 && trackno <= 255)
+        return (int)trackno;
+
+    return -1;
+}
+
+int get_id3v2_tag_genre(const struct id3v2_tag *tag, wchar_t **genre_wcs)
+{
+    const char         *frame_id;
+    struct id3v2_frame *frame;
+    const char         *frame_enc_name;
+    wchar_t            *ptr;
+    wchar_t            *wdata;
+    size_t              wsize;
+    int                 ret;
+    int                 genre_id = ID3V1_UNKNOWN_GENRE;
+    long                long_genre_id = -1;
+
+    *genre_wcs = NULL;
+    frame_id = alias_to_frame_id('g', tag->header.version);
+    assert(frame_id);
+    frame = peek_frame(&tag->frame_head, frame_id);
+
+    if (!frame)
+        return ID3V1_UNKNOWN_GENRE;
+
+    if (frame->size <= 1)
+        return ID3V1_UNKNOWN_GENRE;
+
+    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
+                                                 frame->data[0]);
+
+    ret = iconv_alloc(WCHAR_CODESET, frame_enc_name,
+                      frame->data + 1, frame->size - 1,
+                      (void *)&wdata, &wsize);
+
+    if (ret != 0)
+        return -1;
+
+    wsize /= sizeof(wchar_t);
+    ptr = wdata;
+
+    switch (tag->header.version)
+    {
+        case 4:
+            errno = 0;
+            long_genre_id = wcstol(wdata + 1, &ptr, 10);
+            if (errno != 0)
+                long_genre_id = -1;
+            break;
+
+        case 3:
+        case 2:
+            if (wdata[0] == L'(')
+            {
+                errno = 0;
+                long_genre_id = wcstol(wdata + 1, &ptr, 10);
+                if (errno != 0)
+                    long_genre_id = -1;
+
+                if (*ptr != L')')
+                {
+                    ptr = wdata;
+                    long_genre_id = -1;
+                }
+                else
+                    ptr++;
+            }
+            break;
+    }
+
+    if (long_genre_id >= 0 && long_genre_id <= 255)
+        genre_id = long_genre_id;
+
+    if (ptr < wdata + wsize && ptr[1] != L'\0' && genre_wcs)
+    {
+        *genre_wcs = wcsdup(ptr);
+        if (!genre_wcs)
+        {
+            free(wdata);
+            return -1;
+        }
+    }
+    else
+        *genre_wcs = NULL;
+
+    free(wdata);
+
+    return genre_id;
 }

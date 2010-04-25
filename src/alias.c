@@ -8,12 +8,12 @@
 
 static const struct
 {
-    const char alias;
+    char        alias;
     const char *v22;
     const char *v23;
     const char *v24;
-    const size_t v1offset;     
-    const size_t v1size;     
+    size_t      v1offset;     
+    size_t      v1size;     
 }
 map[] =
 {
@@ -48,8 +48,7 @@ const char *alias_to_frame_id(char alias, unsigned version)
     return NULL;
 }
 
-const void *alias_to_v1_data(char alias, const struct id3v1_tag *tag,
-                             size_t *size)
+void *alias_to_v1_data(char alias, const struct id3v1_tag *tag, size_t *size)
 {
     unsigned i;
 

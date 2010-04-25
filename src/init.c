@@ -316,6 +316,12 @@ int init_config(int *argc, char ***argv)
     ret = setup_encodings(enc_str ? enc_str : "");
     if (ret != 0)
         return -1;
+
+    if (g_config.action == ID3_SYNC && g_config.ver.major == NOT_SET)
+    {
+        print(OS_ERROR, "target version for synchronization is not specified");
+        return -1;
+    }
     
     if (!(g_config.options & ID321_OPT_EXPERT))
     {

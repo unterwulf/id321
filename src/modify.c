@@ -2,6 +2,7 @@
 #include <stdio.h>  /* sscanf() */
 #include <string.h>
 #include <assert.h>
+#include <wchar.h>
 #include "common.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
@@ -47,6 +48,8 @@ static int modify_v2_tag(struct id3v2_tag *tag)
     unsigned    i;
     char        frame_enc_byte;
     const char *frame_enc_name;
+    wchar_t    *genre_wcs = NULL;
+    int         ret;
     struct 
     {
         char        alias;
@@ -60,7 +63,6 @@ static int modify_v2_tag(struct id3v2_tag *tag)
         { 'y', g_config.year },
         { 'c', g_config.comment },
         { 'n', g_config.track },
-        { 'g', g_config.genre_str },
     };
 
     assert(tag->header.version == 2 ||
@@ -118,7 +120,21 @@ static int modify_v2_tag(struct id3v2_tag *tag)
         }
     }
 
-    return 0;
+    if (g_config.genre_str)
+    {
+        ret = iconv_alloc(WCHAR_CODESET, locale_encoding(),
+                          g_config.genre_str, strlen(g_config.genre_str),
+                          (void *)&genre_wcs, NULL);
+        if (ret != 0)
+            return -1;
+    }
+
+    ret = set_id3v2_tag_genre(tag, (g_config.options & ID321_OPT_SET_GENRE_ID)
+                              ? g_config.genre_id : ID3V1_UNKNOWN_GENRE,
+                              genre_wcs);
+    free(genre_wcs);
+
+    return ret;
 }
 
 int modify_tags(const char *filename)
