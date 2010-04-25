@@ -1,108 +1,147 @@
 .\"
-.\" Copyright (c) 2009-2010 Vitaly Sinilin <vs@kp4.ru>
+.\" Copyright (c) 2009\-2010 Vitaly Sinilin <vs@kp4.ru>
 .\"
-.TH id321 1 "26 March 2010" id321
+.TH id321 1 "25 April 2010" id321
 .SH NAME
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
 .B id321
-[pr[int]] [OPTIONS] [-f FORMAT|-F FRAME] FILE...
+.RB [ pr [ int "]]
+.RI [ OPTIONS ]
+[\fB\-f \fIFORMAT\fR|\fB\-F \fIFRAME\fR]
+.IR FILE ...
 .br
 .B id321
-mo[dify] [OPTIONS] KEY=value FILE...
+.BR mo [ dify ]
+.RI [ OPTIONS ]
+.IR FILE ...
 .br
 .B id321
-cp|copy [-1|-2] [-v] SOURCE DEST
+.RB { cp | copy "} [" \-1 | \-2 "] [" \-v ]
+.I SOURCE DEST
 .br
 .B id321
-sy[nc] [-1|-2] [-v] [-e[ENCODING]] FILE...
+.BR sy [ nc "] {" \-1 | \-2 "}
+.RI [ OPTIONS ]
+.IR FILE ...
 .br
 .B id321
-rm|delete [-1|-2] [-v] [-E] FILE...
+.RB { rm | delete "} [" \-1 | \-2 "] [" \-v "] [" \-E ]
+.IR FILE ...
 .br
 .SH DESCRIPTION
 .B id321
 is a program to read and write ID3 tags. The following versions of ID3 tags
-are supported: 1.0, 1.1, 1.2, 1.3, enhanced v1 tag, 2.2, 2.3, 2.4.
+are supported: 1.0, 1.1, 1.2, 1.3, enhanced tag, 2.2, 2.3, 2.4.
 .br
 .SH ACTIONS
 .TP
-.B pr | print
+.BR pr " | " print
 Print tags. This is the default action. Without
-.BR -f " or " -F
+.BR \-f " or " \-F
 option whole tags of specified version will be dumped as a list of
 frames/fields with their text values.
 .TP
-.B mo | modify
+.BR mo " | " modify
 Modify tags.
 .TP
-.B cp | copy
-Copy tags from SOURCE to DEST.
+.BR cp " | " copy
+Copy tags from
+.I SOURCE
+to
+.IR DEST .
+Original tags in
+.I DEST
+will be silently overwritten.
 .TP
-.B sy | sync
-Synchronize v1 and v2 tags values.
+.BR sy " | " sync
+Synchronize v1 and v2 tags values. A target version shall be specified.
+Empty values in a source tag do not replace conforming values in a target tag.
+If you do not need values from the target tag, remove it beforehand using
+.B rm
+action.
 .TP
-.B rm | delete
+.BR rm " | " delete
 Delete tags.
 .br
 .SH OPTIONS
 .TP
-.BI -1 "[1|2|3|e]
-Perform the action on v1 tags only. If the minor version is not specified,
-the scope of the action is any v1 tag.
+.BI \-1 "[1|2|3|e]
+Perform the action on v1 tags only. The optional parameter is a minor version.
+If the minor version is not specified, the scope of the action is any v1 tag.
 .TP
-.BI -2 "[2|3|4]
-Perform the action on v2 tags only. If the minor version is not specified,
-the scope of the action is any v2 tag.
+.BI \-2 "[2|3|4]
+Perform the action on v2 tags only. The optional parameter is a minor version.
+If the minor version is not specified, the scope of the action is any v2 tag.
 .TP
-.BI -E
+.BI \-E
 Expert mode. Some dangerous actions are allowed in this mode.
 .TP
-.BI -e "ENCODING
+.BI \-e "ENCODING
 .RS
 Force tag's data encoding.
 .RI The " ENCODING
-is a colon-separated list of codesets with the following order:
+is a colon\-separated list of codesets with the following order:
 .RS 7
 
-.B V1ENC:ISO-8859-1:UCS-2:UTF-16:UTF-16BE:UTF-8
+.B V1ENC:ISO\-8859\-1:UCS\-2:UTF\-16:UTF\-16BE:UTF\-8
 
 .RE
-It defines encoding mapping for v1 (V1ENC), v2.2 and v2.3 (ISO-8859-1, UCS-2),
-and v2.4 (ISO-8859-1, UTF-16, UTF-16BE, UTF-8) tags. If an element of the list
-is an empty string, default codeset value will be used (default codeset for
-V1ENC is ISO-8859-1).
-Incomplete list may be specified. If an incomplete list has a trailing colon,
-its last specified element value will be propagated to all subsequent omitted
-elements. Otherwise, omitted elements will have their default values.
+It defines an encoding mapping for v1 (V1ENC), v2.2 and v2.3 (ISO\-8859\-1,
+UCS\-2), and v2.4 (ISO\-8859\-1, UTF\-16, UTF\-16BE, UTF\-8) tags.
+If an element of the list is an empty string, the default codeset value will be
+used (the default codeset for V1ENC is ISO\-8859\-1).
+An incomplete list may be specified. If the incomplete list has a trailing
+colon, its last specified element value will be propagated to all subsequent
+omitted elements. Otherwise, omitted elements will have their default values.
 If whole
 .I ENCODING
-is omitted, V1ENC and ISO-8859-1 values will be taken from the
+is omitted, V1ENC and ISO\-8859\-1 values will be taken from the
 current locale codeset. This option does not affect output of
-.B -F
+.B \-F
 option. Note, with
 .BR modify " or " sync
-action this option results in non-standard tags.
+action this option leads to non\-standard tags.
 .RE
 .TP
-.BI -f " FORMAT
-Print tags using printf-like format string. Only useful with
-.B print
-action.
+.B \-\-no\-unsync
+Do not unsynchronize v2 tags when writing. By default, v2 tags are being
+unsynchronized.
 .TP
-.BI -F " FRAME|a|c|g|G|l|n|t|y
+\fB\-s\fR, \fB\-\-size \fISIZE
+A preferable size of v2 tag to be written. If the specified size is not enough
+to store whole tag, it will be ignored and whole tag will be written.
+.TP
+.B \-v
+Be verbose.
+.SH PRINT OPTIONS
+.TP
+.BI \-f " FORMAT
+Print tags using printf\-like format string.
+.TP
+.BI \-F " FRAME|a|c|g|G|l|n|t|y
 Dump specified tag's frame/field as a binary data. This option has
 a little sense for v1 tags, but it still can be used to retrieve
-raw tag's field value regardless current locale. Only useful with
-.B print
-action.
+raw tag's field value regardless current locale.
+.SH MODIFY OPTIONS
 .TP
-.B --no-unsync
-Do not unsynchronise v2 tag when writing. By default, v2 tags are being
-unsynchronised.
+\fB-t\fR, \fB--title \fITITLE
 .TP
-.B -v
-Be verbose.
+\fB-a\fR, \fB--artist \fIARTIST
+.TP
+\fB-l\fR, \fB--album \fIALBUM
+.TP
+\fB-g\fR, \fB--genre \fR{\fIGENRE_ID\fR[\fB:\fIGENRE_STRING\fR]|\fB:\fIGENRE_STRING\fR}
+.TP
+\fB-y\fR, \fB--year \fIYEAR
+.TP
+\fB-c\fR, \fB--comment \fICOMMENT
+.TP
+\fB-t\fR, \fB--speed \fISPEED
+.TP
+\fB--start-time \fIMMM:SS
+.TP
+\fB--end-time \fIMMM:SS
 .SH EXAMPLES
 Dump all ID3 tags:
 .IP
@@ -110,37 +149,39 @@ Dump all ID3 tags:
 .LP
 Dump any ID3v1 tag (enhanced, v1.3, v1.2, v1.1, v1.0):
 .IP
-.B id321 -1 best.mp3
+.B id321 \-1 best.mp3
 .LP
-Dump enhanced ID3v1 tag only (if there is a regular ID3v1 tag only,
+Dump an enhanced ID3v1 tag only (if there is a regular ID3v1 tag only,
 nothing will be dumped):
 .IP
-.B id321 -1e best.mp3
+.B id321 \-1e best.mp3
 .LP
 Print tags as a formatted string. As only one value for each field can
-be printed ID3v2 tag has higher priority when tag version is not
-specified and alias used. For ID3v2 tags you can specify the frame id
+be printed the ID3v2 tag has higher priority when a tag version is not
+specified and an alias used. For ID3v2 tags you can specify the frame id
 (e.g. %TIT2 for song title).
 .IP
-.B id321 -f """%n - %t""" best.mp3
+.B id321 \-f """%n \- %t""" best.mp3
 .LP
-Dump frame in binary format:
+Note that the frame name depends on the tag minor version. If you are not sure
+about exact minor version of the tag, use aliases instead.
+
+Dump the frame in a binary format:
 .IP
-.B id321 -F TIT2
+.B id321 \-F TIT2
 .LP
-Synchronize ID3v1 tag data with ID3v2 tag data. Original data will be
-lost even if there is no corresponding frame in ID3v2 tag. If minor
-version is specified and existent tag has another minor version, it
-will be converted to the specified one, otherwise existent minor
+Synchronize ID3v1 tag data with ID3v2 tag data. If a minor
+version is specified and the existent tag has another minor version, it
+will be converted to the specified one, otherwise the existent minor
 version will be preserved. If the file has no ID3v1 tag, it will be
-created having the specified minor version or ID3v1.3 by default.
+created having the specified minor version or 3 by default.
 .IP
-.B id321 sync -1 best.mp3
+.B id321 sync \-1 best.mp3
 .LP
 Synchronize ID3v2 tag data with ID3v1 tag data. The same as above.
-ID3v2.4 is default for ID3v2.
+4 is the default minor version for ID3v2.
 .IP
-.B id321 sync -2 best.mp3
+.B id321 sync \-2 best.mp3
 .LP
 Delete all ID3 tags:
 .IP
@@ -148,35 +189,63 @@ Delete all ID3 tags:
 .LP
 Delete any ID3v1 tag:
 .IP
-.B id321 rm -1 best.mp3
+.B id321 rm \-1 best.mp3
 .LP
-Delete ID3v1 enhanced tag. Notice that ID3v1 enhanced tag is considered
-as including ID3v1 tag, so general ID3v1 tag will be removed as well.
-In order to remove only enhanced part use `modify -11' command instead.
+Delete an enhanced tag. Notice that the enhanced tag is considered
+as including the ID3v1 tag, so general ID3v1 tag will be removed as well.
+In order to remove the enhanced part only use 
+.B modify \-11
+command instead.
 .IP
-.B id321 rm -1e best.mp3
+.B id321 rm \-1e best.mp3
 .LP
 Modify tag. If no version is specified and there are both v1 and v2 tags
 in the file, both v1 and v2 tags will be modified. If there is no tags
 in the file and no version is specified an ID3v2.4 tag will be prepended
-at the very begining of the file. If version is specified the only tag
-of this version will be modified. Moreover, if also minor version is
-specified existent tag will be converted to this minor version.
+at the very begining of the file. If a version is specified the only tag
+of this version will be modified. Moreover, if also a minor version is
+specified, the existent tag will be converted in order to have the specified
+minor version.
 .IP
-.B id321 modify -t Title -a Artist -n 1 -c Comment -y 2009 best.mp3
+.B id321 modify \-t Title \-a Artist \-n 1 \-c Comment \-y 2009 best.mp3
 .br
-.B id321 modify -24 -F TIT2=Title -F TPE1=Artist best.mp3
+.B id321 modify \-24 \-F TIT2=Title \-F TPE1=Artist best.mp3
 .LP
 Convert tag minor version.
 .IP
-.B id321 modify -11 best.mp3
+.B id321 modify \-11 best.mp3
 .LP
-Padding size of ID3v2 tag.
-
-If value has plus sign at the very begining it is relative value,
-i.e. the tag size will be minimal size needed to store all tag's data
-plus the specified value. Otherwise it is absolute value, i.e. the
-maximum size the tag can be. If it is insufficient to store all tag's
-data error message will be printed.
 .SH AUTHOR
 Written by Vitaly Sinilin <vs@kp4.ru>
+.LP
+.SH SEE ALSO
+ID3v1 tag specification:
+.IP
+http://mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm#MPEGTAG
+.LP
+ID3v1.2 tag informal standard:
+.IP
+http://www.birdcagesoft.com/ID3v12.txt
+.LP
+ID3v1.3 tag informal standard:
+.IP
+http://lib313.sourceforge.net/id3v13.html
+.LP
+Enhanced tag specification:
+.IP
+http://www.fortunecity.com/underworld/sonic/3/id3tag.html
+.LP
+ID3v2.2 tag informal standard:
+.IP
+http://www.id3.org/id3v2-00
+.LP
+ID3v2.3 tag informal standard:
+.IP
+http://www.id3.org/d3v2.3.0
+.LP
+ID3v2.4 tag informal standard:
+.IP
+http://www.id3.org/id3v2.4.0-structure
+.br
+http://www.id3.org/id3v2.4.0-frames
+.LP
