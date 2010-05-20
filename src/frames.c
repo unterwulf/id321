@@ -14,13 +14,13 @@
 #include "alias.h"        /* alias_to_frame_id() */
 #include "framelist.h"
 
-/*
- * Function:     get_id3v2_tag_encoding
+/***
+ * get_id3v2_tag_encoding - gets v2 tag frame encoding name by encoding byte
  *
- * Description:  gets v2.@minor tag frame encoding name by encoding byte @enc
+ * @minor - v2 tag minor version
+ * @enc - encoding byte
  *
- * Return value: On success, string with encoding name is returned.
- *               On error, NULL is returned.
+ * Returns string with encoding name on success, or NULL on error.
  */
 
 const char *get_id3v2_tag_encoding_name(unsigned minor, char enc)
@@ -60,7 +60,8 @@ const char *get_id3v2_tag_encoding_name(unsigned minor, char enc)
     return NULL;
 }
 
-static void print_str_frame(unsigned minor, const struct id3v2_frame *frame)
+static int get_str_frame(unsigned minor, const struct id3v2_frame *frame,
+                          wchar_t *buf, size_t size)
 {
     const char *from_enc = get_id3v2_tag_encoding_name(minor, frame->data[0]);
 
@@ -68,43 +69,53 @@ static void print_str_frame(unsigned minor, const struct id3v2_frame *frame)
     {
         print(OS_WARN, "invalid string encoding `%u' in frame `%.4s'",
                        frame->data[0], frame->id);
-        return;
+        return -EILSEQ;
     }
-    
-    lnprint(from_enc, frame->size - 1, frame->data + 1);
+
+    return iconvordie(WCHAR_CODESET, from_enc,
+                      frame->data + 1, frame->size - 1,
+                      (char *)buf, size*sizeof(wchar_t)) / sizeof(wchar_t);
 }
 
-static void print_v22_str_frame(const struct id3v2_frame *frame)
+static int get_v22_str_frame(const struct id3v2_frame *frame,
+                             wchar_t *buf, size_t size)
 {
-    print_str_frame(2, frame);
+    return get_str_frame(2, frame, buf, size);
 }
 
-static void print_v23_str_frame(const struct id3v2_frame *frame)
+static int get_v23_str_frame(const struct id3v2_frame *frame,
+                             wchar_t *buf, size_t size)
 {
-    print_str_frame(3, frame);
+    return get_str_frame(3, frame, buf, size);
 }
 
-static void print_v24_str_frame(const struct id3v2_frame *frame)
+static int get_v24_str_frame(const struct id3v2_frame *frame,
+                             wchar_t *buf, size_t size)
 {
-    print_str_frame(4, frame);
+    return get_str_frame(4, frame, buf, size);
 }
 
-static void print_url_frame(const struct id3v2_frame *frame)
+static int get_url_frame(const struct id3v2_frame *frame,
+                         wchar_t *buf, size_t size)
 {
-    size_t len = strnlen(frame->data, frame->size);
+    size_t slen = strnlen(frame->data, frame->size);
 
-    lnprint(g_config.enc_iso8859_1, len, frame->data);
+    return iconvordie(WCHAR_CODESET, g_config.enc_iso8859_1,
+                      frame->data, slen,
+                      (char *)buf, size*sizeof(wchar_t)) / sizeof(wchar_t);
 }
 
-static void print_hex_frame(const struct id3v2_frame *frame)
+static int get_hex_frame(const struct id3v2_frame *frame,
+                         wchar_t *buf, size_t size)
 {
+    return 0;
 }
 
 id3_frame_handler_table_t v22_frames[] =
 {
     { "BUF", NULL, "Recommended buffer size" },
     { "CNT", NULL, "Play counter" },
-    { "COM", print_v22_str_frame, "Comments" },
+    { "COM", get_v22_str_frame, "Comments" },
     { "CRA", NULL, "Audio encryption" },
     { "CRM", NULL, "Encrypted meta frame" },
     { "ETC", NULL, "Event timing codes" },
@@ -120,51 +131,51 @@ id3_frame_handler_table_t v22_frames[] =
     { "RVA", NULL, "Relative volume adjustment" },
     { "SLT", NULL, "Synchronized lyric/text" },
     { "STC", NULL, "Synced tempo codes" },
-    { "TAL", print_v22_str_frame, "Album/Movie/Show title" },
-    { "TBP", print_v22_str_frame, "BPM (Beats Per Minute)" },
-    { "TCM", print_v22_str_frame, "Composer" },
-    { "TCO", print_v22_str_frame, "Content type" },
-    { "TCR", print_v22_str_frame, "Copyright message" },
-    { "TDA", print_v22_str_frame, "Date" },
-    { "TDY", print_v22_str_frame, "Playlist delay" },
-    { "TEN", print_v22_str_frame, "Encoded by" },
-    { "TFT", print_v22_str_frame, "File type" },
-    { "TIM", print_v22_str_frame, "Time" },
-    { "TKE", print_v22_str_frame, "Initial key" },
-    { "TLA", print_v22_str_frame, "Language(s)" },
-    { "TLE", print_v22_str_frame, "Length" },
-    { "TMT", print_v22_str_frame, "Media type" },
-    { "TOA", print_v22_str_frame, "Original artist(s)/performer(s)" },
-    { "TOF", print_v22_str_frame, "Original filename" },
-    { "TOL", print_v22_str_frame, "Original Lyricist(s)/text writer(s)" },
-    { "TOR", print_v22_str_frame, "Original release year" },
-    { "TOT", print_v22_str_frame, "Original album/Movie/Show title" },
-    { "TP1", print_v22_str_frame, "Lead artist(s)/Lead performer(s)/Soloist(s)/Performing group" },
-    { "TP2", print_v22_str_frame, "Band/Orchestra/Accompaniment" },
-    { "TP3", print_v22_str_frame, "Conductor/Performer refinement" },
-    { "TP4", print_v22_str_frame, "Interpreted, remixed, or otherwise modified by" },
-    { "TPA", print_v22_str_frame, "Part of a set" },
-    { "TPB", print_v22_str_frame, "Publisher" },
-    { "TRC", print_v22_str_frame, "ISRC (International Standard Recording Code)" },
-    { "TRD", print_v22_str_frame, "Recording dates" },
-    { "TRK", print_v22_str_frame, "Track number/Position in set" },
-    { "TSI", print_v22_str_frame, "Size" },
-    { "TSS", print_v22_str_frame, "Software/hardware and settings used for encoding" },
-    { "TT1", print_v22_str_frame, "Content group description" },
-    { "TT2", print_v22_str_frame, "Title/Songname/Content description" },
-    { "TT3", print_v22_str_frame, "Subtitle/Description refinement" },
-    { "TXT", print_v22_str_frame, "Lyricist/text writer" },
-    { "TXX", print_v22_str_frame, "User defined text information frame" },
-    { "TYE", print_v22_str_frame, "Year" },
+    { "TAL", get_v22_str_frame, "Album/Movie/Show title" },
+    { "TBP", get_v22_str_frame, "BPM (Beats Per Minute)" },
+    { "TCM", get_v22_str_frame, "Composer" },
+    { "TCO", get_v22_str_frame, "Content type" },
+    { "TCR", get_v22_str_frame, "Copyright message" },
+    { "TDA", get_v22_str_frame, "Date" },
+    { "TDY", get_v22_str_frame, "Playlist delay" },
+    { "TEN", get_v22_str_frame, "Encoded by" },
+    { "TFT", get_v22_str_frame, "File type" },
+    { "TIM", get_v22_str_frame, "Time" },
+    { "TKE", get_v22_str_frame, "Initial key" },
+    { "TLA", get_v22_str_frame, "Language(s)" },
+    { "TLE", get_v22_str_frame, "Length" },
+    { "TMT", get_v22_str_frame, "Media type" },
+    { "TOA", get_v22_str_frame, "Original artist(s)/performer(s)" },
+    { "TOF", get_v22_str_frame, "Original filename" },
+    { "TOL", get_v22_str_frame, "Original Lyricist(s)/text writer(s)" },
+    { "TOR", get_v22_str_frame, "Original release year" },
+    { "TOT", get_v22_str_frame, "Original album/Movie/Show title" },
+    { "TP1", get_v22_str_frame, "Lead artist(s)/Lead performer(s)/Soloist(s)/Performing group" },
+    { "TP2", get_v22_str_frame, "Band/Orchestra/Accompaniment" },
+    { "TP3", get_v22_str_frame, "Conductor/Performer refinement" },
+    { "TP4", get_v22_str_frame, "Interpreted, remixed, or otherwise modified by" },
+    { "TPA", get_v22_str_frame, "Part of a set" },
+    { "TPB", get_v22_str_frame, "Publisher" },
+    { "TRC", get_v22_str_frame, "ISRC (International Standard Recording Code)" },
+    { "TRD", get_v22_str_frame, "Recording dates" },
+    { "TRK", get_v22_str_frame, "Track number/Position in set" },
+    { "TSI", get_v22_str_frame, "Size" },
+    { "TSS", get_v22_str_frame, "Software/hardware and settings used for encoding" },
+    { "TT1", get_v22_str_frame, "Content group description" },
+    { "TT2", get_v22_str_frame, "Title/Songname/Content description" },
+    { "TT3", get_v22_str_frame, "Subtitle/Description refinement" },
+    { "TXT", get_v22_str_frame, "Lyricist/text writer" },
+    { "TXX", get_v22_str_frame, "User defined text information frame" },
+    { "TYE", get_v22_str_frame, "Year" },
     { "UFI", NULL, "Unique file identifier" },
     { "ULT", NULL, "Unsychronized lyric/text transcription" },
-    { "WAF", print_url_frame, "Official audio file webpage" },
-    { "WAR", print_url_frame, "Official artist/performer webpage" },
-    { "WAS", print_url_frame, "Official audio source webpage" },
-    { "WCM", print_url_frame, "Commercial information" },
-    { "WCP", print_url_frame, "Copyright/Legal information" },
-    { "WPB", print_url_frame, "Publishers official webpage" },
-    { "WXX", print_url_frame, "User defined URL link frame" },
+    { "WAF", get_url_frame, "Official audio file webpage" },
+    { "WAR", get_url_frame, "Official artist/performer webpage" },
+    { "WAS", get_url_frame, "Official audio source webpage" },
+    { "WCM", get_url_frame, "Commercial information" },
+    { "WCP", get_url_frame, "Copyright/Legal information" },
+    { "WPB", get_url_frame, "Publishers official webpage" },
+    { "WXX", get_url_frame, "User defined URL link frame" },
     { NULL,  NULL,            NULL }
 };
 
@@ -172,14 +183,14 @@ id3_frame_handler_table_t v23_frames[] =
 {
     { "AENC", NULL, "Audio encryption" },
     { "APIC", NULL, "Attached picture" },
-    { "COMM", print_v23_str_frame, "Comments" },
+    { "COMM", get_v23_str_frame, "Comments" },
     { "COMR", NULL, "Commercial frame" },
     { "ENCR", NULL, "Encryption method registration" },
     { "EQUA", NULL, "Equalization" },
     { "ETCO", NULL, "Event timing codes" },
     { "GEOB", NULL, "General encapsulated object" },
     { "GRID", NULL, "Group identification registration" },
-    { "IPLS", print_v23_str_frame, "Involved people list" },
+    { "IPLS", get_v23_str_frame, "Involved people list" },
     { "LINK", NULL, "Linked information" },
     { "MCDI", NULL, "Music CD identifier" },
     { "MLLT", NULL, "MPEG location lookup table" },
@@ -193,56 +204,56 @@ id3_frame_handler_table_t v23_frames[] =
     { "RVRB", NULL, "Reverb" },
     { "SYLT", NULL, "Synchronized lyric/text" },
     { "SYTC", NULL, "Synchronized tempo codes" },
-    { "TALB", print_v23_str_frame, "Album/Movie/Show title" },
-    { "TBPM", print_v23_str_frame, "BPM (beats per minute)" },
-    { "TCOM", print_v23_str_frame, "Composer" },
-    { "TCON", print_v23_str_frame, "Content type" },
-    { "TCOP", print_v23_str_frame, "Copyright message" },
-    { "TDAT", print_v23_str_frame, "Date" },
-    { "TDLY", print_v23_str_frame, "Playlist delay" },
-    { "TENC", print_v23_str_frame, "Encoded by" },
-    { "TEXT", print_v23_str_frame, "Lyricist/Text writer" },
-    { "TFLT", print_v23_str_frame, "File type" },
-    { "TIME", print_v23_str_frame, "Time" },
-    { "TIT1", print_v23_str_frame, "Content group description" },
-    { "TIT2", print_v23_str_frame, "Title/songname/content description" },
-    { "TIT3", print_v23_str_frame, "Subtitle/Description refinement" },
-    { "TKEY", print_v23_str_frame, "Initial key" },
-    { "TLAN", print_v23_str_frame, "Language(s)" },
-    { "TLEN", print_v23_str_frame, "Length" },
-    { "TMED", print_v23_str_frame, "Media type" },
-    { "TOAL", print_v23_str_frame, "Original album/movie/show title" },
-    { "TOFN", print_v23_str_frame, "Original filename" },
-    { "TOLY", print_v23_str_frame, "Original lyricist(s)/text writer(s)" },
-    { "TOPE", print_v23_str_frame, "Original artist(s)/performer(s)" },
-    { "TORY", print_v23_str_frame, "Original release year" },
-    { "TOWN", print_v23_str_frame, "File owner/licensee" },
-    { "TPE1", print_v23_str_frame, "Lead performer(s)/Soloist(s)" },
-    { "TPE2", print_v23_str_frame, "Band/orchestra/accompaniment" },
-    { "TPE3", print_v23_str_frame, "Conductor/performer refinement" },
-    { "TPE4", print_v23_str_frame, "Interpreted, remixed, or otherwise modified by" },
-    { "TPOS", print_v23_str_frame, "Part of a set" },
-    { "TPUB", print_v23_str_frame, "Publisher" },
-    { "TRCK", print_v23_str_frame, "Track number/Position in set" },
-    { "TRDA", print_v23_str_frame, "Recording dates" },
-    { "TRSN", print_v23_str_frame, "Internet radio station name" },
-    { "TRSO", print_v23_str_frame, "Internet radio station owner" },
-    { "TSIZ", print_v23_str_frame, "Size" },
-    { "TSRC", print_v23_str_frame, "ISRC (international standard recording code)" },
-    { "TSSE", print_v23_str_frame, "Software/Hardware and settings used for encoding" },
-    { "TYER", print_v23_str_frame, "Year" },
-    { "TXXX", print_v23_str_frame, "User defined text information frame" },
+    { "TALB", get_v23_str_frame, "Album/Movie/Show title" },
+    { "TBPM", get_v23_str_frame, "BPM (beats per minute)" },
+    { "TCOM", get_v23_str_frame, "Composer" },
+    { "TCON", get_v23_str_frame, "Content type" },
+    { "TCOP", get_v23_str_frame, "Copyright message" },
+    { "TDAT", get_v23_str_frame, "Date" },
+    { "TDLY", get_v23_str_frame, "Playlist delay" },
+    { "TENC", get_v23_str_frame, "Encoded by" },
+    { "TEXT", get_v23_str_frame, "Lyricist/Text writer" },
+    { "TFLT", get_v23_str_frame, "File type" },
+    { "TIME", get_v23_str_frame, "Time" },
+    { "TIT1", get_v23_str_frame, "Content group description" },
+    { "TIT2", get_v23_str_frame, "Title/songname/content description" },
+    { "TIT3", get_v23_str_frame, "Subtitle/Description refinement" },
+    { "TKEY", get_v23_str_frame, "Initial key" },
+    { "TLAN", get_v23_str_frame, "Language(s)" },
+    { "TLEN", get_v23_str_frame, "Length" },
+    { "TMED", get_v23_str_frame, "Media type" },
+    { "TOAL", get_v23_str_frame, "Original album/movie/show title" },
+    { "TOFN", get_v23_str_frame, "Original filename" },
+    { "TOLY", get_v23_str_frame, "Original lyricist(s)/text writer(s)" },
+    { "TOPE", get_v23_str_frame, "Original artist(s)/performer(s)" },
+    { "TORY", get_v23_str_frame, "Original release year" },
+    { "TOWN", get_v23_str_frame, "File owner/licensee" },
+    { "TPE1", get_v23_str_frame, "Lead performer(s)/Soloist(s)" },
+    { "TPE2", get_v23_str_frame, "Band/orchestra/accompaniment" },
+    { "TPE3", get_v23_str_frame, "Conductor/performer refinement" },
+    { "TPE4", get_v23_str_frame, "Interpreted, remixed, or otherwise modified by" },
+    { "TPOS", get_v23_str_frame, "Part of a set" },
+    { "TPUB", get_v23_str_frame, "Publisher" },
+    { "TRCK", get_v23_str_frame, "Track number/Position in set" },
+    { "TRDA", get_v23_str_frame, "Recording dates" },
+    { "TRSN", get_v23_str_frame, "Internet radio station name" },
+    { "TRSO", get_v23_str_frame, "Internet radio station owner" },
+    { "TSIZ", get_v23_str_frame, "Size" },
+    { "TSRC", get_v23_str_frame, "ISRC (international standard recording code)" },
+    { "TSSE", get_v23_str_frame, "Software/Hardware and settings used for encoding" },
+    { "TYER", get_v23_str_frame, "Year" },
+    { "TXXX", get_v23_str_frame, "User defined text information frame" },
     { "UFID", NULL, "Unique file identifier" },
     { "USER", NULL, "Terms of use" },
     { "USLT", NULL, "Unsychronized lyric/text transcription" },
-    { "WCOM", print_url_frame, "Commercial information" },
-    { "WCOP", print_url_frame, "Copyright/Legal information" },
-    { "WOAF", print_url_frame, "Official audio file webpage" },
-    { "WOAR", print_url_frame, "Official artist/performer webpage" },
-    { "WOAS", print_url_frame, "Official audio source webpage" },
-    { "WORS", print_url_frame, "Official internet radio station homepage" },
-    { "WPAY", print_url_frame, "Payment" },
-    { "WPUB", print_url_frame, "Publishers official webpage" },
+    { "WCOM", get_url_frame, "Commercial information" },
+    { "WCOP", get_url_frame, "Copyright/Legal information" },
+    { "WOAF", get_url_frame, "Official audio file webpage" },
+    { "WOAR", get_url_frame, "Official artist/performer webpage" },
+    { "WOAS", get_url_frame, "Official audio source webpage" },
+    { "WORS", get_url_frame, "Official internet radio station homepage" },
+    { "WPAY", get_url_frame, "Payment" },
+    { "WPUB", get_url_frame, "Publishers official webpage" },
     { "WXXX", NULL, "User defined URL link frame" },
     { NULL,   NULL, NULL }
 };
@@ -273,69 +284,84 @@ id3_frame_handler_table_t v24_frames[] = {
     { "SIGN", NULL, "Signature frame" },
     { "SYLT", NULL, "Synchronised lyric/text" },
     { "SYTC", NULL, "Synchronised tempo codes" },
-    { "TALB", print_v24_str_frame, "Album/Movie/Show title" },
-    { "TBPM", print_v24_str_frame, "BPM (beats per minute)" },
-    { "TCOM", print_v24_str_frame, "Composer" },
-    { "TCON", print_v24_str_frame, "Content type" },
-    { "TCOP", print_v24_str_frame, "Copyright message" },
-    { "TDEN", print_v24_str_frame, "Encoding time" },
-    { "TDLY", print_v24_str_frame, "Playlist delay" },
-    { "TDOR", print_v24_str_frame, "Original release time" },
-    { "TDRC", print_v24_str_frame, "Recording time" },
-    { "TDRL", print_v24_str_frame, "Release time" },
-    { "TDTG", print_v24_str_frame, "Tagging time" },
-    { "TENC", print_v24_str_frame, "Encoded by" },
-    { "TEXT", print_v24_str_frame, "Lyricist/Text writer" },
-    { "TFLT", print_v24_str_frame, "File type" },
-    { "TIPL", print_v24_str_frame, "Involved people list" },
-    { "TIT1", print_v24_str_frame, "Content group description" },
-    { "TIT2", print_v24_str_frame, "Title/songname/content description" },
-    { "TIT3", print_v24_str_frame, "Subtitle/Description refinement" },
-    { "TKEY", print_v24_str_frame, "Initial key" },
-    { "TLAN", print_v24_str_frame, "Language(s)" },
-    { "TLEN", print_v24_str_frame, "Length" },
-    { "TMCL", print_v24_str_frame, "Musician credits list" },
-    { "TMED", print_v24_str_frame, "Media type" },
-    { "TMOO", print_v24_str_frame, "Mood" },
-    { "TOAL", print_v24_str_frame, "Original album/movie/show title" },
-    { "TOFN", print_v24_str_frame, "Original filename" },
-    { "TOLY", print_v24_str_frame, "Original lyricist(s)/text writer(s)" },
-    { "TOPE", print_v24_str_frame, "Original artist(s)/performer(s)" },
-    { "TOWN", print_v24_str_frame, "File owner/licensee" },
-    { "TPE1", print_v24_str_frame, "Lead performer(s)/Soloist(s)" },
-    { "TPE2", print_v24_str_frame, "Band/orchestra/accompaniment" },
-    { "TPE3", print_v24_str_frame, "Conductor/performer refinement" },
-    { "TPE4", print_v24_str_frame, "Interpreted, remixed, or otherwise modified by" },
-    { "TPOS", print_v24_str_frame, "Part of a set" },
-    { "TPRO", print_v24_str_frame, "Produced notice" },
-    { "TPUB", print_v24_str_frame, "Publisher" },
-    { "TRCK", print_v24_str_frame, "Track number/Position in set" },
-    { "TRSN", print_v24_str_frame, "Internet radio station name" },
-    { "TRSO", print_v24_str_frame, "Internet radio station owner" },
-    { "TSOA", print_v24_str_frame, "Album sort order" },
-    { "TSOP", print_v24_str_frame, "Performer sort order" },
-    { "TSOT", print_v24_str_frame, "Title sort order" },
-    { "TSRC", print_v24_str_frame, "ISRC (international standard recording code)" },
-    { "TSSE", print_v24_str_frame, "Software/Hardware and settings used for encoding" },
-    { "TSST", print_v24_str_frame, "Set subtitle" },
-    { "TXXX", print_v24_str_frame, "User defined text information frame" },
+    { "TALB", get_v24_str_frame, "Album/Movie/Show title" },
+    { "TBPM", get_v24_str_frame, "BPM (beats per minute)" },
+    { "TCOM", get_v24_str_frame, "Composer" },
+    { "TCON", get_v24_str_frame, "Content type" },
+    { "TCOP", get_v24_str_frame, "Copyright message" },
+    { "TDEN", get_v24_str_frame, "Encoding time" },
+    { "TDLY", get_v24_str_frame, "Playlist delay" },
+    { "TDOR", get_v24_str_frame, "Original release time" },
+    { "TDRC", get_v24_str_frame, "Recording time" },
+    { "TDRL", get_v24_str_frame, "Release time" },
+    { "TDTG", get_v24_str_frame, "Tagging time" },
+    { "TENC", get_v24_str_frame, "Encoded by" },
+    { "TEXT", get_v24_str_frame, "Lyricist/Text writer" },
+    { "TFLT", get_v24_str_frame, "File type" },
+    { "TIPL", get_v24_str_frame, "Involved people list" },
+    { "TIT1", get_v24_str_frame, "Content group description" },
+    { "TIT2", get_v24_str_frame, "Title/songname/content description" },
+    { "TIT3", get_v24_str_frame, "Subtitle/Description refinement" },
+    { "TKEY", get_v24_str_frame, "Initial key" },
+    { "TLAN", get_v24_str_frame, "Language(s)" },
+    { "TLEN", get_v24_str_frame, "Length" },
+    { "TMCL", get_v24_str_frame, "Musician credits list" },
+    { "TMED", get_v24_str_frame, "Media type" },
+    { "TMOO", get_v24_str_frame, "Mood" },
+    { "TOAL", get_v24_str_frame, "Original album/movie/show title" },
+    { "TOFN", get_v24_str_frame, "Original filename" },
+    { "TOLY", get_v24_str_frame, "Original lyricist(s)/text writer(s)" },
+    { "TOPE", get_v24_str_frame, "Original artist(s)/performer(s)" },
+    { "TOWN", get_v24_str_frame, "File owner/licensee" },
+    { "TPE1", get_v24_str_frame, "Lead performer(s)/Soloist(s)" },
+    { "TPE2", get_v24_str_frame, "Band/orchestra/accompaniment" },
+    { "TPE3", get_v24_str_frame, "Conductor/performer refinement" },
+    { "TPE4", get_v24_str_frame, "Interpreted, remixed, or otherwise modified by" },
+    { "TPOS", get_v24_str_frame, "Part of a set" },
+    { "TPRO", get_v24_str_frame, "Produced notice" },
+    { "TPUB", get_v24_str_frame, "Publisher" },
+    { "TRCK", get_v24_str_frame, "Track number/Position in set" },
+    { "TRSN", get_v24_str_frame, "Internet radio station name" },
+    { "TRSO", get_v24_str_frame, "Internet radio station owner" },
+    { "TSOA", get_v24_str_frame, "Album sort order" },
+    { "TSOP", get_v24_str_frame, "Performer sort order" },
+    { "TSOT", get_v24_str_frame, "Title sort order" },
+    { "TSRC", get_v24_str_frame, "ISRC (international standard recording code)" },
+    { "TSSE", get_v24_str_frame, "Software/Hardware and settings used for encoding" },
+    { "TSST", get_v24_str_frame, "Set subtitle" },
+    { "TXXX", get_v24_str_frame, "User defined text information frame" },
     { "UFID", NULL, "Unique file identifier" },
     { "USER", NULL, "Terms of use" },
     { "USLT", NULL, "Unsynchronised lyric/text transcription" },
-    { "WCOM", print_url_frame, "Commercial information" },
-    { "WCOP", print_url_frame, "Copyright/Legal information" },
-    { "WOAF", print_url_frame, "Official audio file webpage" },
-    { "WOAR", print_url_frame, "Official artist/performer webpage" },
-    { "WOAS", print_url_frame, "Official audio source webpage" },
-    { "WORS", print_url_frame, "Official Internet radio station homepage" },
-    { "WPAY", print_url_frame, "Payment" },
-    { "WPUB", print_url_frame, "Publishers official webpage" },
-    { "WXXX", print_url_frame, "User defined URL link frame" },
+    { "WCOM", get_url_frame, "Commercial information" },
+    { "WCOP", get_url_frame, "Copyright/Legal information" },
+    { "WOAF", get_url_frame, "Official audio file webpage" },
+    { "WOAR", get_url_frame, "Official artist/performer webpage" },
+    { "WOAS", get_url_frame, "Official audio source webpage" },
+    { "WORS", get_url_frame, "Official Internet radio station homepage" },
+    { "WPAY", get_url_frame, "Payment" },
+    { "WPUB", get_url_frame, "Publishers official webpage" },
+    { "WXXX", get_url_frame, "User defined URL link frame" },
     { NULL,   NULL,            NULL }
 };
 
-void print_frame_data(const struct id3v2_tag *tag,
-                      const struct id3v2_frame *frame)
+/***
+ * get_frame_data - get frame payload as wcs
+ *
+ * @tag - tag which frame belongs to
+ * @frame - frame
+ * @buf - output buffer
+ * @size - output buffer size
+ *
+ * Returns -EINVAL if the tag has unsupported version,
+ *         -ENOSYS if parser for the frame is not implemented,
+ *         -EILSEQ on parser error,
+ *         or non-negative number of wchars which would be written if @buf was
+ *         large enough.
+ */
+
+int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
+                   wchar_t *buf, size_t size)
 {
     unsigned i;
     id3_frame_handler_table_t *table = NULL;
@@ -346,20 +372,21 @@ void print_frame_data(const struct id3v2_tag *tag,
         case 2: table = v22_frames; break;
         case 3: table = v23_frames; break;
         case 4: table = v24_frames; break;
-        default: return; /* no need to report error here */
+        default: return -EINVAL; /* no need to report error here */
     }
 
     for (i = 0; table[i].id != NULL; i++)
     {
         if (!memcmp(table[i].id, frame->id, idlen))
         {
-            if (table[i].print)
-                table[i].print(frame);
+            if (table[i].get_data)
+                return table[i].get_data(frame, buf, size);
             else
-                printf("[no parser for this frame implemented yet]");
-            break;
+                return -ENOSYS;
         }
     }
+
+    return -EINVAL;
 }
 
 int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,

@@ -1,3 +1,4 @@
+#define _ISOC99_SOURCE /* vswprintf() */
 #include <unistd.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -103,14 +104,21 @@ iconv_t xiconv_open(const char *tocode, const char *fromcode)
     return cd;
 }
 
-/*
- * Function:     iconvordie
+/***
+ * iconvordie
  *
- * Description:  Converts @src buffer of size @srcsize from @fromcode to
- *               @tocode and places result into @dst buffer of size @dstsize.
+ * @tocode - destination character encoding
+ * @fromcode - source character encoding
+ * @src - source buffer
+ * @srcsize - source buffer size
+ * @dst - destination buffer
+ * @dstsize - destination buffer size
  *
- * Return value: number of bytes written is returned
+ * Converts @src buffer of size @srcsize from @fromcode to @tocode and places
+ * result into @dst buffer of size @dstsize.
  *
+ * Returns number of bytes which would have been written if @dst had been large
+ * enough.
  */
 
 ssize_t iconvordie(const char *tocode, const char *fromcode,
@@ -120,11 +128,21 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
     iconv_t      cd;
     const char  *in = src;
     char        *out = dst;
+    size_t       reqsize = dstsize; /* required size of @dst */
     size_t       inbytesleft = srcsize;
     size_t       outbytesleft = dstsize;
     size_t       ret;
+    char         dummy[BUFSIZ];
 
     cd = xiconv_open(tocode, fromcode);
+
+    if (!out && dstsize == 0)
+    {
+        /* we need to estimate required buffer size if no buffer passed,
+         * so use dummy buffer to let iconv do its work */
+        out = dummy;
+        outbytesleft = reqsize = dstsize = sizeof(dummy);
+    }
 
     do {
         errno = 0;
@@ -142,13 +160,21 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
                     continue;
 
                 case E2BIG:
+                    /* we need to estimate required buffer size if the passed
+                     * buffer is not large enough, so use dummy buffer to let
+                     * iconv finish its work */
+                    out = dummy;
+                    outbytesleft = sizeof(dummy);
+                    reqsize += outbytesleft;
                     break;
             }
         }
     } while (inbytesleft > 0);
 
+    reqsize -= outbytesleft;
     iconv_close(cd);
-    return out - dst;
+
+    return reqsize;
 }
 
 /*

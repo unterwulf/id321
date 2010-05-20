@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <unistd.h>
+#include <wchar.h>
 
 #ifdef _FRAME_LIST
 #define PRIVATE(type, name) type name
@@ -94,12 +95,13 @@ struct id3v2_tag
     struct id3v2_frame      frame_head;
 };
 
-typedef void (* id3_frame_handler_t)(const struct id3v2_frame *);
+typedef int (* id3_frame_handler_t)(const struct id3v2_frame *, wchar_t *buf,
+                                    size_t size);
 
 typedef struct id3_frame_handler_table_t
 {
     const char          *id;
-    id3_frame_handler_t  print;
+    id3_frame_handler_t  get_data;
     const char          *desc;
 } id3_frame_handler_table_t;
 

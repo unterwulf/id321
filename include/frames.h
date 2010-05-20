@@ -7,8 +7,9 @@
 
 const char *get_id3v2_tag_encoding_name(unsigned minor, char enc);
 
-void print_frame_data(const struct id3v2_tag *tag,
-                      const struct id3v2_frame *frame);
+int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
+                   wchar_t *buf, size_t size);
+
 void unpack_frame_data(struct id3v2_frame *frame);
 void pack_frame_data(struct id3v2_frame *frame);
 

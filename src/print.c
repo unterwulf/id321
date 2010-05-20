@@ -1,7 +1,10 @@
+#define _ISOC99_SOURCE    /* swprintf() */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <wchar.h>
 #include "alias.h"
 #include "common.h"
 #include "params.h"
@@ -10,10 +13,14 @@
 #include "id3v1e_speed.h"
 #include "id3v2.h"
 #include "output.h"
-#include "frames.h"       /* print_frame_data() */
+#include "printfmt.h"
+#include "frames.h"       /* get_frame_data() */
 #include "framelist.h"
 
-static void print_id3v1_data(char alias, const struct id3v1_tag *tag)
+extern void printwcsf(const struct print_fmt *pf, wchar_t *wcs);
+
+static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
+                             struct print_fmt *pfmt)
 {
     size_t size;
     const void *buf = alias_to_v1_data(alias, tag, &size);
@@ -22,15 +29,44 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag)
         return;
 
     if (size == 1)
-        printf("%u", *(const uint8_t *)buf);
+    {
+        wchar_t int_wcs[4];
+
+        swprintf(int_wcs, sizeof(int_wcs)/sizeof(wchar_t),
+                 L"%u", *(const uint8_t *)buf);
+        pfmt->flags |= FL_INT;
+        printwcsf(pfmt, int_wcs);
+    }
     else
-        lprint(g_config.enc_v1, (const char *)buf);
+    {
+        wchar_t *wcs;
+        int ret = iconv_alloc(WCHAR_CODESET, g_config.enc_v1, buf, strlen(buf),
+                              (void *)&wcs, NULL);
+
+        if (ret != 0)
+            return;
+
+        printwcsf(pfmt, wcs);
+        free(wcs);
+    }
 }
 
 static void print_id3v1_tag_field(const char *name, const char *value)
 {
+    wchar_t *wcs = NULL;
+    int ret = iconv_alloc(WCHAR_CODESET, g_config.enc_v1, value, strlen(value),
+                          (void *)&wcs, NULL);
+
     printf("%s: ", name);
-    lprint(g_config.enc_v1, value);
+
+    if (ret == 0)
+    {
+        printwcsf(NULL, wcs);
+        free(wcs);
+    }
+    else
+        printf("[ENOMEM]");
+
     printf("\n");
 }
 
@@ -68,9 +104,28 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
          frame != &tag->frame_head;
          frame = frame->next)
     {
+        int len = get_frame_data(tag, frame, NULL, 0);
+
         printf("%.*s: ", ID3V2_FRAME_ID_MAX_SIZE, frame->id);
-        print_frame_data(tag, frame);
-        printf("\n");
+
+        if (len > 0)
+        {
+            wchar_t *wcs = malloc(sizeof(wcs)*(len+1));
+            if (wcs)
+            {
+                get_frame_data(tag, frame, wcs, len);
+                wcs[len] = L'\0';
+                printwcsf(NULL, wcs);
+                printf("\n");
+                free(wcs);
+            }
+            else
+                printf("[ENOMEM]\n");
+        }
+        else if (len == -ENOSYS)
+            printf("[parser for this frame is not implemented yet]\n");
+        else if (len == -EINVAL)
+            printf("[unknown frame]\n");
     }
 }
 
@@ -88,10 +143,14 @@ static int is_valid_frame_id_str(const char *str, size_t len)
 static void print_tag(const struct id3v1_tag *tag1,
                       const struct id3v2_tag *tag2)
 {
-    const char *curpos;
-    const char *newpos;
+    const char *pos;
+    const char *lastspec = NULL;
     size_t len;
     struct id3v2_frame *frame;
+    enum {
+        st_escape, st_normal, st_flags, st_width, st_prec, st_spec
+    } state = st_normal;
+    struct print_fmt pfmt = { };
 
     if (!g_config.fmtstr)
         return;
@@ -99,53 +158,152 @@ static void print_tag(const struct id3v1_tag *tag1,
     /* let's parse format string */
     len = strlen(g_config.fmtstr);
 
-    for (curpos = g_config.fmtstr, frame = NULL;
-         (newpos = strchr(curpos, '%')) && (newpos + 1 < g_config.fmtstr + len);
-         curpos = newpos)
+    for (pos = g_config.fmtstr, frame = NULL;
+         pos < g_config.fmtstr + len;
+         pos++)
     {
-        if (newpos > curpos)
-            fwrite(curpos, newpos - curpos, 1, stdout);
-
-        if (is_valid_alias(newpos[1]))
+        switch (state)
         {
-            if (tag2)
-            {
-                const char *frame_id; 
-                frame_id = alias_to_frame_id(newpos[1], tag2->header.version);
-                frame = peek_frame(&tag2->frame_head, frame_id);
-            }
+            case st_normal:
+                switch (*pos)
+                {
+                    case '\\': state = st_escape; break;
+                    case '%':  memset(&pfmt, '\0', sizeof(pfmt));
+                               lastspec = pos;
+                               state = st_flags; break;
+                    default:   putchar(*pos);
+                }
+                break;
 
-            if (!frame && tag1)
-                print_id3v1_data(newpos[1], tag1);
+            case st_escape:
+                switch (*pos)
+                {
+                    case 'n': putchar('\n'); break;
+                    case 'r': putchar('\r'); break;
+                    case 't': putchar('\t'); break;
+                    default:  putchar('\\'); pos--; /* process it again */
+                }
+                state = st_normal;
+                break;
 
-            newpos += 2;
-        }
-        else if (tag2 && (newpos + 3 < g_config.fmtstr + len)
-                 && is_valid_frame_id_str(newpos + 1, 3))
-        {
-            char   local_frame_id[ID3V2_FRAME_ID_MAX_SIZE] = "\0";
-            size_t frame_id_len = ((newpos + 4 < g_config.fmtstr + len)
-                                   && is_valid_frame_id_str(newpos + 4, 1))
-                                  ? 4 : 3;
+            case st_flags:
+                switch (*pos)
+                {
+                    case '0': pfmt.flags |= FL_ZERO; break;
+                    case '-': pfmt.flags |= FL_LEFT; break;
+                    default:  pos--; state = st_width;
+                }
+                break;
 
-            strncpy(local_frame_id, newpos + 1, frame_id_len);
-            newpos += frame_id_len + 1;
-            frame = peek_frame(&tag2->frame_head, local_frame_id);
-        }
-        else /* invalid format sequence, so just print it as is */
-        {
-            fwrite(newpos, 2, 1, stdout);
-            newpos += 2;
-        }
+            case st_width:
+                if (isdigit(*pos))
+                    pfmt.width = 10*pfmt.width + (*pos - '0');
+                else if (*pos == '.')
+                {
+                    state = st_prec;
+                    pfmt.flags |= FL_PREC;
+                }
+                else
+                {
+                    state = st_spec;
+                    pos--; /* process it again */
+                }
+                break;
 
-        if (frame != NULL)
-        {
-            print_frame_data(tag2, frame);
-            frame = NULL;
+            case st_prec:
+                if (isdigit(*pos))
+                    pfmt.precision = 10*pfmt.precision + (*pos - '0');
+                else
+                {
+                    state = st_spec;
+                    pos--; /* process it again */
+                }
+                break;
+
+            case st_spec:
+                if (*pos == 'n')
+                {
+                    wchar_t trackno_wcs[4];
+                    int trackno = -1;
+
+                    if (tag2)
+                        trackno = get_id3v2_tag_trackno(tag2);
+
+                    if (trackno == -1 && tag1 && tag1->track != 0)
+                        trackno = tag1->track;
+
+                    if (trackno != -1)
+                    {
+                        swprintf(trackno_wcs,
+                            sizeof(trackno_wcs)/sizeof(wchar_t),
+                            L"%u", trackno);
+
+                        pfmt.flags |= FL_INT;
+                        printwcsf(&pfmt, trackno_wcs);
+                    }
+                }
+                else if (is_valid_alias(*pos))
+                {
+                    if (tag2)
+                    {
+                        const char *frame_id; 
+                        frame_id = alias_to_frame_id(*pos,
+                                                     tag2->header.version);
+                        frame = peek_frame(&tag2->frame_head, frame_id);
+                    }
+
+                    if (!frame && tag1)
+                        print_id3v1_data(*pos, tag1, &pfmt);
+                }
+                else if (tag2 && (pos + 2 < g_config.fmtstr + len)
+                         && is_valid_frame_id_str(pos, 3))
+                {
+                    char   local_frame_id[ID3V2_FRAME_ID_MAX_SIZE] = "\0";
+                    size_t frame_id_len = ((pos + 3 < g_config.fmtstr + len)
+                                           && is_valid_frame_id_str(pos + 3, 1))
+                                          ? 4 : 3;
+
+                    strncpy(local_frame_id, pos, frame_id_len);
+                    pos += frame_id_len - 1;
+                    frame = peek_frame(&tag2->frame_head, local_frame_id);
+                }
+                else /* invalid format spec, so just print it as is */
+                    printf("%.*s", pos - lastspec + 1, lastspec);
+
+                if (frame)
+                {
+                    int len = get_frame_data(tag2, frame, NULL, 0);
+
+                    if (len > 0)
+                    {
+                        wchar_t *wcs = malloc(sizeof(wchar_t)*(len+1));
+
+                        if (wcs)
+                        {
+                            get_frame_data(tag2, frame, wcs, len);
+                            wcs[len] = L'\0';
+                            printwcsf(&pfmt, wcs);
+                            free(wcs);
+                        }
+                        else
+                            printwcsf(&pfmt, L"ENOMEM"); 
+                    }
+
+                    frame = NULL;
+                }
+                state = st_normal;
+                break;
         }
     }
 
-    printf("%s\n", curpos);
+    /* flush incomplete state */
+
+    switch (state)
+    {
+        case st_escape: putchar('\\'); break;
+        case st_normal: break;
+        default:        printf("%s", lastspec); break;
+    }
 }
 
 int print_tags(const char *filename)
