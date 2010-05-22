@@ -102,7 +102,7 @@ int init_config(int *argc, char ***argv)
     long      long_val;
     int       ret;
     uint16_t  debug_mask = OS_ERROR | OS_WARN;
-    char     *enc_str = NULL;
+    char     *enc_str = getenv("ID321_ENCODING");
 
     static char v2_def_encs[] =
     {
@@ -299,8 +299,11 @@ int init_config(int *argc, char ***argv)
 
             case 'e':
                 if (!optarg)
+                {
                     g_config.enc_v1 = g_config.enc_iso8859_1 =
                         locale_encoding();
+                    enc_str = NULL;
+                }
                 else
                     enc_str = optarg;
                 break;
