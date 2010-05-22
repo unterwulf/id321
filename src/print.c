@@ -122,10 +122,14 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
             else
                 printf("[ENOMEM]\n");
         }
+        else if (len == 0)
+            printf("\n");
         else if (len == -ENOSYS)
             printf("[parser for this frame is not implemented yet]\n");
         else if (len == -EINVAL)
             printf("[unknown frame]\n");
+        else if (len == -EILSEQ)
+            printf("[malformed frame]\n");
     }
 }
 
@@ -319,7 +323,7 @@ int print_tags(const char *filename)
 
     if (!tag1 && !tag2)
     {
-        print(OS_WARN, "no ID3 tags in `%s'", filename);
+        print(OS_WARN, "%s: file has no ID3 tags", filename);
         return 0;
     }
 
@@ -335,7 +339,8 @@ int print_tags(const char *filename)
         if (frame)
             fwrite(frame->data, frame->size, 1, stdout);
         else
-            print(OS_ERROR, "there is no ID3v2 `%s' frame", g_config.frame);
+            print(OS_ERROR, "%s: file has no ID3v2 frame '%s'",
+                  filename, g_config.frame);
     }
     else
     {

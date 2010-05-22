@@ -6,28 +6,26 @@
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
 .B id321
-.RB [ pr [ int "]]
-.RI [ OPTIONS ]
+.RB [ pr [ int ]]
+.RI [ OPTION... ]
 [\fB\-f \fIFORMAT\fR|\fB\-F \fIFRAME\fR]
 .IR FILE ...
 .br
 .B id321
 .BR mo [ dify ]
-.RI [ OPTIONS ]
-.IR FILE ...
+[\fIOPTION\fR...] \fIFILE\fR...
 .br
 .B id321
-.RB { cp | copy "} [" \-1 | \-2 "] [" \-v ]
-.I SOURCE DEST
+.RB { cp | copy }
+[\fIOPTION\fR...] \fISOURCE DEST
 .br
 .B id321
-.BR sy [ nc "] {" \-1 | \-2 "}
-.RI [ OPTIONS ]
-.IR FILE ...
+.BR sy [ nc ]
+{\fB\-1\fR|\fB\-2\fR} [\fIOPTION\fR...] \fIFILE\fR...
 .br
 .B id321
-.RB { rm | delete "} [" \-1 | \-2 "] [" \-v "] [" \-E ]
-.IR FILE ...
+.RB { rm | delete }
+[\fIOPTION\fR...] \fIFILE\fR...
 .br
 .SH DESCRIPTION
 .B id321
@@ -50,12 +48,16 @@ Copy tags from
 .I SOURCE
 to
 .IR DEST .
-Original tags in
+Original tags of matching version in
 .I DEST
-will be silently overwritten.
+will be silently overwritten. If
+.I DEST
+has a tag of version which is absent in
+.IR SOURCE ,
+it will be preserved.
 .TP
 .BR sy " | " sync
-Synchronize v1 and v2 tags values. A target version shall be specified.
+Synchronise v1 and v2 tags values. A target version shall be specified.
 Empty values in a source tag do not replace conforming values in a target tag.
 If you do not need values from the target tag, remove it beforehand using
 .B rm
@@ -64,7 +66,7 @@ action.
 .BR rm " | " delete
 Delete tags.
 .br
-.SH OPTIONS
+.SH COMMON OPTIONS
 .TP
 .BI \-1 "[1|2|3|e]
 Perform the action on v1 tags only. The optional parameter is a minor version.
@@ -104,14 +106,6 @@ option. Note, with
 action this option leads to non\-standard tags.
 .RE
 .TP
-.B \-\-no\-unsync
-Do not unsynchronize v2 tags when writing. By default, v2 tags are being
-unsynchronized.
-.TP
-\fB\-s\fR, \fB\-\-size \fISIZE
-A preferable size of v2 tag to be written. If the specified size is not enough
-to store whole tag, it will be ignored and whole tag will be written.
-.TP
 .B \-v
 Be verbose.
 .SH PRINT OPTIONS
@@ -119,10 +113,8 @@ Be verbose.
 .BI \-f " FORMAT
 Print tags using printf\-like format string.
 .TP
-.BI \-F " FRAME|a|c|g|G|l|n|t|y
-Dump specified tag's frame/field as a binary data. This option has
-a little sense for v1 tags, but it still can be used to retrieve
-raw tag's field value regardless current locale.
+.BI \-F " FRAME
+Dump specified ID3v2 tag's frame as a binary data.
 .SH MODIFY OPTIONS
 .TP
 \fB-t\fR, \fB--title \fITITLE
@@ -142,6 +134,18 @@ raw tag's field value regardless current locale.
 \fB--start-time \fIMMM:SS
 .TP
 \fB--end-time \fIMMM:SS
+.SH WRITE OPTIONS
+The following options are applicable for all actions which write tags,
+namely
+.BR modify ", " sync " and " copy .
+.TP
+.B \-\-no\-unsync
+Do not unsynchronise v2 tags when writing. By default, v2 tags are being
+unsynchronised.
+.TP
+\fB\-s\fR, \fB\-\-size \fISIZE
+A preferable size of v2 tag to be written. If the specified size is not enough
+to store whole tag, it will be ignored and whole tag will be written.
 .SH EXAMPLES
 Dump all ID3 tags:
 .IP
@@ -166,11 +170,11 @@ specified and an alias used. For ID3v2 tags you can specify the frame id
 Note that the frame name depends on the tag minor version. If you are not sure
 about exact minor version of the tag, use aliases instead.
 
-Dump the frame in a binary format:
+Dump the frame TIT2 in a binary format:
 .IP
 .B id321 \-F TIT2
 .LP
-Synchronize ID3v1 tag data with ID3v2 tag data. If a minor
+Synchronise ID3v1 tag data with ID3v2 tag data. If a minor
 version is specified and the existent tag has another minor version, it
 will be converted to the specified one, otherwise the existent minor
 version will be preserved. If the file has no ID3v1 tag, it will be
@@ -178,7 +182,7 @@ created having the specified minor version or 3 by default.
 .IP
 .B id321 sync \-1 best.mp3
 .LP
-Synchronize ID3v2 tag data with ID3v1 tag data. The same as above.
+Synchronise ID3v2 tag data with ID3v1 tag data. The same as above.
 4 is the default minor version for ID3v2.
 .IP
 .B id321 sync \-2 best.mp3
@@ -208,13 +212,13 @@ specified, the existent tag will be converted in order to have the specified
 minor version.
 .IP
 .B id321 modify \-t Title \-a Artist \-n 1 \-c Comment \-y 2009 best.mp3
-.br
-.B id321 modify \-24 \-F TIT2=Title \-F TPE1=Artist best.mp3
 .LP
 Convert tag minor version.
 .IP
 .B id321 modify \-11 best.mp3
 .LP
+.SH BUGS
+Conversion between minor versions of ID3v2 is not implemented yet.
 .SH AUTHOR
 Written by Vitaly Sinilin <vs@kp4.ru>
 .LP

@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,7 +17,7 @@ struct file *open_file(const char *filename, mode_t mode)
     
     if (file->fd == -1)
     {
-        print(OS_ERROR, "unable to open source file `%s'", filename);
+        print(OS_ERROR, "%s: %s", filename, strerror(errno));
         free(file);
         return NULL;
     }

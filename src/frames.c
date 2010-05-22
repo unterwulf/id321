@@ -67,7 +67,7 @@ static int get_str_frame(unsigned minor, const struct id3v2_frame *frame,
 
     if (!from_enc)
     {
-        print(OS_WARN, "invalid string encoding `%u' in frame `%.4s'",
+        print(OS_WARN, "invalid string encoding '%u' in frame '%.4s'",
                        frame->data[0], frame->id);
         return -EILSEQ;
     }

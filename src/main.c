@@ -14,11 +14,6 @@ extern int copy_tags(int argc, char **argv);
 
 char *program_name;
 
-static void usage()
-{
-    printf("usage: %s {[pr]|mo|rm|sy} [-1|-2] [ARGS] FILE...\n", program_name);
-}
-
 int main(int argc, char **argv)
 {
     static int (* const actions[])(const char *) =
@@ -39,7 +34,7 @@ int main(int argc, char **argv)
 
     if (argc == 0)
     {
-        usage();
+        print(OS_ERROR, "no input files");
         return EXIT_SUCCESS;
     }
 

@@ -16,6 +16,8 @@
 #define OPT_END_TIME   3
 #define OPT_NO_UNSYNC  4
 
+extern void help();
+
 /*
  * Function:     setup_encodings
  *
@@ -35,14 +37,19 @@ static int setup_encodings(char *enc_str)
     char *pos = enc_str;
     char *new_pos;
     iconv_t cd;
-    static char const **enc[] =
+    static struct 
     {
-        &g_config.enc_v1,
-        &g_config.enc_iso8859_1,
-        &g_config.enc_ucs2,
-        &g_config.enc_utf16,
-        &g_config.enc_utf16be,
-        &g_config.enc_utf8,
+        const char  *desc;
+        const char **name;
+    }
+    enc[] =
+    {
+        { "ID3v1",      &g_config.enc_v1 },
+        { "ISO-8859-1", &g_config.enc_iso8859_1 },
+        { "UCS-2",      &g_config.enc_ucs2 },
+        { "UTF-16",     &g_config.enc_utf16 },
+        { "UTF-16BE",   &g_config.enc_utf16be },
+        { "UTF-8",      &g_config.enc_utf8 },
     };
 
     for_each (i, enc)
@@ -52,10 +59,10 @@ static int setup_encodings(char *enc_str)
         if (!new_pos)
         {
             if (strlen(pos) != 0)
-                (*enc)[i] = pos;
+                *(enc[i].name) = pos;
             else if (cur && strlen(cur) != 0)
             {
-                (*enc)[i] = cur;
+                *(enc[i].name) = cur;
                 continue;
             }
             break;
@@ -64,20 +71,22 @@ static int setup_encodings(char *enc_str)
         {
             *new_pos = '\0';
             if (strlen(pos) != 0)
-                (*enc)[i] = pos;
+                *(enc[i].name) = pos;
             cur = pos;
             pos = new_pos + 1;
         }
     }
 
+    print(OS_INFO, "Encoding mapping:");
+
     for_each (i, enc)
     {
-        print(OS_DEBUG, "%u: %s", i, (*enc)[i]);
-        cd = iconv_open((*enc)[i], (*enc)[i]);
+        print(OS_INFO, "   %s=%s", enc[i].desc, *(enc[i].name));
+        cd = iconv_open(*(enc[i].name), *(enc[i].name));
         if (cd == (iconv_t)-1)
         {
-            print(OS_ERROR, "codeset `%s' is not supported by your iconv",
-                  (*enc)[i]);
+            print(OS_ERROR, "codeset '%s' is not supported by your iconv",
+                  *(enc[i].name));
             return -1;
         }
         else
@@ -104,12 +113,17 @@ int init_config(int *argc, char ***argv)
 
     static const struct option long_opts[] =
     {
+        { "expert",     0, 0, 'E' },
+        { "frame",      1, 0, 'F' },
+        { "help",       0, 0, 'h' },
+        { "verbose",    0, 0, 'v' },
         { "title",      1, 0, 't' },
         { "artist",     1, 0, 'a' },
         { "album",      1, 0, 'l' },
         { "year",       1, 0, 'y' },
         { "comment",    1, 0, 'c' },
         { "genre",      1, 0, 'g' },
+        { "track",      1, 0, 'n' },
         { "size",       1, 0, 's' },
         { "no-unsync",  0, 0, OPT_NO_UNSYNC },
         { "speed",      1, 0, OPT_SPEED },
@@ -162,11 +176,15 @@ int init_config(int *argc, char ***argv)
     }
 
     while ((c = getopt_long(*argc, *argv,
-                       "1::2::e::vEf:F:a:c:g:l:n:t:y:s:",
-                       long_opts, NULL)) != -1)
+                            "1::2::e::vhEf:F:a:c:g:l:n:t:y:s:",
+                            long_opts, NULL)) != -1)
     {
         switch (c)
         {
+            case 'h':
+                help();
+                exit(EXIT_SUCCESS);
+
             case '1':
                 g_config.ver.major = 1;
                 if (optarg != 0)
@@ -190,7 +208,7 @@ int init_config(int *argc, char ***argv)
 
                     if (g_config.ver.minor == NOT_SET)
                     {
-                        print(OS_ERROR, "unknown minor version of id3v1: %s",
+                        print(OS_ERROR, "unknown minor version of ID3v1: %s",
                               optarg);
                         return -1;
                     }
@@ -215,7 +233,7 @@ int init_config(int *argc, char ***argv)
 
                     if (g_config.ver.minor == NOT_SET)
                     {
-                        print(OS_ERROR, "unknown minor version of id3v2: %s",
+                        print(OS_ERROR, "unknown minor version of ID3v2: %s",
                               optarg);
                         return -1;
                     }
@@ -287,7 +305,7 @@ int init_config(int *argc, char ***argv)
                     enc_str = optarg;
                 break;
 
-            case 'v': debug_mask |= OS_INFO | OS_DEBUG; break;
+            case 'v': debug_mask = (debug_mask << 1) | 1; break;
             case 'f': g_config.fmtstr = optarg; break;
             case 'E': g_config.options |= ID321_OPT_EXPERT; break;
             case OPT_NO_UNSYNC: g_config.options |= ID321_OPT_NO_UNSYNC; break;
@@ -307,6 +325,9 @@ int init_config(int *argc, char ***argv)
                 }
                 g_config.options |= ID321_OPT_SET_SPEED;
                 break;
+
+            case '?':
+                return -1;
         }
     }
 
@@ -340,7 +361,7 @@ int init_config(int *argc, char ***argv)
         if ((g_config.options & ID321_OPT_SET_SPEED)
             && !(is_valid_id3v1e_speed_id(g_config.speed)))
         {
-            print(OS_ERROR, "non standard speed value `%u' specified; "
+            print(OS_ERROR, "non standard speed value '%u' specified; "
                   "if you are sure what are you doing use -E to force this",
                   g_config.speed);
             return -1;
@@ -349,7 +370,7 @@ int init_config(int *argc, char ***argv)
         if ((g_config.options & ID321_OPT_SET_GENRE_ID)
             && g_config.genre_id > ID3V1_GENRE_ID_MAX)
         {
-            print(OS_ERROR, "non standard genre id `%u' specified; "
+            print(OS_ERROR, "non standard genre id '%u' specified; "
                   "if you are sure what are you doing use -E to force this",
                   g_config.genre_id);
             return -1;

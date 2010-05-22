@@ -79,7 +79,7 @@ static int get_id3v2_tag(struct file *file, unsigned minor,
 
     lseek(file->fd, 0, SEEK_SET);
 
-    /* read id3v2 tag if available */
+    /* read ID3v2 tag if available */
     if (read_id3v2_header(file->fd, &(*tag)->header) != -1)
     {
         if (minor == (*tag)->header.version || minor == NOT_SET)
@@ -93,15 +93,15 @@ static int get_id3v2_tag(struct file *file, unsigned minor,
         }
         else
         {
-            print(OS_DEBUG, "file has id3v2.%d tag, ignore it",
-                            (*tag)->header.version);
+            print(OS_INFO, "file has ID3v2.%d tag, ignore it",
+                           (*tag)->header.version);
             free_id3v2_tag(*tag);
             *tag = NULL;
         }
     }
     else
     {
-        /* check presence of an appended id3v2 tag */
+        /* TODO: check presence of an appended ID3v2 tag */
         free_id3v2_tag(*tag);
         *tag = NULL;
     }

@@ -218,7 +218,7 @@ int sync_tags(const char *filename)
     {
         if (!tag2)
         {
-            print(OS_ERROR, "no ID3v2 tag in `%s' to synchronize with",
+            print(OS_ERROR, "%s: file has no ID3v2 tag to synchronize with",
                             filename);
             ret = -1;
         }
@@ -248,7 +248,7 @@ int sync_tags(const char *filename)
     {
         if (!tag1)
         {
-            print(OS_ERROR, "no ID3v1 tag in `%s' to synchronize with",
+            print(OS_ERROR, "%s: file has no ID3v1 tag to synchronize with",
                             filename);
             ret = -1;
         }
@@ -267,7 +267,7 @@ int sync_tags(const char *filename)
             else if (g_config.ver.minor != tag2->header.version &&
                      g_config.ver.minor != NOT_SET)
             {
-                print(OS_ERROR, "present ID3v2 tag in `%s' has a different "
+                print(OS_ERROR, "%s: present ID3v2 tag has a different "
                                 "minor version, conversion is not implemented "
                                 "yet, skipping this file", filename);
 

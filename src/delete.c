@@ -24,8 +24,7 @@ int delete_tags(const char *filename)
         ret = crop_id3v2_tag(file, g_config.ver.minor);
 
     if (file->crop.start == 0 && file->crop.end == file->size)
-        print(OS_DEBUG, "there are no specified tags found in file `%s'",
-                        filename);
+        print(OS_WARN, "%s: no specified tags found", filename);
     else
     {
         print(OS_DEBUG, "start: %d, end: %d, size: %d",

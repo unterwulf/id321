@@ -13,4 +13,5 @@ id321_SOURCES = main.c print.c delete.c modify.c sync.c copy.c \
                 framelist.c frames.c \
                 id3v1.c id3v1_genres.c id3v1e_speed.c id3v2.c id3v23.c \
                 printwcsf.c output.c \
-                synchsafe.c common.c alias.c
+                synchsafe.c common.c alias.c \
+                help.c

@@ -96,7 +96,7 @@ iconv_t xiconv_open(const char *tocode, const char *fromcode)
 
     if (cd == (iconv_t)-1)
     {
-        print(OS_ERROR, "unable to convert string from `%s' to `%s'",
+        print(OS_ERROR, "unable to convert string from '%s' to '%s'",
                 fromcode, tocode);
         exit(EXIT_FAILURE);
     }
@@ -208,8 +208,6 @@ int iconv_alloc(const char *tocode, const char *fromcode,
     size_t       inbytesleft = srcsize;
     size_t       outbytesleft;
     size_t       ret;
-
-    print(OS_DEBUG, "to: %s, from: %s!", tocode, fromcode);
 
     cd = xiconv_open(tocode, fromcode);
 

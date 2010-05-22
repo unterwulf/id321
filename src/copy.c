@@ -3,7 +3,7 @@
 #include "id3v2.h"
 #include "params.h"
 #include "output.h"
-#include "common.h" /* NOT_SET, get_tags(), write_tags() */
+#include "common.h" /* get_tags(), write_tags() */
 
 int copy_tags(int argc, char **argv)
 {
@@ -21,6 +21,12 @@ int copy_tags(int argc, char **argv)
 
     if (ret != 0)
         return EXIT_FAILURE;
+
+    if (!tag1 && !tag2)
+    {
+        print(OS_ERROR, "%s: no specified tags in the source file", argv[0]);
+        return EXIT_FAILURE;
+    }
 
     ret = write_tags(argv[1], tag1, tag2);
 

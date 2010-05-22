@@ -19,7 +19,7 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
 
         if (!memcmp(buf, ID3V1_HEADER, ID3V1_HEADER_SIZE))
         {
-            print(OS_DEBUG, "id3v1 tag found");
+            print(OS_INFO, "ID3v1 tag found");
             file->crop.end -= ID3V1_TAG_SIZE;
         }
         else
@@ -36,7 +36,7 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
 
         if (!memcmp(buf, ID3V1E_HEADER, ID3V1E_HEADER_SIZE))
         {
-            print(OS_DEBUG, "id3v1 enhanced tag found");
+            print(OS_INFO, "ID3v1 enhanced tag found");
             file->crop.end -= ID3V1E_TAG_SIZE - ID3V1_TAG_SIZE;
             return 0;
         }
@@ -52,7 +52,7 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
 
         if (!memcmp(buf, ID3V12_HEADER, ID3V12_HEADER_SIZE))
         {
-            print(OS_DEBUG, "id3v1.2 tag found");
+            print(OS_INFO, "ID3v1.2 tag found");
             file->crop.end -= ID3V12_TAG_SIZE - ID3V1_TAG_SIZE;
         }
     }
@@ -73,7 +73,7 @@ int crop_id3v2_tag(struct file *file, unsigned minor)
         {
             if (minor == hdr.version || minor == NOT_SET)
             {
-                print(OS_DEBUG, "id3v2 tag found");
+                print(OS_INFO, "ID3v2.%u tag found", hdr.version);
                 file->crop.start += ID3V2_HEADER_LEN + hdr.size;
                 if (hdr.version == 4 && hdr.flags & ID3V2_FLAG_FOOTER_PRESENT)
                     file->crop.start += ID3V2_FOOTER_LEN;
@@ -90,7 +90,7 @@ int crop_id3v2_tag(struct file *file, unsigned minor)
         {
             if (minor == hdr.version || minor == NOT_SET)
             {
-                print(OS_DEBUG, "id3v2 appended tag found");
+                print(OS_INFO, "ID3v2.%u appended tag found", hdr.version);
                 file->crop.end -=
                     ID3V2_HEADER_LEN + ID3V2_FOOTER_LEN + hdr.size;
             }

@@ -37,6 +37,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
     {
         lseek(file->fd, 0, SEEK_SET);
         write(file->fd, tag2buf, tag2size);
+        print(OS_INFO, "ID3v2.%u tag written", tag2->header.version);
     }
 
     if (tag1)
@@ -47,6 +48,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
         lseek(file->fd, file->crop.end, SEEK_SET);
         write(file->fd, buf, size);
         ftruncate(file->fd, file->crop.end + size);
+        print(OS_INFO, "ID3v1.%u tag written", tag1->version);
     }
     else if (file->crop.end < file->size)
     {

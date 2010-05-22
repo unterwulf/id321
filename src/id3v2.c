@@ -34,13 +34,6 @@ void free_id3v2_tag(struct id3v2_tag *tag)
     free(tag);
 }
 
-static const char *map_v22_frame_to_v24(const char *v22frame)
-{
-    /* TODO: */
-
-    return NULL;
-}
-
 static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
                                      const unsigned char *buf,
                                      unsigned char version)
@@ -113,7 +106,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
 
         if (frame->size > bytes_left)
         {
-            print(OS_ERROR, "frame `%.4s' size is %d, but space left is %d",
+            print(OS_ERROR, "frame '%.4s' size is %d, but space left is %d",
                   frame->id, frame->size, bytes_left);
             free(frame);
             return -1;
@@ -302,7 +295,7 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
 
         if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
         {
-            print(OS_ERROR, "i don't know id3v2.%d", hdr->version);
+            print(OS_ERROR, "i don't know ID3v2.%d", hdr->version);
             return -1;
         }
 
@@ -323,7 +316,7 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
 
     if (ret == 0 && hdr->version != 4)
     {
-        print(OS_WARN, "id3v2 appended tag is not allowed for id3v2.%d",
+        print(OS_WARN, "appended tag is not allowed for ID3v2.%d",
                        hdr->version);
         return -1;
     }
