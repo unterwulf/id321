@@ -1,6 +1,5 @@
 #include <inttypes.h>
 #include <unistd.h>
-#include "common.h"
 #include "synchsafe.h"
 
 ss_uint32_t unsync_uint32(uint32_t src)
@@ -105,27 +104,4 @@ size_t deunsync_buf(char *buf, size_t size, int pre)
     }
 
     return wr_pos - buf;
-}
-
-ssize_t read_unsync(int fd, void *buf, size_t size, int *pre)
-{
-    size_t realsize;
-    ssize_t bytes_read = 0;
-
-    while (readordie(fd, buf, size) == (ssize_t)size)
-    {
-        bytes_read += size;
-        realsize = deunsync_buf(buf, size, *pre);
-        *pre = (((uint8_t *)buf)[size - 1] == 0xFF);
-
-        if (realsize < size)
-        {
-            size -= realsize;
-            buf += realsize;
-        }
-        else
-            return bytes_read;
-    }
-
-    return -1;
 }

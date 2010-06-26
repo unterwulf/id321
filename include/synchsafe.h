@@ -12,6 +12,4 @@ ss_uint32_t unsync_uint32(uint32_t src);
 size_t deunsync_buf(char *buf, size_t size, int pre);
 size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize);
 
-ssize_t read_unsync(int fd, void *buf, size_t size, int *pre);
-
 #endif /* SYNCHSAFE_H */

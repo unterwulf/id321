@@ -61,6 +61,29 @@ static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
     return 0;
 }
 
+static ssize_t read_unsync(int fd, void *buf, size_t size, int *pre)
+{
+    size_t realsize;
+    ssize_t bytes_read = 0;
+
+    while (readordie(fd, buf, size) == (ssize_t)size)
+    {
+        bytes_read += size;
+        realsize = deunsync_buf(buf, size, *pre);
+        *pre = (((uint8_t *)buf)[size - 1] == 0xFF);
+
+        if (realsize < size)
+        {
+            size -= realsize;
+            buf += realsize;
+        }
+        else
+            return bytes_read;
+    }
+
+    return -1;
+}
+
 int read_id3v2_frames(int fd, struct id3v2_tag *tag)
 {
     uint8_t buf[ID3V2_FRAME_HEADER_SIZE];
