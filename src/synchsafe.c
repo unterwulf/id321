@@ -91,7 +91,7 @@ size_t deunsync_buf(char *buf, size_t size, int pre)
     char   *wr_pos = buf;
 
     /* checking precondition */
-    if (pre == 1 && buf[0] == '\0')
+    if (pre == 1 && size >= 1 && buf[0] == '\0')
         pos++;
 
     for (; pos < size; pos++)
