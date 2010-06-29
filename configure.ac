@@ -11,7 +11,11 @@ AC_HEADER_STDC
 AC_CHECK_LIB(313, lib313_unpack)
 AC_CHECK_LIB(313, lib313_pack)
 
+AC_C_BIGENDIAN
+
 AM_CONDITIONAL([STATIC_LIB313], [test "x$ac_cv_lib_313_lib313_unpack" = xno])
+AC_DEFINE([UCS2_WORKAROUND], [1],
+          [Define it 0 if your iconv() uses BOM in UCS-2 encoding.])
 AC_CONFIG_SUBDIRS([lib313])
 
 AC_OUTPUT([Makefile src/Makefile])

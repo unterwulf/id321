@@ -3,9 +3,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
-#include <iconv.h>
 #include "params.h"
 #include "output.h"
+#include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
 #include "id3v1e_speed.h"
@@ -36,7 +36,7 @@ static int setup_encodings(char *enc_str)
     char *cur = NULL;
     char *pos = enc_str;
     char *new_pos;
-    iconv_t cd;
+    id321_iconv_t cd;
     static struct 
     {
         const char  *desc;
@@ -82,15 +82,15 @@ static int setup_encodings(char *enc_str)
     for_each (i, enc)
     {
         print(OS_INFO, "   %s=%s", enc[i].desc, *(enc[i].name));
-        cd = iconv_open(*(enc[i].name), *(enc[i].name));
-        if (cd == (iconv_t)-1)
+        cd = id321_iconv_open(*(enc[i].name), *(enc[i].name));
+        if (cd == (id321_iconv_t)-1)
         {
             print(OS_ERROR, "codeset '%s' is not supported by your iconv",
                   *(enc[i].name));
             return -1;
         }
         else
-            iconv_close(cd);
+            id321_iconv_close(cd);
     }
 
     return 0;

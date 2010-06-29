@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iconv.h>
 #include <wchar.h>
 #include "common.h"
+#include "iconv_wrap.h"
 #include "output.h"
 
 /*
@@ -90,11 +90,11 @@ int str_to_long(const char *nptr, long *ret)
     return (*nptr != '\0' && *endptr == '\0') ? 0 : -1;
 }
 
-iconv_t xiconv_open(const char *tocode, const char *fromcode)
+id321_iconv_t xiconv_open(const char *tocode, const char *fromcode)
 {
-    iconv_t cd = iconv_open(tocode, fromcode);
+    id321_iconv_t cd = id321_iconv_open(tocode, fromcode);
 
-    if (cd == (iconv_t)-1)
+    if (cd == (id321_iconv_t)-1)
     {
         print(OS_ERROR, "unable to convert string from '%s' to '%s'",
                 fromcode, tocode);
@@ -125,7 +125,7 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
                    const char *src, size_t srcsize,
                    char *dst, size_t dstsize)
 {
-    iconv_t      cd;
+    id321_iconv_t cd;
     const char  *in = src;
     char        *out = dst;
     size_t       reqsize = dstsize; /* required size of @dst */
@@ -146,7 +146,7 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
 
     do {
         errno = 0;
-        ret = iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
+        ret = id321_iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
 
         if (ret == (size_t)(-1))
         {
@@ -172,7 +172,7 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
     } while (inbytesleft > 0);
 
     reqsize -= outbytesleft;
-    iconv_close(cd);
+    id321_iconv_close(cd);
 
     return reqsize;
 }
@@ -198,7 +198,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
                 const char *src, size_t srcsize,
                 char **dst, size_t *dstsize)
 {
-    iconv_t      cd;
+    id321_iconv_t cd;
     char        *buf;
     char        *tmp;
     char        *out;
@@ -221,7 +221,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
 
     do {
         errno = 0;
-        ret = iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
+        ret = id321_iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
 
         if (ret == (size_t)(-1))
         {
@@ -275,7 +275,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
         out += sizeof(wchar_t);
     }
 
-    iconv_close(cd);
+    id321_iconv_close(cd);
     *dst = buf;
     if (dstsize)
         *dstsize = out - buf;
@@ -283,7 +283,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
 
 oom:
 
-    iconv_close(cd);
+    id321_iconv_close(cd);
     return -1;
 }
 
