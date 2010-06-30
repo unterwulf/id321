@@ -1,12 +1,12 @@
-#include <inttypes.h>
-#include <unistd.h>
-#include "synchsafe.h"
+#include <inttypes.h>   /* uint32_t */
+#include <stddef.h>     /* size_t */
+#include "synchsafe.h"  /* ss_uint32_t */
 
 ss_uint32_t unsync_uint32(uint32_t src)
 {
     ss_uint32_t res;
 
-    /* The unsyncronisation scheme is the following:
+    /* The unsynchronisation scheme is the following:
      *
      * pos: 76543210 76543210 76543210 76543210
      * src: FEDCBAzy xwvutsrq ponmlkji hgfedcba
@@ -25,7 +25,7 @@ uint32_t deunsync_uint32(ss_uint32_t src)
 {
     uint32_t res;
 
-    /* The deunsyncronisation scheme is the following:
+    /* The deunsynchronisation scheme is the following:
      *
      * pos: 76543210 76543210 76543210 76543210
      * src: 0BAzyxwv 0utsrqpo 0nmlkjih 0gfedcba
@@ -40,18 +40,17 @@ uint32_t deunsync_uint32(ss_uint32_t src)
     return res;
 }
 
-/*
- * Function:     unsync_buf
+/***
+ * unsync_buf - unsynchronise buffer
  *
- * Description:  Unsynchronises buffer src of size srcsize and write the result
- *               to the buffer dst of size dstsize
+ * The function unsynchronises the buffer @src of size @srcsize and writes
+ * a result to the buffer @dst of size @dstsize. It may be called with
+ * @dstsize == 0 to estimate the necessary destination buffer size.
  *
- * Return value: size of unsynchronised buffer, if it is greater than
- *               dstsize the buffer was truncated
- *
- * Notes:        May be called with dstsize == 0 to estimate required
- *               destination buffer size
+ * Returns the size of the unsynchronised buffer, if it is greater than
+ * @dstsize the value in @dst is truncated.
  */
+
 size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
 {
     size_t pos;
@@ -87,8 +86,8 @@ size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
 
 size_t deunsync_buf(char *buf, size_t size, int pre)
 {
-    size_t  pos = 0;
-    char   *wr_pos = buf;
+    size_t pos = 0;
+    char *wr_pos = buf;
 
     /* checking precondition */
     if (pre == 1 && size >= 1 && buf[0] == '\0')

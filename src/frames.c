@@ -1,11 +1,11 @@
 #define _GNU_SOURCE       /* strnlen() */
-#include <stdlib.h>
-#include <stdio.h>        /* snprintf() */
+#include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
+#include <stdio.h>        /* snprintf() */
+#include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
-#include <errno.h>
-#include <assert.h>
 #include "id3v1_genres.h"
 #include "id3v2.h"
 #include "output.h"
@@ -13,6 +13,7 @@
 #include "common.h"
 #include "alias.h"        /* alias_to_frame_id() */
 #include "framelist.h"
+#include "frm_comm.h"
 
 /***
  * get_id3v2_tag_encoding - gets v2 tag frame encoding name by encoding byte
@@ -54,26 +55,128 @@ const char *get_id3v2_tag_encoding_name(unsigned minor, char enc)
             break;
 
         default:
-            assert(1);
+            assert(0);
     }
 
     return NULL;
 }
 
-static int get_str_frame(unsigned minor, const struct id3v2_frame *frame,
+char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name)
+{
+    if (!strcasecmp(enc_name, g_config.enc_iso8859_1))
+    {
+        switch (minor)
+        {
+            case 2: return ID3V22_STR_ISO88591;
+            case 3: return ID3V23_STR_ISO88591;
+            case 4: return ID3V24_STR_ISO88591;
+        }
+    }
+    else if (!strcasecmp(enc_name, g_config.enc_ucs2))
+    {
+        switch (minor)
+        {
+            case 2: return ID3V22_STR_UCS2;
+            case 3: return ID3V23_STR_UCS2;
+        }
+    }
+    else if (!strcasecmp(enc_name, g_config.enc_utf16))
+    {
+        switch (minor)
+        {
+            case 4: return ID3V24_STR_UTF16;
+        }
+    }
+    else if (!strcasecmp(enc_name, g_config.enc_utf16be))
+    {
+        switch (minor)
+        {
+            case 4: return ID3V24_STR_UTF16BE;
+        }
+    }
+    else if (!strcasecmp(enc_name, g_config.enc_utf8))
+    {
+        switch (minor)
+        {
+            case 4: return ID3V24_STR_UTF8;
+        }
+    }
+
+    return ID3V2_UNSUPPORTED_ENCODING;
+}
+
+static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
                           wchar_t *buf, size_t size)
 {
-    const char *from_enc = get_id3v2_tag_encoding_name(minor, frame->data[0]);
+    size_t reqsize;
+    struct id3v2_frm_comm *comm;
+    int ret;
+
+    ret = unpack_id3v2_frm_comm(minor, frame, &comm);
+
+    if (ret != 0)
+        return ret;
+
+    /* reserve six extra chars for " []: " and null-terminator */
+    reqsize = (comm->desc ? wcslen(comm->desc) : 0) +
+              (comm->text ? wcslen(comm->text) : 0) + ID3V2_LANG_HDR_SIZE + 6;
+
+    if (reqsize <= size)
+    {
+        wchar_t lang[ID3V2_LANG_HDR_SIZE] = { };
+
+        iconvordie(WCHAR_CODESET, "ISO-8859-1",
+                   comm->lang, ID3V2_LANG_HDR_SIZE,
+                   (char *)lang, sizeof(lang)*sizeof(lang[0]));
+
+        swprintf(buf, size, L"%ls%ls[%.*ls]: %ls",
+                 comm->desc ? comm->desc : L"",
+                 comm->desc && comm->desc[0] ? L" " : L"",
+                 ID3V2_LANG_HDR_SIZE, lang, comm->text ? comm->text : L"");
+    }
+
+    free_id3v2_frm_comm(comm);
+    return reqsize;
+}
+
+static int get_v22_comm_frame(const struct id3v2_frame *frame,
+                              wchar_t *buf, size_t size)
+{
+    return get_comm_frame(2, frame, buf, size);
+}
+
+static int get_v23_comm_frame(const struct id3v2_frame *frame,
+                              wchar_t *buf, size_t size)
+{
+    return get_comm_frame(3, frame, buf, size);
+}
+
+static int get_v24_comm_frame(const struct id3v2_frame *frame,
+                              wchar_t *buf, size_t size)
+{
+    return get_comm_frame(4, frame, buf, size);
+}
+
+static int get_str_frame(unsigned minor, const struct id3v2_frame *frame,
+                         wchar_t *buf, size_t size)
+{
+    const char *from_enc;
+
+    if (frame->size < 1)
+        return -EILSEQ;
+
+    from_enc = get_id3v2_tag_encoding_name(minor, frame->data[0]);
 
     if (!from_enc)
     {
-        print(OS_WARN, "invalid string encoding '%u' in frame '%.4s'",
-                       frame->data[0], frame->id);
+        print(OS_WARN, "invalid string encoding 0x%.2X in frame '%.4s'",
+                       (unsigned char)frame->data[0], frame->id);
         return -EILSEQ;
     }
 
     return iconvordie(WCHAR_CODESET, from_enc,
-                      frame->data + 1, frame->size - 1,
+                      frame->data + ID3V2_ENC_HDR_SIZE,
+                      frame->size - ID3V2_ENC_HDR_SIZE,
                       (char *)buf, size*sizeof(wchar_t)) / sizeof(wchar_t);
 }
 
@@ -115,7 +218,7 @@ id3_frame_handler_table_t v22_frames[] =
 {
     { "BUF", NULL, "Recommended buffer size" },
     { "CNT", NULL, "Play counter" },
-    { "COM", get_v22_str_frame, "Comments" },
+    { "COM", get_v22_comm_frame, "Comments" },
     { "CRA", NULL, "Audio encryption" },
     { "CRM", NULL, "Encrypted meta frame" },
     { "ETC", NULL, "Event timing codes" },
@@ -183,7 +286,7 @@ id3_frame_handler_table_t v23_frames[] =
 {
     { "AENC", NULL, "Audio encryption" },
     { "APIC", NULL, "Attached picture" },
-    { "COMM", get_v23_str_frame, "Comments" },
+    { "COMM", get_v23_comm_frame, "Comments" },
     { "COMR", NULL, "Commercial frame" },
     { "ENCR", NULL, "Encryption method registration" },
     { "EQUA", NULL, "Equalization" },
@@ -262,7 +365,7 @@ id3_frame_handler_table_t v24_frames[] = {
     { "AENC", NULL, "Audio encryption" },
     { "APIC", NULL, "Attached picture" },
     { "ASPI", NULL, "Audio seek point index" },
-    { "COMM", NULL, "Comments" },
+    { "COMM", get_v24_comm_frame, "Comments" },
     { "COMR", NULL, "Commercial frame" },
     { "ENCR", NULL, "Encryption method registration" },
     { "EQU2", NULL, "Equalisation (2)" },
@@ -389,47 +492,63 @@ int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
     return -EINVAL;
 }
 
-int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
-                                char frame_enc_byte, char *data, size_t size)
+int update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
+                                        char frame_enc_byte,
+                                        char *data, size_t size)
 {
-    size_t              frame_size = size + 1;
-    char               *frame_data = malloc(frame_size);
-    struct id3v2_frame *frame;
+    size_t frame_size = size + 1;
+    char *frame_data = malloc(frame_size);
 
     if (!frame_data)
-        return -1;
+        return -ENOMEM;
 
     frame_data[0] = frame_enc_byte;
     memcpy(frame_data + 1, data, frame_size - 1);
-
-    frame = peek_frame(&tag->frame_head, frame_id);
-
-    if (!frame)
-    {
-        frame = calloc(1, sizeof(struct id3v2_frame));
-
-        if (!frame)
-        {
-            free(frame_data);
-            return -1;
-        }
-
-        strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
-        append_frame(&tag->frame_head, frame);
-    }
-    else
-        free(frame->data);
-
+    free(frame->data);
     frame->size = frame_size;
     frame->data = frame_data;
 
     return 0;
 }
 
+int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
+                                char frame_enc_byte, char *data, size_t size)
+{
+    struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
+    int ret = 0;
+
+    if (frame)
+    {
+        ret = update_id3v2_tag_text_frame_payload(
+                  frame, frame_enc_byte, data, size);
+    }
+    else
+    {
+        frame = calloc(1, sizeof(struct id3v2_frame));
+
+        if (!frame)
+            return -ENOMEM;
+
+        ret = update_id3v2_tag_text_frame_payload(
+                  frame, frame_enc_byte, data, size);
+
+        if (ret == 0)
+        {
+            strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
+            append_frame(&tag->frame_head, frame);
+        }
+        else
+            free_frame(frame);
+    }
+
+    return ret;
+}
+
 int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
                         wchar_t *genre_wcs)
 {
-    const char *frame_id = alias_to_frame_id('g', tag->header.version);
+    const struct alias *al = get_alias('g');
+    const char *frame_id;
     wchar_t    *wdata;
     int         wsize;
     char       *frame_data;
@@ -438,7 +557,8 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
     const char *frame_enc_name;
     int         ret;
 
-    assert(frame_id);
+    assert(al);
+    frame_id = alias_to_frame_id(al, tag->header.version); 
 
     if (genre_id != ID3V1_UNKNOWN_GENRE)
     {
@@ -449,27 +569,28 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
         {
             case 4:
                 wsize = swprintf_alloc(&wdata, L"%u%lc%ls",
-                                       genre_id, L'\0', genre_wcs) -
-                        (genre_wcs[0] == L'\0');
+                                       genre_id, L'\0', genre_wcs);
+                
+                if (wsize > 0 && genre_wcs[0] == L'\0')
+                    wsize--; /* no need to have the separator */
                 break;
 
             default:
             case 2:
             case 3:
-                wsize = swprintf_alloc(&wdata, L"(%u)%ls",
-                                       genre_id, genre_wcs);
+                wsize = swprintf_alloc(&wdata, L"(%u)%ls", genre_id, genre_wcs);
         }
 
         if (wsize < 0)
-            return -1;
+            return wsize;
     }
-    else if (genre_wcs && genre_wcs[0] != L'\0')
+    else if (!IS_EMPTY_WCS(genre_wcs))
     {
         wdata = genre_wcs;
         wsize = wcslen(genre_wcs);
     }
     else
-        return 0;
+        return -EINVAL;
 
     frame_enc_byte = g_config.v2_def_encs[tag->header.version];
     frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
@@ -481,10 +602,11 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
                       (char *)wdata, wsize*sizeof(wchar_t),
                       &frame_data, &frame_size);
 
-    free(wdata);
+    if (wdata != genre_wcs)
+        free(wdata);
 
     if (ret != 0)
-        return -1;
+        return ret;
 
     ret = update_id3v2_tag_text_frame(tag, frame_id, frame_enc_byte,
                                       frame_data, frame_size);
@@ -494,91 +616,84 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
     return ret;
 }
 
-
-int get_id3v2_tag_trackno(const struct id3v2_tag *tag)
+static int get_text_frame_data_by_alias(const struct id3v2_tag *tag,
+                                        char alias,
+                                        wchar_t **data, size_t *datasize)
 {
-    const char         *frame_id;
+    const char *frame_id;
     struct id3v2_frame *frame;
-    const char         *frame_enc_name;
-    char               *buf;
-    size_t              bufsize;
-    long                trackno;
-    int                 ret;
+    const char *frame_enc_name;
+    const struct alias *al = get_alias(alias);
+    int ret;
 
-    frame_id = alias_to_frame_id('n', tag->header.version);
-
-    if (!frame_id)
-        return -1;
-
+    assert(al);
+    frame_id = alias_to_frame_id(al, tag->header.version);
     frame = peek_frame(&tag->frame_head, frame_id);
 
     if (!frame)
-        return -1;
+        return -ENOENT;
 
     if (frame->size <= 1)
-        return -1;
+        return -EILSEQ;
 
-    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
-                                                 frame->data[0]);
+    frame_enc_name =
+        get_id3v2_tag_encoding_name(tag->header.version, frame->data[0]);
+
+    if (!frame_enc_name)
+        return -EILSEQ;
 
     ret = iconv_alloc(WCHAR_CODESET, frame_enc_name,
                       frame->data + 1, frame->size - 1,
-                      &buf, &bufsize);
+                      (void *)data, datasize);
+
+    if (datasize)
+        *datasize /= sizeof(wchar_t);
+
+    return ret;
+}
+
+int get_id3v2_tag_trackno(const struct id3v2_tag *tag)
+{
+    wchar_t *wdata;
+    long trackno;
+    int ret;
+
+    ret = get_text_frame_data_by_alias(tag, 'n', &wdata, NULL);
 
     if (ret != 0)
-        return -1;
+        return ret;
 
     errno = 0;
-    trackno = wcstol((wchar_t *)buf, NULL, 10);
-    free(buf);
+    trackno = wcstol(wdata, NULL, 10);
+    free(wdata);
 
     if (errno == 0 && trackno >= 0 && trackno <= 255)
         return (int)trackno;
 
-    return -1;
+    return -EILSEQ;
 }
 
 int get_id3v2_tag_genre(const struct id3v2_tag *tag, wchar_t **genre_wcs)
 {
-    const char         *frame_id;
-    struct id3v2_frame *frame;
-    const char         *frame_enc_name;
-    wchar_t            *ptr;
-    wchar_t            *wdata;
-    size_t              wsize;
-    int                 ret;
-    int                 genre_id = ID3V1_UNKNOWN_GENRE;
-    long                long_genre_id = -1;
+    wchar_t *ptr;
+    wchar_t *wdata;
+    size_t wsize;
+    int genre_id = ID3V1_UNKNOWN_GENRE;
+    long long_genre_id = -1;
+    int ret;
 
-    *genre_wcs = NULL;
-    frame_id = alias_to_frame_id('g', tag->header.version);
-    assert(frame_id);
-    frame = peek_frame(&tag->frame_head, frame_id);
-
-    if (!frame)
-        return ID3V1_UNKNOWN_GENRE;
-
-    if (frame->size <= 1)
-        return ID3V1_UNKNOWN_GENRE;
-
-    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
-                                                 frame->data[0]);
-
-    ret = iconv_alloc(WCHAR_CODESET, frame_enc_name,
-                      frame->data + 1, frame->size - 1,
-                      (void *)&wdata, &wsize);
+    ret = get_text_frame_data_by_alias(tag, 'g', &wdata, &wsize);
 
     if (ret != 0)
-        return -1;
+        return ret;
 
-    wsize /= sizeof(wchar_t);
     ptr = wdata;
 
     switch (tag->header.version)
     {
         case 4:
             errno = 0;
-            long_genre_id = wcstol(wdata + 1, &ptr, 10);
+            long_genre_id = wcstol(wdata, &ptr, 10);
             if (errno != 0)
                 long_genre_id = -1;
             break;
@@ -612,7 +727,7 @@ int get_id3v2_tag_genre(const struct id3v2_tag *tag, wchar_t **genre_wcs)
         if (!genre_wcs)
         {
             free(wdata);
-            return -1;
+            return -ENOMEM;
         }
     }
     else

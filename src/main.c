@@ -1,9 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <locale.h>
-#include "params.h"
-#include "output.h"
+#include <stdlib.h> /* EXIT_* */
 #include "common.h" /* for_each() */
+#include "output.h"
+#include "params.h"
 
 extern int init_config(int *argc, char ***argv);
 extern int print_tags(const char *filename);
@@ -16,6 +16,7 @@ char *program_name;
 
 int main(int argc, char **argv)
 {
+    int ret = 0;
     static int (* const actions[])(const char *) =
     {
         [ ID3_PRINT  ] = print_tags,
@@ -29,21 +30,32 @@ int main(int argc, char **argv)
 
     program_name = argv[0];
 
-    if (init_config(&argc, &argv) == -1)
+    if (init_config(&argc, &argv) != 0)
         return EXIT_FAILURE;
 
     if (argc == 0)
     {
         print(OS_ERROR, "no input files");
-        return EXIT_SUCCESS;
+        return EXIT_FAILURE;
     }
 
     if (g_config.action == ID3_COPY)
-        return copy_tags(argc, argv);
+    {
+        ret = copy_tags(argc, argv);
 
-    for (; argc > 0; argc--, argv++)
-        if (actions[g_config.action](*argv) != 0)
-            return EXIT_FAILURE;
+        if (ret == -ENOMEM)
+            print(OS_ERROR, "out of memory");
+    }
+    else
+    {
+        for (; argc > 0; argc--, argv++)
+        {
+            ret = actions[g_config.action](*argv);
 
-    return EXIT_SUCCESS;
+            if (ret == -ENOMEM)
+                print(OS_ERROR, "%s: out of memory", *argv);
+        }
+    }
+
+    return ret == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

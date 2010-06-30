@@ -10,13 +10,14 @@
 #include "iconv_wrap.h"
 #include "output.h"
 
-/*
- * Function:     readordie
+/***
+ * readordie
  *
- * Description:  reads until len bytes has been read or EOF has been reached
+ * The routine reads until @len bytes has been read or EOF has been reached.
  *
- * Return value: number of bytes has been read, or -1 on error
+ * Returns the number of bytes has been read, or -errno on error
  */
+
 ssize_t readordie(int fd, void *buf, size_t len)
 {
     ssize_t ret;
@@ -29,7 +30,7 @@ ssize_t readordie(int fd, void *buf, size_t len)
             if (errno == EINTR)
                 continue;
             perror("read");
-            return -1;
+            return -errno;
         }
         left -= ret;
         buf += ret;
@@ -114,11 +115,11 @@ id321_iconv_t xiconv_open(const char *tocode, const char *fromcode)
  * @dst - destination buffer
  * @dstsize - destination buffer size
  *
- * Converts @src buffer of size @srcsize from @fromcode to @tocode and places
- * result into @dst buffer of size @dstsize.
+ * Converts the buffer @src of size @srcsize from @fromcode to @tocode and
+ * places result into the buffer @dst of size @dstsize.
  *
- * Returns number of bytes which would have been written if @dst had been large
- * enough.
+ * Returns the number of bytes which would have been written if @dst had
+ * been large enough.
  */
 
 ssize_t iconvordie(const char *tocode, const char *fromcode,
@@ -190,7 +191,7 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
  *
  *               *@dst must be freed with free() after use.
  *
- * Return value: 0 on success, -1 on any error
+ * Return value: 0 on success, -ENOMEM on out of memory error
  *
  */
 
@@ -284,7 +285,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
 oom:
 
     id321_iconv_close(cd);
-    return -1;
+    return -ENOMEM;
 }
 
 int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...)
@@ -296,7 +297,7 @@ int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...)
 
     wdata = malloc(wsize*sizeof(wchar_t));
     if (!wdata)
-        return -1;
+        return -ENOMEM;
 
     do {
         va_start(args, fmt);
@@ -306,7 +307,7 @@ int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...)
         if (ret == -1)
         {
             free(wdata);
-            return -1;
+            return -EFAULT;
         }
         else if ((size_t)ret == wsize)
         {
@@ -318,7 +319,7 @@ int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...)
             if (!tmp)
             {
                 free(wdata);
-                return -1;
+                return -ENOMEM;
             }
 
             wdata = tmp;

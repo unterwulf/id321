@@ -7,7 +7,7 @@
 #include <wchar.h>
 #include "alias.h"
 #include "common.h"
-#include "params.h"
+#include "params.h"       /* g_config, NOT_SET */
 #include "id3v1.h"
 #include "id3v1_genres.h"
 #include "id3v1e_speed.h"
@@ -23,10 +23,13 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
                              struct print_fmt *pfmt)
 {
     size_t size;
-    const void *buf = alias_to_v1_data(alias, tag, &size);
-
-    if (!buf)
+    const struct alias *al = get_alias(alias);
+    const void *buf;
+    
+    if (!al)
         return;
+
+    buf = alias_to_v1_data(al, tag, &size);
 
     if (size == 1)
     {
@@ -225,34 +228,36 @@ static void print_tag(const struct id3v1_tag *tag1,
                 break;
 
             case st_spec:
+            {
+                const struct alias *al;
+
                 if (*pos == 'n')
                 {
-                    wchar_t trackno_wcs[4];
+                    wchar_t trackno_wcs[4] = L"###";
                     int trackno = -1;
 
                     if (tag2)
                         trackno = get_id3v2_tag_trackno(tag2);
 
-                    if (trackno == -1 && tag1 && tag1->track != 0)
+                    if (trackno < 0 && tag1 && tag1->track != 0)
                         trackno = tag1->track;
 
-                    if (trackno != -1)
+                    if (trackno >= 0)
                     {
                         swprintf(trackno_wcs,
                             sizeof(trackno_wcs)/sizeof(wchar_t),
                             L"%u", trackno);
-
                         pfmt.flags |= FL_INT;
-                        printwcsf(&pfmt, trackno_wcs);
                     }
+
+                    printwcsf(&pfmt, trackno_wcs);
                 }
-                else if (is_valid_alias(*pos))
+                else if ((al = get_alias(*pos)))
                 {
                     if (tag2)
                     {
-                        const char *frame_id; 
-                        frame_id = alias_to_frame_id(*pos,
-                                                     tag2->header.version);
+                        const char *frame_id =
+                            alias_to_frame_id(al, tag2->header.version);
                         frame = peek_frame(&tag2->frame_head, frame_id);
                     }
 
@@ -297,6 +302,7 @@ static void print_tag(const struct id3v1_tag *tag1,
                 }
                 state = st_normal;
                 break;
+            }
         }
     }
 
@@ -319,28 +325,29 @@ int print_tags(const char *filename)
     ret = get_tags(filename, g_config.ver, &tag1, &tag2);
 
     if (ret != 0)
-        return -1;
+        return NOMEM_OR_FAULT(ret);
 
     if (!tag1 && !tag2)
     {
-        print(OS_WARN, "%s: file has no ID3 tags", filename);
+        print(OS_WARN, "%s: file has no ID3 tags%s", filename,
+              g_config.ver.major != NOT_SET ? " of specified version" : "");
         return 0;
     }
 
     if (g_config.fmtstr)
         print_tag(tag1, tag2);
-    else if (g_config.frame)
+    else if (g_config.frame_id)
     {
         struct id3v2_frame *frame = NULL;
 
         if (tag2)
-            frame = peek_frame(&tag2->frame_head, g_config.frame);
+            frame = peek_frame(&tag2->frame_head, g_config.frame_id);
 
         if (frame)
             fwrite(frame->data, frame->size, 1, stdout);
         else
             print(OS_ERROR, "%s: file has no ID3v2 frame '%s'",
-                  filename, g_config.frame);
+                  filename, g_config.frame_id);
     }
     else
     {

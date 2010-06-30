@@ -6,12 +6,17 @@
 #include "id3v2.h"
 
 const char *get_id3v2_tag_encoding_name(unsigned minor, char enc);
+char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name);
 
 int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
                    wchar_t *buf, size_t size);
 
 void unpack_frame_data(struct id3v2_frame *frame);
 void pack_frame_data(struct id3v2_frame *frame);
+
+int update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
+                                        char frame_enc_byte,
+                                        char *data, size_t size);
 
 int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
                                 char frame_enc_byte, char *data, size_t size);

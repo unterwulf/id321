@@ -10,7 +10,7 @@ bin_PROGRAMS = id321
 id321_SOURCES = main.c print.c delete.c modify.c sync.c copy.c \
                 get.c write.c crop.c \
                 file.c init.c dump.c \
-                framelist.c frames.c \
+                framelist.c frames.c frm_comm.c \
                 id3v1.c id3v1_genres.c id3v1e_speed.c id3v2.c id3v23.c \
                 printwcsf.c output.c iconv_ucs2.c \
                 synchsafe.c common.c alias.c \

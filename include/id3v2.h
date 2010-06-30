@@ -50,16 +50,23 @@
 #define ID3V24_FRM_FMT_FLAG_UNSYNC  0x02
 #define ID3V24_FRM_FMT_FLAG_LEN     0x01
 
-#define ID3V22_STR_ISO88591         0
-#define ID3V22_STR_UCS2             1
+#define ID3V22_STR_ISO88591         '\x00'
+#define ID3V22_STR_UCS2             '\x01'
 
-#define ID3V23_STR_ISO88591         0
-#define ID3V23_STR_UCS2             1
+#define ID3V23_STR_ISO88591         '\x00'
+#define ID3V23_STR_UCS2             '\x01'
 
-#define ID3V24_STR_ISO88591         0
-#define ID3V24_STR_UTF16            1
-#define ID3V24_STR_UTF16BE          2
-#define ID3V24_STR_UTF8             3
+#define ID3V24_STR_ISO88591         '\x00'
+#define ID3V24_STR_UTF16            '\x01'
+#define ID3V24_STR_UTF16BE          '\x02'
+#define ID3V24_STR_UTF8             '\x03'
+
+/* non standard value, for internal use only */
+#define ID3V2_UNSUPPORTED_ENCODING  '\xFF'
+
+#define ID3V2_ENC_HDR_SIZE          1
+#define ID3V2_LANG_HDR_SIZE         3
+#define ID3V2_FRM_COMM_HDR_SIZE    (ID3V2_ENC_HDR_SIZE + ID3V2_LANG_HDR_SIZE)
 
 struct id3v2_header
 {

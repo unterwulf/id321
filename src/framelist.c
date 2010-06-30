@@ -23,14 +23,15 @@ void unlink_frame(struct id3v2_frame *frame)
     frame->next->prev = frame->prev;
     frame->next = frame->prev = NULL;
 }
- 
-struct id3v2_frame *peek_frame(const struct id3v2_frame *head,
-                               const char *name)
+
+struct id3v2_frame *peek_next_frame(const struct id3v2_frame *head,
+                                    const char *name,
+                                    const struct id3v2_frame *pos)
 {
     struct id3v2_frame *frame;
 
-    for (frame = head->next; frame != head; frame = frame->next)
-        if (!memcmp(frame->id, name, ID3V2_FRAME_ID_MAX_SIZE))
+    for (frame = pos->next; frame != head; frame = frame->next)
+        if (!strncmp(frame->id, name, ID3V2_FRAME_ID_MAX_SIZE))
             return frame;
 
     return NULL;

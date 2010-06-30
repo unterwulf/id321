@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,6 +12,10 @@
 #include "dump.h"
 #include "output.h"
 #include "common.h"
+
+#define READORDIE(fd, buf, size, ret) \
+    if (readordie(fd, buf, size) != (ssize_t)(size)) \
+        return ret;
 
 #define IS_WHOLE_TAG_UNSYNC(hdr) \
     ((hdr.version == 2 || hdr.version == 3) && hdr.flags & ID3V2_FLAG_UNSYNC)
@@ -103,11 +108,11 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         {
             bytes_read = read_unsync(fd, buf, frame_header_size, &pre);
             if (bytes_read == -1)
-                return -1;
+                return -EFAULT;
         }
         else
         {
-            READORDIE(fd, buf, frame_header_size);
+            READORDIE(fd, buf, frame_header_size, -1);
             bytes_read = frame_header_size;
         }
 
@@ -123,7 +128,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         frame = calloc(1, sizeof(struct id3v2_frame));
 
         if (!frame)
-            goto oom;
+            return -ENOMEM;
 
         unpack_id3v2_frame_header(frame, buf, tag->header.version);
 
@@ -132,7 +137,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             print(OS_ERROR, "frame '%.4s' size is %d, but space left is %d",
                   frame->id, frame->size, bytes_left);
             free(frame);
-            return -1;
+            return -EFAULT;
         }
 
         frame->data = malloc(frame->size);
@@ -140,7 +145,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         if (!frame->data)
         {
             free(frame);
-            goto oom;
+            return -ENOMEM;
         }
 
         if (IS_WHOLE_TAG_UNSYNC(tag->header))
@@ -149,7 +154,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             if (bytes_read == -1)
             {
                 free_frame(frame);
-                return -1;
+                return -EFAULT;
             }
         }
         else
@@ -158,7 +163,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             if (bytes_read != (ssize_t)frame->size)
             {
                 free_frame(frame);
-                return -1;
+                return -EFAULT;
             }
         }
 
@@ -188,7 +193,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             bytes_to_read = (bytes_left > sizeof(block))
                 ? sizeof(block) : bytes_left;
 
-            READORDIE(fd, block, bytes_to_read);
+            READORDIE(fd, block, bytes_to_read, -EFAULT);
             bytes_left -= bytes_to_read;
 
             for (pos = 0; pos < bytes_to_read; pos++)
@@ -204,11 +209,6 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
     }
 
     return 0;
-
-oom:
-
-    print(OS_ERROR, "out of memory");
-    return -1;
 }
 
 int read_id3v2_ext_header(int fd, struct id3v2_tag *tag)
@@ -218,7 +218,7 @@ int read_id3v2_ext_header(int fd, struct id3v2_tag *tag)
 
     }
 
-    return -1;
+    return -EFAULT;
 }
 
 static int validate_id3v2_header(const struct id3v2_header *hdr)
@@ -303,7 +303,7 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
     int          pos;
     const char  *id = footer ? "3DI" : "ID3";
 
-    READORDIE(fd, buf, ID3V2_HEADER_LEN);
+    READORDIE(fd, buf, ID3V2_HEADER_LEN, -EFAULT);
 
     if (!memcmp(buf, id, 3))
     {
@@ -311,7 +311,7 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
         {
             if (((uint8_t)buf[pos] == 0xFF && (pos == 3 || pos == 4))
                     || (((uint8_t)buf[pos] & 0x80) && pos >= 6 && pos <= 9))
-                return -1;
+                return -EILSEQ;
         }
 
         unpack_id3v2_header(hdr, buf);
@@ -319,13 +319,13 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
         if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
         {
             print(OS_ERROR, "i don't know ID3v2.%d", hdr->version);
-            return -1;
+            return -EILSEQ;
         }
 
         return 0;
     }
 
-    return -1;
+    return -EILSEQ;
 }
 
 int read_id3v2_header(int fd, struct id3v2_header *hdr)
@@ -341,7 +341,7 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
     {
         print(OS_WARN, "appended tag is not allowed for ID3v2.%d",
                        hdr->version);
-        return -1;
+        return -EILSEQ;
     }
 
     return ret;
@@ -420,7 +420,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     *buf = malloc(bufsize);
 
     if (!*buf)
-        goto oom;
+        return -ENOMEM;
 
     if (header.version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
         header.flags |= ID3V2_FLAG_UNSYNC;
@@ -538,6 +538,5 @@ oom:
 
     free(*buf);
     *buf = NULL;
-    print(OS_ERROR, "out of memory");
-    return -1;
+    return -ENOMEM;
 }

@@ -1,7 +1,7 @@
 .\"
 .\" Copyright (c) 2009\-2010 Vitaly Sinilin <vs@kp4.ru>
 .\"
-.TH id321 1 "25 April 2010" id321
+.TH id321 1 "30 June 2010" id321
 .SH NAME
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
@@ -107,7 +107,7 @@ action this option leads to non\-standard tags.
 .br
 .I ENCODING
 may be also defined by the envirionment variable \fBID321_ENCODING\fR.
-The command-line option has higher priority than the envirionment variable.
+The command\-line option has higher priority than the envirionment variable.
 .RE
 .TP
 .B \-v
@@ -120,24 +120,58 @@ Print tags using printf\-like format string.
 .BI \-F " FRAME
 Dump specified ID3v2 tag's frame as a binary data.
 .SH MODIFY OPTIONS
+For the following options, an empty string as the option argument will
+cause deletion of a corresponding ID3v2 frame.
 .TP
-\fB-t\fR, \fB--title \fITITLE
+\fB\-t\fR, \fB\-\-title \fITITLE
 .TP
-\fB-a\fR, \fB--artist \fIARTIST
+\fB\-a\fR, \fB\-\-artist \fIARTIST
 .TP
-\fB-l\fR, \fB--album \fIALBUM
+\fB\-l\fR, \fB\-\-album \fIALBUM
 .TP
-\fB-g\fR, \fB--genre \fR{\fIGENRE_ID\fR[\fB:\fIGENRE_STRING\fR]|\fB:\fIGENRE_STRING\fR}
+\fB\-g\fR, \fB\-\-genre \fR{\fIGENRE_ID\fR[\fB:\fIGENRE_STRING\fR]|\fB:\fIGENRE_STRING\fR}
 .TP
-\fB-y\fR, \fB--year \fIYEAR
+\fB\-y\fR, \fB\-\-year \fIYEAR
 .TP
-\fB-c\fR, \fB--comment \fICOMMENT
+\fB\-c\fR, \fB\-\-comment \fR[[\fILANG\fB:\fR]\fIDESC\fB:\fR]\fICOMMENT
+.IR LANG " and " DESC
+can have a special value '*' to match all comment frames regardless their
+language and description respectively. In this case all matching frames
+will be altered if \fICOMMENT\fR is not empty, or deleted if it is.
+Colons (\fB:\fR) and asterisks (\fB*\fR) within
+.IR LANG ", " DESC " and " COMMENT
+should be escaped with '\\' not to have their special
+meanings.
+If omitted, the default language is XXX and the default description is an
+empty string.
+.P
+The following options are ID3v2.x specific. There is no sense using them
+with other versions of tags.
 .TP
-\fB-t\fR, \fB--speed \fISPEED
+\fB\-F\fR, \fB\-\-frame \fIFRAME_ID\fR[\fB[\fR{\fIINDEX\fR|\fB*\fR}\fB]\fR][[\fB:\fR{\fIENCODING\fR|\fBbin\fR}]\fB:\fR{\fB\-\fR|\fIDATA\fR}]
+Modify/delete arbitrary ID3v2 frame. A new value can be taken from stdin
+using '\fB\-\fR' instead of \fIDATA\fR. To use a single dash as a new value
+escape it with a backslash as '\fB\\\-\fR'.
+If only \fIFRAME_ID\fR is specified, the frame will be deleted.
+If no \fIINDEX\fR is specified, a first matching frame will be affected.
+If the special index value '\fB*\fR' is specified, all matching frames will be
+affected. If empty index is specified (i.e. empty brackets as '\fBTIT2[]\fR')
+a new frame will be created regardless whether \fIDATA\fR is specified or not.
+If no \fIENCODING\fR is specified, a default encoding will be used. If the
+special encoding value \fBbin\fR is specified, the data will be placed into
+the frame as is.
+Note that the acceptable \fIENCODING\fR values depend on the tag version
+and the encoding mapping (see \fB\-e\fR option for details). No validation is
+performed for this option, so use it only if you are sure what you are doing.
+.P
+The following options are enhaced tag specific. There is no sense using them
+with other versions of tags.
 .TP
-\fB--start-time \fIMMM:SS
+\fB\-t\fR, \fB\-\-speed \fR{\fBslow\fR|\fBmedium\fR|\fBfast\fR|\fBhardcore\fR}
 .TP
-\fB--end-time \fIMMM:SS
+\fB\-\-start\-time \fIMMM:SS
+.TP
+\fB\-\-end\-time \fIMMM:SS
 .SH WRITE OPTIONS
 The following options are applicable for all actions which write tags,
 namely
@@ -217,12 +251,17 @@ minor version.
 .IP
 .B id321 modify \-t Title \-a Artist \-n 1 \-c Comment \-y 2009 best.mp3
 .LP
+In order to delete ID3v2 frame assign it an empty string. The following
+example will delete a title frame and all English comment frames.
+.IP
+.B id321 modify \-t '' \-c 'eng:*:' best.mp3
+.LP
 Convert tag minor version.
 .IP
 .B id321 modify \-11 best.mp3
 .LP
 .SH BUGS
-Conversion between minor versions of ID3v2 is not implemented yet.
+Conversion between minor versions of ID3v2 tags is not implemented yet.
 .SH AUTHOR
 Written by Vitaly Sinilin <vs@kp4.ru>
 .LP
@@ -245,7 +284,7 @@ http://www.fortunecity.com/underworld/sonic/3/id3tag.html
 .LP
 ID3v2.2 tag informal standard:
 .IP
-http://www.id3.org/id3v2-00
+http://www.id3.org/id3v2\-00
 .LP
 ID3v2.3 tag informal standard:
 .IP
@@ -253,7 +292,7 @@ http://www.id3.org/d3v2.3.0
 .LP
 ID3v2.4 tag informal standard:
 .IP
-http://www.id3.org/id3v2.4.0-structure
+http://www.id3.org/id3v2.4.0\-structure
 .br
-http://www.id3.org/id3v2.4.0-frames
+http://www.id3.org/id3v2.4.0\-frames
 .LP

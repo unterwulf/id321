@@ -20,7 +20,7 @@ static void print_padding(char ch, int len)
  *
  * This function differs from printf("%ls"). It does not stop processing @wcs
  * on the first non-representable wide character. Instead, it prints a dummy
- * characted and continues processing.
+ * character and continues processing.
  *
  * The function can be called with @pf pointing to NULL. In this case default
  * format is used.

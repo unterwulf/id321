@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stddef.h>   /* size_t */
 #include <string.h>
 #include <inttypes.h>
@@ -39,8 +40,8 @@
 
 int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size)
 {
-    if (!tag || size < ID3V1_TAG_SIZE)
-        return -1;
+    if (size < ID3V1_TAG_SIZE)
+        return -E2BIG;
 
     /* we will find a tag at the end of the buffer */
     buf += size - ID3V1_TAG_SIZE;
@@ -63,7 +64,7 @@ int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size)
             tag->version = 0;
     }
     else
-        return -1;
+        return -ENOENT;
 
     return 0;
 }
@@ -72,14 +73,14 @@ int unpack_id3v13_tag(struct id3v1_tag *tag, const char *buf, size_t size)
 {
     struct lib313_tag tag313;
 
-    if (!tag || size < ID3V1_TAG_SIZE)
-        return -1;
+    if (size < ID3V1_TAG_SIZE)
+        return -E2BIG;
 
     /* we will find a tag at the end of the buffer */
     buf += size - ID3V1_TAG_SIZE;
 
     if (lib313_unpack(&tag313, buf) != LIB313_SUCCESS)
-        return -1;
+        return -ENOENT;
 
     memset(tag, '\0', sizeof(*tag));
 
@@ -99,8 +100,8 @@ int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size)
 {
     const char *legacy;
 
-    if (!tag || size < ID3V1E_TAG_SIZE)
-        return -1;
+    if (size < ID3V1E_TAG_SIZE)
+        return -E2BIG;
     
     /* we will find a tag at the end of the buffer */
     buf += size - ID3V1E_TAG_SIZE;
@@ -111,9 +112,9 @@ int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     {
         (void)unpack_id3v1_tag(tag, legacy, ID3V1_TAG_SIZE);
 
-        unpack_id3v1e_field(tag, buf, title,   TIT);
-        unpack_id3v1e_field(tag, buf, artist,  ART);
-        unpack_id3v1e_field(tag, buf, album,   ALB);
+        unpack_id3v1e_field(tag, buf, title,  TIT);
+        unpack_id3v1e_field(tag, buf, artist, ART);
+        unpack_id3v1e_field(tag, buf, album,  ALB);
 
         tag->speed = buf[ID3V1E_SPD_OFF];
         strncpy(tag->genre_str, buf + ID3V1E_GN2_OFF, ID3V1E_GN2_SIZE);
@@ -123,7 +124,7 @@ int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size)
         tag->version = ID3V1E_MINOR;
     }
     else
-        return -1;
+        return -ENOENT;
 
     return 0;
 }
@@ -132,8 +133,8 @@ int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size)
 {
     const char *legacy;
 
-    if (!tag || size < ID3V12_TAG_SIZE)
-        return -1;
+    if (size < ID3V12_TAG_SIZE)
+        return -E2BIG;
     
     /* we will find a tag at the end of the buffer */
     buf += size - ID3V12_TAG_SIZE;
@@ -153,7 +154,7 @@ int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size)
         tag->version = 2;
     }
     else
-        return -1;
+        return -ENOENT;
 
     return 0;
 }

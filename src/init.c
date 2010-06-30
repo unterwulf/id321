@@ -1,4 +1,6 @@
+#include <errno.h>
 #include <inttypes.h>
+#include <stdio.h>        /* fread(), stdin */
 #include <stdlib.h>       /* atoi() */
 #include <unistd.h>
 #include <string.h>
@@ -18,19 +20,21 @@
 
 extern void help();
 
-/*
- * Function:     setup_encodings
+/***
+ * setup_encodings
  *
- * Description:  Setups encodings in g_config from a colon-separated list of
- *               encodings passed in enc_str and checks if they are supported
- *               by iconv.
+ * @enc_str - string containing a colon-separated list of encodings
  *
- * Return value: On success, 0 is returned. On error, -1 is returned.
+ * The routine setups encodings in g_config from a colon-separated list of
+ * encodings passed in the string @enc_str and checks if they are supported
+ * by iconv.
  *
- * Notes:        This function reports about errors itself.
+ * Returns 0 on success, or -1 on error.
+ *
+ * Notes: This function reports about errors itself.
  */
 
-static int setup_encodings(char *enc_str)
+static inline int setup_encodings(char *enc_str)
 {
     unsigned i;
     char *cur = NULL;
@@ -60,7 +64,7 @@ static int setup_encodings(char *enc_str)
         {
             if (strlen(pos) != 0)
                 *(enc[i].name) = pos;
-            else if (cur && strlen(cur) != 0)
+            else if (!IS_EMPTY_STR(cur))
             {
                 *(enc[i].name) = cur;
                 continue;
@@ -96,6 +100,268 @@ static int setup_encodings(char *enc_str)
     return 0;
 }
 
+static void unescape_chars(char *str, const char *chars, char esc)
+{
+    char *read;
+    char *write;
+
+    for (read = str, write = str; *read; read++, write++)
+    {
+        if (read[0] == esc && strchr(chars, read[1]))
+            read++;
+
+        *write = *read;
+    }
+
+    *write = '\0';
+}
+
+/***
+ * parse_comment_optarg - parse comment option argument
+ *
+ * The routine modifies comment-related fields of the g_config structure
+ * in accordance with @optarg passed.
+ *
+ * Comment option argument shall be in the format
+ *
+ *     [[lang:]desc:]text
+ *
+ * where lang and desc can have special value '*' that means any value.
+ * Because of the format, colons and asterisks within lang, desc and
+ * test shall be escaped with '\' not to have their special meaning.
+ */
+
+static inline int parse_comment_optarg(char *optarg)
+{
+    int i, j;
+    char *stack[3];
+    char *pos;
+    struct
+    {
+        const char **value;
+        uint8_t flag;
+    }
+    conf[] =
+    {
+        { &g_config.comment,      0 },
+        { &g_config.comment_desc, ID321_OPT_ANY_COMM_DESC },
+        { &g_config.comment_lang, ID321_OPT_ANY_COMM_LANG }
+    };
+
+    pos = stack[0] = optarg;
+
+    /* at first, fill stack with all values available */
+
+    for (i = 0; (i < sizeof(stack) - 1)
+                && (pos = memchr(pos, ':', strlen(pos))); i++)
+    {
+        if (pos - 1 >= stack[i] && pos[-1] == '\\')
+        {
+            /* skip escaped colon */
+            i--;
+            pos++;
+            continue;
+        }
+
+        *pos = '\0';
+        pos++;
+        stack[i+1] = pos;
+    }
+
+    /* then, propagate the collected values to the proper fields */
+
+    for (j = 0; i >= 0; i--, j++)
+    {
+        if (!strcmp(stack[i], "*"))
+            g_config.options |= conf[j].flag;
+        else
+        {
+            unescape_chars(stack[i], ":*\\", '\\');
+            *conf[j].value = stack[i];
+        }
+    }
+
+    return (g_config.comment_lang && strlen(g_config.comment_lang) != 3)
+           ? -EFAULT : 0;
+}
+
+/***
+ * parse_frame_optarg - parse frame option argument
+ *
+ * The routine modifies arbitrary frame-related fields of the g_config
+ * structure in accordance with @optarg passed.
+ *
+ * Frame option argument shall be in the format
+ *
+ *     <frame_id>['['<frame_number>']'][[:{<enc>|bin}]:<value>]
+ *
+ * where value can have special value '-' that means stdin. Use '\-' to set
+ * literaly single dash.
+ */
+
+static inline int parse_frame_optarg(char *optarg)
+{
+    int i, j;
+    char *stack[3];
+    char *pos;
+
+    pos = stack[0] = optarg;
+
+    /* at first, fill stack with all values available */
+
+    for (i = 0; (i < sizeof(stack) - 1)
+                && (pos = memchr(pos, ':', strlen(pos))); i++)
+    {
+        *pos = '\0';
+        pos++;
+        stack[i+1] = pos; /* push */
+    }
+
+    /* then, propagate the collected values to the proper fields */
+
+    j = 0;
+    g_config.frame_enc = NULL;
+
+    /* parse frame id and frame number */
+    {
+        char *opb;
+
+        g_config.frame_id = stack[j++];
+        opb = strchr(g_config.frame_id, '[');
+
+        if (opb)
+        {
+            char *clb = strchr(opb + 1, ']');
+            long frame_no;
+
+            if (!clb || clb[1] != '\0')
+                return -EILSEQ;
+
+            *opb = *clb = '\0';
+            
+            if (opb + 1 == clb) /* empty brackets */
+                g_config.options |= ID321_OPT_CREATE_FRAME;
+            else if (!strcmp(opb + 1, "*"))
+                g_config.options |= ID321_OPT_ALL_FRAMES;
+            else if (str_to_long(opb + 1, &frame_no) == 0)
+                g_config.frame_no = (int) frame_no;
+            else
+                return -EILSEQ;
+        }
+        else
+        {
+            g_config.frame_no = 0;
+            g_config.options |= ID321_OPT_CREATE_FRAME_IF_NOT_EXISTS;
+        }
+    }
+
+    if (i == 0 && !(g_config.options & ID321_OPT_CREATE_FRAME))
+        g_config.options |= ID321_OPT_RM_FRAME;
+
+    if (i == 2)
+    {
+        if (!strcasecmp(stack[j], "bin"))
+            g_config.options |= ID321_OPT_BIN_FRAME;
+        else
+            g_config.frame_enc = stack[j];
+
+        j++;
+    }
+
+    if (i > 0)
+    {
+        if (!strcmp(stack[j], "-"))
+        {
+            int bufsize = BLOCK_SIZE;
+            char *buf = malloc(bufsize);
+            char *ptr = buf;
+            ssize_t size = 0;
+
+            if (!buf)
+                return -ENOMEM;
+
+            do {
+                size_t avail = bufsize - (ptr - buf);
+                ssize_t bytes = fread(ptr, 1, avail, stdin);
+                size += bytes;
+
+                if (bytes == avail && !feof(stdin))
+                {
+                    char *newbuf;
+                    newbuf = realloc(buf, bufsize*2);
+                    if (!newbuf)
+                    {
+                        free(buf);
+                        return -ENOMEM;
+                    }
+                    ptr = newbuf + bufsize;
+                    buf = newbuf;
+                    bufsize *= 2;
+                }
+            } while(!feof(stdin));
+
+            g_config.frame_data = buf;
+            g_config.frame_size = size;
+        }
+        else if (!strcmp(stack[j], "\\-"))
+        {
+            g_config.frame_data = "-";
+            g_config.frame_size = 1;
+        }
+        else
+        {
+            g_config.frame_data = stack[j];
+            g_config.frame_size = strlen(g_config.frame_data);
+        }
+    }
+
+    return 0;
+}
+
+static inline int parse_genre_optarg(char *optarg)
+{
+    /* genre shall be in the format id3v1_genre_id[:genre_str]
+     * where id3v1_genre_id may be specified by name */
+    int ret;
+    long long_val;
+    char *sep;
+    
+    if (optarg[0] == '\0')
+    {
+        g_config.options |= ID321_OPT_RM_GENRE_FRAME | ID321_OPT_SET_GENRE_ID;
+        g_config.genre_id = ID3V1_UNKNOWN_GENRE;
+        g_config.genre_str = "";
+        return 0;
+    }
+
+    sep = strchr(optarg, ':');
+
+    if (sep)
+    {
+        *sep = '\0';
+        g_config.genre_str = sep + 1;
+    }
+
+    if (sep == optarg)
+        return 0; /* genre_id is omitted */
+
+    ret = str_to_long(optarg, &long_val);
+    if (ret == 0 && long_val >= 0 && long_val <= 0xFF)
+    {
+        g_config.genre_id = long_val;
+        g_config.options |= ID321_OPT_SET_GENRE_ID;
+    }
+    else
+    {
+        g_config.genre_id = get_id3v1_genre_id(optarg);
+        if (g_config.genre_id == ID3V1_UNKNOWN_GENRE)
+            return -EILSEQ;
+        g_config.options |= ID321_OPT_SET_GENRE_ID;
+    }
+
+    return 0;
+}
+
 int init_config(int *argc, char ***argv)
 {
     int       c;
@@ -103,6 +369,9 @@ int init_config(int *argc, char ***argv)
     int       ret;
     uint16_t  debug_mask = OS_ERROR | OS_WARN;
     char     *enc_str = getenv("ID321_ENCODING");
+
+#define FATAL(cond, ...) \
+    { if (cond) { print(OS_ERROR, __VA_ARGS__); return -1; } }
 
     static char v2_def_encs[] =
     {
@@ -134,7 +403,7 @@ int init_config(int *argc, char ***argv)
 
     static const struct
     {
-        char            *act_name;
+        const char      *act_name;
         enum id3_action  act_id;
     }
     actions[] =
@@ -205,13 +474,8 @@ int init_config(int *argc, char ***argv)
                                 break;
                         }
                     }
-
-                    if (g_config.ver.minor == NOT_SET)
-                    {
-                        print(OS_ERROR, "unknown minor version of ID3v1: %s",
-                              optarg);
-                        return -1;
-                    }
+                    FATAL(g_config.ver.minor == NOT_SET,
+                          "unknown minor version of ID3v1: %s", optarg);
                 }
                 break;
 
@@ -230,72 +494,41 @@ int init_config(int *argc, char ***argv)
                                 break;
                         }
                     }
-
-                    if (g_config.ver.minor == NOT_SET)
-                    {
-                        print(OS_ERROR, "unknown minor version of ID3v2: %s",
-                              optarg);
-                        return -1;
-                    }
+                    FATAL(g_config.ver.minor == NOT_SET,
+                          "unknown minor version of ID3v2: %s", optarg);
                 }
                 break;
 
             case 's':                
                 ret = str_to_long(optarg, &long_val);
-                if (ret == 0 && long_val >= 0)
-                {
-                    g_config.size = long_val;
-                    g_config.options |= ID321_OPT_CHANGE_SIZE;
-                }
-                else
-                {
-                    print(OS_ERROR, "invalid tag size value specified");
-                    return -1;
-                }
+                FATAL(ret != 0 || long_val < 0, "invalid tag size specified");
+                g_config.size = long_val;
+                g_config.options |= ID321_OPT_CHANGE_SIZE;
                 break;
 
             case 'g':
-            {
-                /* genre shall be in format id3v1_genre_id[:genre_str]
-                 * where id3v1_genre_id may be specified by name */
-                char *sep = strchr(optarg, ':');
-
-                if (sep)
-                {
-                    *sep = '\0';
-                    g_config.genre_str = sep + 1;
-                }
-
-                if (sep == optarg)
-                    break;
-
-                ret = str_to_long(optarg, &long_val);
-                if (ret == 0 && long_val >= 0 && long_val <= 0xFF)
-                {
-                    g_config.genre_id = long_val;
-                    g_config.options |= ID321_OPT_SET_GENRE_ID;
-                }
-                else
-                {
-                    g_config.genre_id = get_id3v1_genre_id(optarg);
-                    if (g_config.genre_id == ID3V1_UNKNOWN_GENRE)
-                    {
-                        print(OS_ERROR, "invalid genre specified");
-                        return -1;
-                    }
-
-                    g_config.options |= ID321_OPT_SET_GENRE_ID;
-                }
+                ret = parse_genre_optarg(optarg);
+                FATAL(ret != 0, "invalid genre specified");
                 break;
-            }
+
+            case 'c':
+                ret = parse_comment_optarg(optarg);
+                FATAL(ret != 0, "invalid comment language specified");
+                break;
 
             case 'a': g_config.artist = optarg; break;
-            case 'c': g_config.comment = optarg; break;
             case 'l': g_config.album = optarg; break;
             case 'n': g_config.track = optarg; break;
             case 't': g_config.title = optarg; break;
             case 'y': g_config.year = optarg; break;
-            case 'F': g_config.frame = optarg; break;
+            case 'F':
+                FATAL(g_config.action != ID3_PRINT
+                      && g_config.action != ID3_MODIFY,
+                      "option '-F' has no sense for the current action");
+                ret = parse_frame_optarg(optarg);
+                FATAL(ret == -ENOMEM, "out of memory");
+                FATAL(ret != 0, "invalid frame spec specified");
+                break;
 
             case 'e':
                 if (!optarg)
@@ -318,13 +551,9 @@ int init_config(int *argc, char ***argv)
                 if (g_config.speed == 0)
                 {
                     ret = str_to_long(optarg, &long_val);
-                    if (ret == 0 && long_val == (long_val & 0xFF))
-                        g_config.speed = (uint8_t)long_val;
-                    else
-                    {
-                        print(OS_ERROR, "invalid speed value");
-                        return -1;
-                    }
+                    FATAL(ret != 0 || long_val != (long_val & 0xFF),
+                          "invalid speed value");
+                    g_config.speed = (uint8_t)long_val;
                 }
                 g_config.options |= ID321_OPT_SET_SPEED;
                 break;
@@ -341,44 +570,32 @@ int init_config(int *argc, char ***argv)
     if (ret != 0)
         return -1;
 
-    if (g_config.action == ID3_SYNC && g_config.ver.major == NOT_SET)
-    {
-        print(OS_ERROR, "target version for synchronization is not specified");
-        return -1;
-    }
+    FATAL(g_config.action == ID3_SYNC && g_config.ver.major == NOT_SET,
+          "target version for synchronisation is not specified");
     
     if (!(g_config.options & ID321_OPT_EXPERT))
     {
-        if (g_config.action == ID3_DELETE
-            && (g_config.ver.minor == 0 || g_config.ver.minor == 1
-                || g_config.ver.minor == 3))
-        {
-            print(OS_ERROR, "removing of namely ID3v1.%u tag may lead to "
-                  "a garbage at the end of the file in case there is an "
-                  "ID3v1.2 or ID3v1 enhanced tag; if you are sure use -E "
-                  "to do so",
-                  g_config.ver.minor);
-            return -1;
-        }
+        FATAL(g_config.action == ID3_DELETE
+              && (g_config.ver.minor == 0 || g_config.ver.minor == 1
+                  || g_config.ver.minor == 3),
+              "removing of namely ID3v1.%u tag may lead to "
+              "a garbage at the end of the file in case there is an "
+              "ID3v1.2 or ID3v1 enhanced tag; if you are sure use -E "
+              "to do so",
+              g_config.ver.minor);
 
-        if ((g_config.options & ID321_OPT_SET_SPEED)
-            && !(is_valid_id3v1e_speed_id(g_config.speed)))
-        {
-            print(OS_ERROR, "non standard speed value '%u' specified; "
-                  "if you are sure what are you doing use -E to force this",
-                  g_config.speed);
-            return -1;
-        }
+        FATAL((g_config.options & ID321_OPT_SET_SPEED)
+              && !(is_valid_id3v1e_speed_id(g_config.speed)),
+              "non standard speed value '%u' specified; "
+              "if you are sure what you are doing use -E to force this",
+              g_config.speed);
 
-        if ((g_config.options & ID321_OPT_SET_GENRE_ID)
-            && g_config.genre_id > ID3V1_GENRE_ID_MAX)
-        {
-            print(OS_ERROR, "non standard genre id '%u' specified; "
-                  "if you are sure what are you doing use -E to force this",
-                  g_config.genre_id);
-            return -1;
-        }
-
+        FATAL((g_config.options & ID321_OPT_SET_GENRE_ID)
+              && g_config.genre_id > ID3V1_GENRE_ID_MAX
+              && g_config.genre_id != ID3V1_UNKNOWN_GENRE,
+              "non standard genre id '%u' specified; "
+              "if you are sure what you are doing use -E to force this",
+              g_config.genre_id);
     }
 
     *argc -= optind;

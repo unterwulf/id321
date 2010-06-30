@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <unistd.h> /* SEEK_* */
 #include <string.h>
 #include "id3v2.h"
@@ -6,6 +7,12 @@
 #include "params.h" /* NOT_SET */
 #include "crop.h"
 #include "file.h"
+
+/***
+ * crop_id3v1_tag - crop id3v1 tag from @file
+ *
+ * Returns size of the tag cropped or negative errno on error.
+ */
 
 int crop_id3v1_tag(struct file *file, unsigned minor)
 {
@@ -23,7 +30,7 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
             file->crop.end -= ID3V1_TAG_SIZE;
         }
         else
-            return -1;
+            return -ENOENT;
     }
 
     /* check presence of v1 enhanced tag */
@@ -38,7 +45,7 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
         {
             print(OS_INFO, "ID3v1 enhanced tag found");
             file->crop.end -= ID3V1E_TAG_SIZE - ID3V1_TAG_SIZE;
-            return 0;
+            return ID3V1E_TAG_SIZE;
         }
     }
 
@@ -54,22 +61,27 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
         {
             print(OS_INFO, "ID3v1.2 tag found");
             file->crop.end -= ID3V12_TAG_SIZE - ID3V1_TAG_SIZE;
+            return ID3V12_TAG_SIZE;
         }
     }
 
-    return 0;
+    return ID3V1_TAG_SIZE;
 }
 
 int crop_id3v2_tag(struct file *file, unsigned minor)
 {
     struct id3v2_header hdr;
+    int ret;
+    int bigret = -ENOENT;
 
     if (file->crop.start + ID3V2_HEADER_LEN < file->crop.end)
     {
         /* check presence of an id3v2 header at the very beginning
          * of the crop area */
         lseek(file->fd, file->crop.start, SEEK_SET);
-        if (read_id3v2_header(file->fd, &hdr) != -1)
+        ret = read_id3v2_header(file->fd, &hdr);
+
+        if (ret == 0)
         {
             if (minor == hdr.version || minor == NOT_SET)
             {
@@ -77,8 +89,11 @@ int crop_id3v2_tag(struct file *file, unsigned minor)
                 file->crop.start += ID3V2_HEADER_LEN + hdr.size;
                 if (hdr.version == 4 && hdr.flags & ID3V2_FLAG_FOOTER_PRESENT)
                     file->crop.start += ID3V2_FOOTER_LEN;
+                bigret = 0;
             }
         }
+        else if (ret == -EFAULT)
+            return ret;
     }
 
     if (file->crop.end - ID3V2_FOOTER_LEN >= file->crop.start)
@@ -86,16 +101,21 @@ int crop_id3v2_tag(struct file *file, unsigned minor)
         /* check presence of an id3v2 footer at the very end
          * of the crop area */
         lseek(file->fd, file->crop.end - ID3V2_FOOTER_LEN, SEEK_SET);
-        if (read_id3v2_footer(file->fd, &hdr) != -1)
+        ret = read_id3v2_footer(file->fd, &hdr);
+
+        if (ret == 0)
         {
             if (minor == hdr.version || minor == NOT_SET)
             {
                 print(OS_INFO, "ID3v2.%u appended tag found", hdr.version);
                 file->crop.end -=
                     ID3V2_HEADER_LEN + ID3V2_FOOTER_LEN + hdr.size;
+                bigret = 0;
             }
         }
+        else if (ret == -EFAULT)
+            return ret;
     }
 
-    return 0;
+    return bigret;
 }

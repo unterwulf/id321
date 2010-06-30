@@ -10,12 +10,14 @@
 #define BLOCK_SIZE 4096
 #define WCHAR_CODESET "WCHAR_T"
 
-#define READORDIE(fd, buf, size) \
-    if (readordie(fd, buf, size) != (ssize_t)(size)) \
-        return -1;
-
 #define for_each(i, array) \
     for (i = 0; i < sizeof(array)/sizeof(array[0]); i++)
+
+#define IS_EMPTY_STR(str) (!(str) || !str[0])
+#define IS_EMPTY_WCS(wcs) (!(wcs) || !wcs[0])
+
+#define NOMEM_OR_FAULT(ret) (ret == -ENOMEM ? ret : -EFAULT)
+#define SUCC_NOMEM_OR_FAULT(ret) (ret == 0 || ret == -ENOMEM ? ret : -EFAULT)
 
 int get_tags(const char *filename, struct version ver,
              struct id3v1_tag **tag1, struct id3v2_tag **tag2);

@@ -147,7 +147,7 @@ uint8_t get_id3v1_genre_id(const char *name)
     uint8_t i;
 
     for (i = 0; i <= ID3V1_GENRE_ID_MAX; i++)
-        if (!strcmp(id3v1_genres[i], name))
+        if (!strcasecmp(id3v1_genres[i], name))
             return i;
 
     return ID3V1_UNKNOWN_GENRE;

@@ -1,17 +1,36 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>   /* strerror() */
+#include <sys/stat.h>
 #include <unistd.h>
-#include "common.h" /* BLOCK_SIZE */
+#include "common.h"   /* BLOCK_SIZE */
 #include "output.h"
 #include "file.h"
 
 struct file *open_file(const char *filename, mode_t mode)
 {
-    struct file *file = (struct file*)malloc(sizeof(struct file));
+    struct stat st;
+    struct file *file = malloc(sizeof(struct file));
+    int ret;
 
     if (!file)
         return NULL;
+
+    ret = stat(filename, &st);
+
+    if (ret != 0)
+    {
+        print(OS_ERROR, "%s: %s", filename, strerror(errno));
+        free(file);
+        return NULL;
+    }
+    else if (!S_ISREG(st.st_mode))
+    {
+        print(OS_ERROR, "%s: not a regular file", filename);
+        free(file);
+        return NULL;
+    }
 
     file->fd = open(filename, mode);
     
@@ -22,7 +41,7 @@ struct file *open_file(const char *filename, mode_t mode)
         return NULL;
     }
 
-    file->size = lseek(file->fd, 0, SEEK_END);
+    file->size = st.st_size;
 
     /* initialize crop params */
     file->crop.start = 0;
@@ -35,9 +54,6 @@ int close_file(struct file *file)
 {
     int ret;
     
-    if (!file)
-        return -1;
-
     ret = close(file->fd);
     free(file);
 
