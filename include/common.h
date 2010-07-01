@@ -2,7 +2,7 @@
 #define COMMON_H
 
 #include <unistd.h>
-#include <iconv.h>
+#include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v2.h"
 #include "params.h"
@@ -30,7 +30,7 @@ ssize_t writeordie(int fd, const void *buf, size_t count);
 const char *locale_encoding();
 int str_to_long(const char *nptr, long *ret);
 
-iconv_t xiconv_open(const char *tocode, const char *fromcode);
+id321_iconv_t xiconv_open(const char *tocode, const char *fromcode);
 
 ssize_t iconvordie(const char *tocode, const char *fromcode,
                    const char *src, size_t srcsize,
