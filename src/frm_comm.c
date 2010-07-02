@@ -11,6 +11,7 @@
 #include "output.h"
 #include "params.h"       /* g_config */
 #include "common.h"
+#include "compat.h"
 #include "frames.h"
 #include "frm_comm.h"
 #include "framelist.h"

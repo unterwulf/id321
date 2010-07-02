@@ -1,4 +1,4 @@
-#define _GNU_SOURCE       /* strnlen() */
+#define _GNU_SOURCE       /* strnlen(), wcsdup() */
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -11,6 +11,7 @@
 #include "output.h"
 #include "params.h"
 #include "common.h"
+#include "compat.h"
 #include "alias.h"        /* alias_to_frame_id() */
 #include "framelist.h"
 #include "frm_comm.h"
