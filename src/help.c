@@ -29,6 +29,7 @@ void help()
 "General options:\n"
 "       --no-unsync                   do not unsynchronise ID3v2 tags\n"
 "       -v, --verbose                 be verbose\n"
+"       -V, --version                 print the version number\n"
 "       -h, --help                    print this message\n"
     );
 }

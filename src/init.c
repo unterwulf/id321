@@ -1,8 +1,9 @@
 #include <errno.h>
 #include <inttypes.h>
-#include <stdio.h>        /* fread(), stdin */
+#include <stdio.h>        /* fread(), printf(), stdin */
 #include <stdlib.h>       /* atoi() */
 #include <string.h>
+#include "config.h"
 #include "params.h"
 #include "opts.h"
 #include "output.h"
@@ -391,6 +392,7 @@ int init_config(int *argc, char ***argv)
         { "frame",      'F',            OPT_REQ_ARG, ID3_MODIFY | ID3_PRINT },
         { "help",       'h',            OPT_NO_ARG,  ID3_GRP_ALL },
         { "verbose",    'v',            OPT_NO_ARG,  ID3_GRP_ALL },
+        { "version",    'V',            OPT_NO_ARG,  ID3_GRP_ALL },
         { "title",      't',            OPT_REQ_ARG, ID3_MODIFY },
         { "artist",     'a',            OPT_REQ_ARG, ID3_MODIFY },
         { "album",      'l',            OPT_REQ_ARG, ID3_MODIFY },
@@ -455,6 +457,10 @@ int init_config(int *argc, char ***argv)
         {
             case 'h':
                 help();
+                exit(EXIT_SUCCESS);
+
+            case 'V':
+                printf("id321 " VERSION "\n");
                 exit(EXIT_SUCCESS);
 
             case '1':
