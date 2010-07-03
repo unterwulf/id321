@@ -2,10 +2,9 @@
 #include <inttypes.h>
 #include <stdio.h>        /* fread(), stdin */
 #include <stdlib.h>       /* atoi() */
-#include <unistd.h>
 #include <string.h>
-#include <getopt.h>
 #include "params.h"
+#include "opts.h"
 #include "output.h"
 #include "iconv_wrap.h"
 #include "id3v1.h"
@@ -372,6 +371,8 @@ int init_config(int *argc, char ***argv)
 
 #define FATAL(cond, ...) \
     { if (cond) { print(OS_ERROR, __VA_ARGS__); return -1; } }
+#define ID3_GRP_WRITE ( ID3_MODIFY | ID3_SYNC | ID3_COPY )
+#define ID3_GRP_ALL ( ID3_GRP_WRITE | ID3_PRINT | ID3_DELETE )
 
     static char v2_def_encs[] =
     {
@@ -380,25 +381,29 @@ int init_config(int *argc, char ***argv)
         [4] = ID3V24_STR_UTF8,
     };
 
-    static const struct option long_opts[] =
+    static const struct opt optlist[] =
     {
-        { "expert",     0, 0, 'E' },
-        { "frame",      1, 0, 'F' },
-        { "help",       0, 0, 'h' },
-        { "verbose",    0, 0, 'v' },
-        { "title",      1, 0, 't' },
-        { "artist",     1, 0, 'a' },
-        { "album",      1, 0, 'l' },
-        { "year",       1, 0, 'y' },
-        { "comment",    1, 0, 'c' },
-        { "genre",      1, 0, 'g' },
-        { "track",      1, 0, 'n' },
-        { "size",       1, 0, 's' },
-        { "no-unsync",  0, 0, OPT_NO_UNSYNC },
-        { "speed",      1, 0, OPT_SPEED },
-        { "start-time", 1, 0, OPT_START_TIME },
-        { "end-time",   1, 0, OPT_END_TIME },
-        { 0, 0, 0, 0 }
+        { NULL,         '1',            OPT_OPT_ARG, ID3_GRP_ALL },
+        { NULL,         '2',            OPT_OPT_ARG, ID3_GRP_ALL },
+        { NULL,         'e',            OPT_OPT_ARG, ID3_GRP_ALL },
+        { "fmt",        'f',            OPT_REQ_ARG, ID3_MODIFY | ID3_PRINT },
+        { "expert",     'E',            OPT_NO_ARG,  ID3_MODIFY | ID3_DELETE },
+        { "frame",      'F',            OPT_REQ_ARG, ID3_MODIFY | ID3_PRINT },
+        { "help",       'h',            OPT_NO_ARG,  ID3_GRP_ALL },
+        { "verbose",    'v',            OPT_NO_ARG,  ID3_GRP_ALL },
+        { "title",      't',            OPT_REQ_ARG, ID3_MODIFY },
+        { "artist",     'a',            OPT_REQ_ARG, ID3_MODIFY },
+        { "album",      'l',            OPT_REQ_ARG, ID3_MODIFY },
+        { "year",       'y',            OPT_REQ_ARG, ID3_MODIFY },
+        { "comment",    'c',            OPT_REQ_ARG, ID3_MODIFY },
+        { "genre",      'g',            OPT_REQ_ARG, ID3_MODIFY },
+        { "track",      'n',            OPT_REQ_ARG, ID3_MODIFY },
+        { "size",       's',            OPT_REQ_ARG, ID3_GRP_WRITE },
+        { "no-unsync",  OPT_NO_UNSYNC,  OPT_NO_ARG,  ID3_GRP_WRITE },
+        { "speed",      OPT_SPEED,      OPT_REQ_ARG, ID3_MODIFY },
+        { "start-time", OPT_START_TIME, OPT_REQ_ARG, ID3_MODIFY },
+        { "end-time",   OPT_END_TIME,   OPT_REQ_ARG, ID3_MODIFY },
+        { NULL,         0,              0, 0 }
     };
 
     static const struct
@@ -438,15 +443,13 @@ int init_config(int *argc, char ***argv)
             if (!strcmp((*argv)[1], actions[i].act_name))
             {
                 g_config.action = actions[i].act_id;
-                optind = 2;
+                opt_ind = 2;
                 break;
             }
         }
     }
 
-    while ((c = getopt_long(*argc, *argv,
-                            "1::2::e::vhEf:F:a:c:g:l:n:t:y:s:",
-                            long_opts, NULL)) != -1)
+    while ((c = get_opt(*argc, *argv, optlist)) != -1)
     {
         switch (c)
         {
@@ -456,17 +459,17 @@ int init_config(int *argc, char ***argv)
 
             case '1':
                 g_config.ver.major = 1;
-                if (optarg != 0)
+                if (opt_arg != 0)
                 {
-                    if (strlen(optarg) == 1)
+                    if (strlen(opt_arg) == 1)
                     {
-                        switch (optarg[0])
+                        switch (opt_arg[0])
                         {
                             case '0':
                             case '1':
                             case '2':
                             case '3':
-                                g_config.ver.minor = atoi(optarg);
+                                g_config.ver.minor = atoi(opt_arg);
                                 break;
 
                             case 'e':
@@ -475,82 +478,79 @@ int init_config(int *argc, char ***argv)
                         }
                     }
                     FATAL(g_config.ver.minor == NOT_SET,
-                          "unknown minor version of ID3v1: %s", optarg);
+                          "unknown minor version of ID3v1: %s", opt_arg);
                 }
                 break;
 
             case '2':
                 g_config.ver.major = 2;
-                if (optarg != 0)
+                if (opt_arg != 0)
                 {
-                    if (strlen(optarg) == 1)
+                    if (strlen(opt_arg) == 1)
                     {
-                        switch (optarg[0])
+                        switch (opt_arg[0])
                         {
                             case '2':
                             case '3':
                             case '4':
-                                g_config.ver.minor = atoi(optarg);
+                                g_config.ver.minor = atoi(opt_arg);
                                 break;
                         }
                     }
                     FATAL(g_config.ver.minor == NOT_SET,
-                          "unknown minor version of ID3v2: %s", optarg);
+                          "unknown minor version of ID3v2: %s", opt_arg);
                 }
                 break;
 
             case 's':                
-                ret = str_to_long(optarg, &long_val);
+                ret = str_to_long(opt_arg, &long_val);
                 FATAL(ret != 0 || long_val < 0, "invalid tag size specified");
                 g_config.size = long_val;
                 g_config.options |= ID321_OPT_CHANGE_SIZE;
                 break;
 
             case 'g':
-                ret = parse_genre_optarg(optarg);
+                ret = parse_genre_optarg(opt_arg);
                 FATAL(ret != 0, "invalid genre specified");
                 break;
 
             case 'c':
-                ret = parse_comment_optarg(optarg);
+                ret = parse_comment_optarg(opt_arg);
                 FATAL(ret != 0, "invalid comment language specified");
                 break;
 
-            case 'a': g_config.artist = optarg; break;
-            case 'l': g_config.album = optarg; break;
-            case 'n': g_config.track = optarg; break;
-            case 't': g_config.title = optarg; break;
-            case 'y': g_config.year = optarg; break;
+            case 'a': g_config.artist = opt_arg; break;
+            case 'l': g_config.album = opt_arg; break;
+            case 'n': g_config.track = opt_arg; break;
+            case 't': g_config.title = opt_arg; break;
+            case 'y': g_config.year = opt_arg; break;
             case 'F':
-                FATAL(g_config.action != ID3_PRINT
-                      && g_config.action != ID3_MODIFY,
-                      "option '-F' has no sense for the current action");
-                ret = parse_frame_optarg(optarg);
+                ret = parse_frame_optarg(opt_arg);
                 FATAL(ret == -ENOMEM, "out of memory");
                 FATAL(ret != 0, "invalid frame spec specified");
                 break;
 
             case 'e':
-                if (!optarg)
+                if (!opt_arg)
                 {
                     g_config.enc_v1 = g_config.enc_iso8859_1 =
                         locale_encoding();
                     enc_str = NULL;
                 }
                 else
-                    enc_str = optarg;
+                    enc_str = opt_arg;
                 break;
 
             case 'v': debug_mask = (debug_mask << 1) | 1; break;
-            case 'f': g_config.fmtstr = optarg; break;
+            case 'f': g_config.fmtstr = opt_arg; break;
             case 'E': g_config.options |= ID321_OPT_EXPERT; break;
             case OPT_NO_UNSYNC: g_config.options |= ID321_OPT_NO_UNSYNC; break;
 
             case OPT_SPEED:
-                g_config.speed = get_id3v1e_speed_id(optarg);
+                g_config.speed = get_id3v1e_speed_id(opt_arg);
                 if (g_config.speed == 0)
                 {
-                    ret = str_to_long(optarg, &long_val);
+                    ret = str_to_long(opt_arg, &long_val);
                     FATAL(ret != 0 || long_val != (long_val & 0xFF),
                           "invalid speed value");
                     g_config.speed = (uint8_t)long_val;
@@ -598,8 +598,8 @@ int init_config(int *argc, char ***argv)
               g_config.genre_id);
     }
 
-    *argc -= optind;
-    *argv += optind;
+    *argc -= opt_ind;
+    *argv += opt_ind;
 
     return 0;
 }

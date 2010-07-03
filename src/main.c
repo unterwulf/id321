@@ -17,12 +17,16 @@ char *program_name;
 int main(int argc, char **argv)
 {
     int ret = 0;
-    static int (* const actions[])(const char *) =
+    static const struct {
+        enum id3_action action;
+        int (*func)(const char *);
+    }
+    actions[] =
     {
-        [ ID3_PRINT  ] = print_tags,
-        [ ID3_MODIFY ] = modify_tags,
-        [ ID3_DELETE ] = delete_tags,
-        [ ID3_SYNC   ] = sync_tags,
+        { ID3_PRINT,  print_tags  },
+        { ID3_MODIFY, modify_tags },
+        { ID3_DELETE, delete_tags },
+        { ID3_SYNC,   sync_tags   },
     };
 
     /* take care of locale */
@@ -48,9 +52,15 @@ int main(int argc, char **argv)
     }
     else
     {
+        unsigned i;
+
+        for_each (i, actions)
+            if (actions[i].action == g_config.action)
+                break;
+
         for (; argc > 0; argc--, argv++)
         {
-            ret = actions[g_config.action](*argv);
+            ret = actions[i].func(*argv);
 
             if (ret == -ENOMEM)
                 print(OS_ERROR, "%s: out of memory", *argv);

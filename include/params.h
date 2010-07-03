@@ -21,11 +21,11 @@
 
 enum id3_action
 {
-    ID3_PRINT,
-    ID3_MODIFY,
-    ID3_DELETE,
-    ID3_SYNC,
-    ID3_COPY,
+    ID3_PRINT  = 0x1,
+    ID3_MODIFY = 0x2,
+    ID3_DELETE = 0x4,
+    ID3_SYNC   = 0x8,
+    ID3_COPY   = 0x10,
 };
 
 struct version
