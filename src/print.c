@@ -188,6 +188,7 @@ static void print_tag(const struct id3v1_tag *tag1,
                     case 'n': putchar('\n'); break;
                     case 'r': putchar('\r'); break;
                     case 't': putchar('\t'); break;
+                    case '\\': putchar('\\'); break;
                     default:  putchar('\\'); pos--; /* process it again */
                 }
                 state = st_normal;
@@ -276,6 +277,8 @@ static void print_tag(const struct id3v1_tag *tag1,
                     pos += frame_id_len - 1;
                     frame = peek_frame(&tag2->frame_head, local_frame_id);
                 }
+                else if (*pos == '%' && pos - lastspec == 1)
+                    putchar('%');
                 else /* invalid format spec, so just print it as is */
                     printf("%.*s", pos - lastspec + 1, lastspec);
 
@@ -314,6 +317,8 @@ static void print_tag(const struct id3v1_tag *tag1,
         case st_normal: break;
         default:        printf("%s", lastspec); break;
     }
+
+    putchar('\n');
 }
 
 int print_tags(const char *filename)
