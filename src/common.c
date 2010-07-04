@@ -1,10 +1,10 @@
 #define _ISOC99_SOURCE /* vswprintf() */
-#include <unistd.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <wchar.h>
 #include "common.h"
 #include "iconv_wrap.h"
@@ -13,9 +13,10 @@
 /***
  * readordie
  *
- * The routine reads until @len bytes has been read or EOF has been reached.
+ * The routine reads from file descriptior @fd until @len bytes has been
+ * read or EOF has been reached.
  *
- * Returns the number of bytes has been read, or -errno on error
+ * Returns the number of bytes read, or -errno on error.
  */
 
 ssize_t readordie(int fd, void *buf, size_t len)
@@ -98,7 +99,7 @@ id321_iconv_t xiconv_open(const char *tocode, const char *fromcode)
     if (cd == (id321_iconv_t)-1)
     {
         print(OS_ERROR, "unable to convert string from '%s' to '%s'",
-                fromcode, tocode);
+                        fromcode, tocode);
         exit(EXIT_FAILURE);
     }
 
@@ -178,21 +179,19 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
     return reqsize;
 }
 
-/*
- * Function:     iconv_alloc
+/***
+ * iconv_alloc
  *
- * Description:  Converts @src buffer from @fromcode to @tocode and places
- *               result into internally allocated memory area. *@dst will
- *               be pointing to the result, and *@dstsize will contain its
- *               size.
+ * Converts the buffer @src from @fromcode to @tocode and places result
+ * into internally allocated memory area. *@dst will be pointing to the
+ * result, and *@dstsize will contain its size.
  *
- *               If @tocode is WCHAR_CODESET, resulting wcstring will be
- *               null-terminated even if @src is not.
+ * If @tocode is WCHAR_CODESET, resulting wcstring will be null-terminated
+ * even if @src is not.
  *
- *               *@dst must be freed with free() after use.
+ * *@dst must be freed with free() after use.
  *
- * Return value: 0 on success, -ENOMEM on out of memory error
- *
+ * Returns 0 on success, or -ENOMEM on out of memory error.
  */
 
 int iconv_alloc(const char *tocode, const char *fromcode,

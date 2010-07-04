@@ -9,7 +9,7 @@
 #include "file.h"
 
 /***
- * crop_id3v1_tag - crop id3v1 tag from @file
+ * crop_id3v1_tag - crop ID3v1 tag from @file
  *
  * Returns size of the tag cropped or negative errno on error.
  */

@@ -2,7 +2,7 @@
 #define SYNCHSAFE_H
 
 #include <inttypes.h>
-#include <unistd.h>
+#include <stddef.h>
 
 typedef uint32_t ss_uint32_t;
 

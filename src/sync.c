@@ -1,20 +1,20 @@
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>        /* sscanf() */
 #include <string.h>
-#include <inttypes.h>
 #include <wchar.h>
+#include "alias.h"
 #include "common.h"
+#include "framelist.h"
+#include "frames.h"       /* set_id3v2_tag_genre_by_id() */
+#include "frm_comm.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
 #include "id3v2.h"
-#include "params.h"
 #include "output.h"
-#include "alias.h"
-#include "frames.h"       /* set_id3v2_tag_genre_by_id() */
-#include "frm_comm.h"
-#include "framelist.h"
+#include "params.h"
 
 static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 {
@@ -132,15 +132,19 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
     return 0;
 }
 
-/*
- * Function:     get_v1_timestamp
+/***
+ * get_v1e_timestamp
  *
- * Description:  parses the string with the following timestamp format: mmm:ss 
+ * The routine parses the string with the following timestamp format as per
+ * the enhanced tag specification:
  *
- * Return value: time in seconds or -1 if passed string is not a valid
- *               timestamp string
+ *    MMM:SS 
+ *
+ * Returns time in seconds or -1 if passed string is not a valid timestamp
+ * string.
  */
-static int32_t get_v1_timestamp(const char *timestamp)
+
+static int32_t get_v1e_timestamp(const char *timestamp)
 {
     unsigned minutes;
     unsigned seconds;
@@ -262,12 +266,12 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
     /* TODO: sync starttime and endtime */
 
-    time = get_v1_timestamp(tag1->starttime);
+    time = get_v1e_timestamp(tag1->starttime);
 //    if (time != -1)
 //        update_id3v2_tag_event(tag2, ETCO_END_OF_INITIAL_SILENCE,
 //                               time*1000);
 
-    time = get_v1_timestamp(tag1->endtime);
+    time = get_v1e_timestamp(tag1->endtime);
 //    if (time != -1)
 //        update_id3v2_tag_event(tag2, ETCO_AUDIO_END, time*1000);
 

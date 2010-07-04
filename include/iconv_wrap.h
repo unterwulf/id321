@@ -1,5 +1,6 @@
 #ifndef ICONV_WRAP_H
 #define ICONV_WRAP_H
+
 #include "config.h"
 
 #ifdef UCS2_WORKAROUND

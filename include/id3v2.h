@@ -2,7 +2,7 @@
 #define ID3V2_H
 
 #include <inttypes.h>
-#include <unistd.h>
+#include <sys/types.h>
 #include <wchar.h>
 
 #ifdef _FRAME_LIST

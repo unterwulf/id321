@@ -2,8 +2,8 @@
 #define ID3V1_H
 
 #include <inttypes.h>
-#include <stddef.h>
-#include <lib313.h>
+#include <stddef.h>   /* size_t */
+#include <lib313.h>   /* ID3V1_*, ID3V13_* */
 
 /* v1.1 defines */
 

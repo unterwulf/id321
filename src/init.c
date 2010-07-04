@@ -3,15 +3,15 @@
 #include <stdio.h>        /* fread(), printf(), stdin */
 #include <stdlib.h>       /* atoi() */
 #include <string.h>
+#include "common.h"
 #include "config.h"
-#include "params.h"
-#include "opts.h"
-#include "output.h"
 #include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
 #include "id3v1e_speed.h"
-#include "common.h"
+#include "opts.h"
+#include "output.h"
+#include "params.h"
 
 #define OPT_SPEED      1
 #define OPT_START_TIME 2

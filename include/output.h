@@ -2,7 +2,6 @@
 #define OUTPUT_H
 
 #include <inttypes.h>
-#include <stddef.h>
 
 typedef enum {
     OS_DEBUG = 0x8,

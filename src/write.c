@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "output.h"
 #include "params.h" /* NOT_SET */
 #include "common.h" /* BLOCK_SIZE */

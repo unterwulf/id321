@@ -1,7 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <unistd.h>
+#include <sys/types.h>  /* size_t, ssize_t */
+#include <wchar.h>      /* wchar_t */
 #include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v2.h"
