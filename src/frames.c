@@ -585,7 +585,7 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
         if (wsize < 0)
             return wsize;
     }
-    else if (!IS_EMPTY_WCS(genre_wcs))
+    else if (!IS_EMPTY_STR(genre_wcs))
     {
         wdata = genre_wcs;
         wsize = wcslen(genre_wcs);

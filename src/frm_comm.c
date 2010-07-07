@@ -161,8 +161,8 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
         }
 
         if (!memcmp(tmp_comm->lang, comm->lang, ID3V2_LANG_HDR_SIZE) 
-            && ((IS_EMPTY_WCS(tmp_comm->desc)
-                 && IS_EMPTY_WCS(comm->desc))
+            && ((IS_EMPTY_STR(tmp_comm->desc)
+                 && IS_EMPTY_STR(comm->desc))
                 || (tmp_comm->desc && comm->desc
                         && !wcscmp(tmp_comm->desc, comm->desc))))
         {
@@ -271,7 +271,7 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, struct id3v2_frm_comm *comm,
 
     ret = peek_next_id3v2_frm_comm(tag, &old_frame, comm, flags);
 
-    if (ret == -ENOENT && !flags && !IS_EMPTY_WCS(comm->text))
+    if (ret == -ENOENT && !flags && !IS_EMPTY_STR(comm->text))
     {
         ret = pack_id3v2_frm_comm(tag->header.version, comm, &new_frame);
 
@@ -284,7 +284,7 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, struct id3v2_frm_comm *comm,
     {
         do
         {
-            if (!IS_EMPTY_WCS(comm->text))
+            if (!IS_EMPTY_STR(comm->text))
             {
                 ret = pack_id3v2_frm_comm(tag->header.version,
                                           comm, &new_frame);

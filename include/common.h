@@ -15,7 +15,6 @@
     for (i = 0; i < sizeof(array)/sizeof(array[0]); i++)
 
 #define IS_EMPTY_STR(str) (!(str) || !str[0])
-#define IS_EMPTY_WCS(wcs) (!(wcs) || !wcs[0])
 
 #define NOMEM_OR_FAULT(ret) (ret == -ENOMEM ? ret : -EFAULT)
 #define SUCC_NOMEM_OR_FAULT(ret) (ret == 0 || ret == -ENOMEM ? ret : -EFAULT)
