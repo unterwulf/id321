@@ -53,54 +53,57 @@ uint32_t deunsync_uint32(ss_uint32_t src)
 
 size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
 {
-    size_t pos;
-    size_t dstpos;
-    unsigned char *usrc = (unsigned char *)src; /* do not spell it in Russian */
+    size_t ressize = dstsize;
 
-    for (pos = 0, dstpos = 0; pos < srcsize && dstpos < dstsize; pos++)
+    for (; srcsize > 0 && dstsize > 0; src++, dst++, srcsize--, dstsize--)
     {
-        dst[dstpos++] = src[pos];
-
-        if (usrc[pos] == 0xFF &&
-            ((pos + 1 < srcsize
-              && ((usrc[pos+1] & 0xE0) == 0xE0 || usrc[pos+1] == '\0'))
-             || pos + 1 == srcsize))
+        *dst = *src;
+        
+        if (*src == '\xFF' &&
+            (srcsize > 1 && ((*(src+1) & '\xE0') == '\xE0' || *(src+1) == '\0')
+             || srcsize == 1))
         {
-            if (dstpos < dstsize)
-                dst[dstpos++] = '\0';
+            if (dstsize > 1)
+            {
+                *++dst = '\0';
+                dstsize--;
+            }
             else
-                dstpos++;
+                ressize++;
         }
     }
 
     /* just estimate required buffer size */
-    for (dstpos += srcsize - pos; pos < srcsize; pos++)
-        if (usrc[pos] == 0xFF &&
-            ((pos + 1 < srcsize
-              && ((usrc[pos+1] & 0xE0) == 0xE0 || usrc[pos+1] == '\0'))
-             || pos + 1 == srcsize))
-            dstpos++;
+    for (ressize += srcsize; srcsize > 0; src++, srcsize--)
+        if (*src == '\xFF' &&
+            (srcsize > 1 && ((*(src+1) & '\xE0') == '\xE0' || *(src+1) == '\0')
+             || srcsize == 1))
+            ressize++;
 
-    return dstpos;
+    return ressize - dstsize;
 }
 
 size_t deunsync_buf(char *buf, size_t size, int pre)
 {
-    size_t pos = 0;
-    char *wr_pos = buf;
+    char *wrptr = buf;
+    size_t origsize = size;
 
     /* checking precondition */
-    if (pre == 1 && size >= 1 && buf[0] == '\0')
-        pos++;
-
-    for (; pos < size; pos++)
+    if (pre == 1 && size > 0 && *buf == '\0')
     {
-        *(wr_pos++) = buf[pos];
-
-        if ((unsigned char)buf[pos] == 0xFF
-            && pos + 1 < size && buf[pos+1] == '\0')
-            pos++;
+        buf++;
+        size--;
     }
 
-    return wr_pos - buf;
+    if (size > 0)
+    {
+        *wrptr++ = *buf++;
+        size--;
+    }
+
+    for (; size > 0; buf++, size--)
+        if (*(buf-1) != '\xFF' || *buf != '\0')
+            *wrptr++ = *buf;
+
+    return origsize - (buf - wrptr);
 }
