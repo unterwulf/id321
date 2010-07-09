@@ -117,7 +117,6 @@ void free_id3v2_tag(struct id3v2_tag *tag);
 
 int read_id3v2_header(int fd, struct id3v2_header *hdr);
 int read_id3v2_footer(int fd, struct id3v2_header *hdr);
-int unpack_id3v2_header(struct id3v2_header *hdr, const char *buf);
 int read_id3v2_ext_header(int fd, struct id3v2_tag *tag);
 int read_id3v2_frames(int fd, struct id3v2_tag *tag);
 

@@ -41,7 +41,7 @@ void free_id3v2_tag(struct id3v2_tag *tag)
 
 static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
                                      const unsigned char *buf,
-                                     unsigned char version)
+                                     unsigned version)
 {
     if (version == 2)
     {
@@ -49,13 +49,15 @@ static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
         frame->size = ((uint32_t)buf[3] << 16) |
                       ((uint32_t)buf[4] << 8) |
                       (uint32_t)buf[5];
+        /* no need to do ntohl(frame->size), as we use shift operator here */
         frame->status_flags = 0;
         frame->format_flags = 0;
     }
     else
     {
         memcpy(frame->id, buf, 4);
-        frame->size = ntohl(*((uint32_t *)&(buf[4])));
+        memcpy(&frame->size, buf + 4, sizeof(uint32_t));
+        frame->size = ntohl(frame->size);
         frame->status_flags = buf[8];
         frame->format_flags = buf[9];
 
@@ -250,14 +252,13 @@ static int validate_id3v2_header(const struct id3v2_header *hdr)
     }
 }
 
-int unpack_id3v2_header(struct id3v2_header *hdr, const char *buf)
+static void unpack_id3v2_header(struct id3v2_header *hdr, const char *buf)
 {
     hdr->version = (uint8_t)buf[3];
     hdr->revision = (uint8_t)buf[4];
     hdr->flags = (uint8_t)buf[5];
-    hdr->size = deunsync_uint32(ntohl(*((uint32_t*)&(buf[6]))));
-
-    return 0;
+    memcpy(&hdr->size, buf + 6, sizeof(uint32_t));
+    hdr->size = deunsync_uint32(ntohl(hdr->size));
 }
 
 #if 0
@@ -391,16 +392,18 @@ static size_t pack_id3v2_frame(char *buf, size_t size,
     {
         /* TODO: check max frame size */
         memcpy(hdr_buf, frame->id, 3);
+        /* no need to do htonl(payload_size), as we use shift operator here */
         hdr_buf[3] = (uint8_t)((payload_size >> 16) & 0xFF);
         hdr_buf[4] = (uint8_t)((payload_size >> 8) & 0xFF);
         hdr_buf[5] = (uint8_t)(payload_size & 0xFF);
     }
     else
     {
+        uint32_t net_payload_size = (hdr->version == 4)
+                                    ? htonl(unsync_uint32(payload_size))
+                                    : htonl(payload_size);
         memcpy(hdr_buf, frame->id, 4);
-        *(uint32_t *)(&hdr_buf[4]) = (hdr->version == 4)
-                                     ? htonl(unsync_uint32(payload_size))
-                                     : htonl(payload_size);
+        memcpy(hdr_buf + 4, &net_payload_size, sizeof(uint32_t));
         hdr_buf[8] = frame->status_flags;
         hdr_buf[9] = format_flags;
     }
@@ -408,9 +411,20 @@ static size_t pack_id3v2_frame(char *buf, size_t size,
     return hdr_size + payload_size;
 }
 
+static void pack_id3v2_header(char *buf, const struct id3v2_header *hdr)
+{
+    uint32_t net_tag_size = htonl(unsync_uint32(hdr->size));
+
+    strcpy(buf, "ID3");
+    buf[3] = hdr->version;
+    buf[4] = hdr->revision;
+    buf[5] = hdr->flags;
+    memcpy(buf + 6, &net_tag_size, sizeof(uint32_t));
+}
+
 ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
 {
-    struct id3v2_header       header = tag->header;
+    struct id3v2_header header = tag->header;
     const struct id3v2_frame *frame;
     size_t bufsize = header.size > BLOCK_SIZE ? header.size : BLOCK_SIZE;
     size_t pos = ID3V2_HEADER_LEN;
@@ -526,11 +540,9 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         pos = newsize;
     }
 
-    strcpy(*buf, "ID3");
-    (*buf)[3] = header.version;
-    (*buf)[4] = header.revision;
-    (*buf)[5] = header.flags;
-    *(uint32_t *)&((*buf)[6]) = htonl(unsync_uint32(pos - ID3V2_HEADER_LEN));
+    header.size = pos - ID3V2_HEADER_LEN;
+
+    pack_id3v2_header(*buf, &header);
 
     return pos;
 
