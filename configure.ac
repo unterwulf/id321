@@ -21,6 +21,8 @@ fi
 
 AC_CHECK_FUNCS(wcsdup, [], [])
 
+AM_ICONV
+
 AM_CONDITIONAL([STATIC_LIB313], [test "x$ac_cv_lib_313_lib313_unpack" = xno])
 
 AC_DEFINE([UCS2_WORKAROUND], [1],

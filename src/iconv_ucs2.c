@@ -2,7 +2,7 @@
 #include <iconv.h>
 #include <stdlib.h>
 #include <strings.h> /* strcasecmp() */
-#include "config.h"  /* WORDS_BIGENDIAN */
+#include "config.h"  /* WORDS_BIGENDIAN, ICONV_CONST */
 
 /***
  * It seems that iconv implementations tend not to consider BOM as part of
@@ -60,8 +60,9 @@ iconv_ucs2_t iconv_open_ucs2(const char *tocode, const char *fromcode)
     return cd_ucs2;
 }
 
-size_t iconv_ucs2(iconv_ucs2_t cd, char **inbuf, size_t *inbytesleft,
-                                   char **outbuf, size_t *outbytesleft)
+size_t iconv_ucs2(iconv_ucs2_t cd,
+                  ICONV_CONST char **inbuf, size_t *inbytesleft,
+                  char **outbuf, size_t *outbytesleft)
 {
 #ifdef WORDS_BIGENDIAN
     const char bom[] = { 0xFE, 0xFF };

@@ -1,6 +1,7 @@
 all: configure
 
 configure: Makefile.am configure.ac src/Makefile.am
+	cp /usr/share/gettext/config.rpath build
 	autoreconf -s -i
 
 clean:
