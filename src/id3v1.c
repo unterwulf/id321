@@ -48,6 +48,7 @@ int unpack_id3v1_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 
     if (!memcmp(buf, ID3V1_HEADER, ID3V1_HEADER_SIZE))
     {
+        memset(tag, '\0', sizeof(*tag));
         unpack_id3v1_field(buf, tag, title,   TIT);
         unpack_id3v1_field(buf, tag, artist,  ART);
         unpack_id3v1_field(buf, tag, album,   ALB);
