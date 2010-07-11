@@ -3,7 +3,6 @@
 #include <stdio.h>  /* sscanf() */
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
 #include "common.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
@@ -14,6 +13,7 @@
 #include "framelist.h"
 #include "frames.h"
 #include "frm_comm.h"
+#include "u32_char.h"
 
 static int modify_v1_tag(struct id3v1_tag *tag)
 {
@@ -218,7 +218,7 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
 
         if (!IS_EMPTY_STR(g_config.comment))
         {
-            ret = iconv_alloc(WCHAR_CODESET, locale_encoding(),
+            ret = iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
                               g_config.comment, strlen(g_config.comment),
                               (void *)&comm->text, NULL);
             if (ret != 0)
@@ -227,7 +227,7 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
 
         if (!IS_EMPTY_STR(g_config.comment_desc))
         {
-            ret = iconv_alloc(WCHAR_CODESET, locale_encoding(),
+            ret = iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
                           g_config.comment_desc, strlen(g_config.comment_desc),
                           (void *)&comm->desc, NULL);
             if (ret != 0)
@@ -274,24 +274,24 @@ err_comm:
     }
     else
     {
-        wchar_t *genre_wcs = NULL;
+        u32_char *genre_u32_str = NULL;
         uint8_t genre_id = (g_config.options & ID321_OPT_SET_GENRE_ID)
                            ? g_config.genre_id : ID3V1_UNKNOWN_GENRE;
 
         if (!IS_EMPTY_STR(g_config.genre_str))
         {
-            ret = iconv_alloc(WCHAR_CODESET, locale_encoding(),
+            ret = iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
                               g_config.genre_str, strlen(g_config.genre_str),
-                              (void *)&genre_wcs, NULL);
+                              (void *)&genre_u32_str, NULL);
             if (ret != 0)
                 return ret;
         }
 
-        if (genre_id != ID3V1_UNKNOWN_GENRE || genre_wcs)
+        if (genre_id != ID3V1_UNKNOWN_GENRE || genre_u32_str)
         {
-            ret = set_id3v2_tag_genre(tag, genre_id, genre_wcs);
+            ret = set_id3v2_tag_genre(tag, genre_id, genre_u32_str);
 
-            free(genre_wcs);
+            free(genre_u32_str);
 
             if (ret != 0)
                 return ret;

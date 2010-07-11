@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <limits.h>   /* MB_LEN_MAX */
-#include <wchar.h>
+#include "common.h"
 #include "printfmt.h"
+#include "u32_char.h"
 
 static void print_padding(char ch, int len)
 {
@@ -13,31 +14,22 @@ static void print_padding(char ch, int len)
 }
 
 /***
- * printwcsf - prints wide-character string @wcs using format from @pf
+ * printfmt_gen - prints string @str using format from @pf
  *
  * @pf - pointer to format struct
- * @wcs - wide character string
- *
- * This function differs from printf("%ls"). It does not stop processing @wcs
- * on the first non-representable wide character. Instead, it prints a dummy
- * character and continues processing.
+ * @str - char or u32_char string
+ * @is_u32 - kind of string @str is pointed to
  *
  * The function can be called with @pf pointing to NULL. In this case default
  * format is used.
  */
 
-void printwcsf(const struct print_fmt *pf, wchar_t *wcs)
+static void printfmt_gen(const struct print_fmt *pf, void *str, int is_u32)
 {
-    int len = wcslen(wcs);
+    size_t len = is_u32 ? u32_strlen(str) : strlen(str);
     int precision;
     int actlen = len;
-    int i;
-    mbstate_t ps;
-    char mbchar[MB_LEN_MAX];
-    size_t mbsize;
     static const struct print_fmt default_pf = {}; /* to use when @pf is NULL */
-
-    memset(&ps, '\0', sizeof(ps));
 
     if (!pf)
         pf = &default_pf;
@@ -61,20 +53,36 @@ void printwcsf(const struct print_fmt *pf, wchar_t *wcs)
     if ((pf->flags & FL_INT) && precision > len)
         print_padding('0', precision - len);
 
-    /* we cannot use printf here because %ls stops format string processing if
-     * wc cannot be represented as a multibyte sequence, and we need to just
-     * print ? in such case and continue processing */
-
-    for (i = 0; i < len; i++)
+    if (!is_u32)
     {
-        mbsize = wcrtomb(mbchar, wcs[i], &ps);
-
-        if (mbsize == -1)
-            mbsize = wcrtomb(mbchar, L'?', &ps);
-
-        fwrite(mbchar, mbsize, 1, stdout);
+        printf("%.*s", len, (char *)str);
+    }
+    else
+    {
+        char *buf;
+        size_t size;
+        int ret = iconv_alloc(locale_encoding(), U32_CHAR_CODESET,
+                              (const char *)str, len * sizeof(u32_char),
+                              &buf, &size);
+        if (ret != 0)
+            printf("%.*s", len, "[ENOMEM]");
+        else
+        {
+            printf("%.*s", size, buf);
+            free(buf);
+        }
     }
 
     if (pf->width > actlen && (pf->flags & FL_LEFT))
         print_padding(' ', pf->width - actlen);
+}
+
+void printfmt(const struct print_fmt *pf, char *str)
+{
+    printfmt_gen(pf, str, 0);
+}
+
+void u32_printfmt(const struct print_fmt *pf, u32_char *u32_str)
+{
+    printfmt_gen(pf, u32_str, 1);
 }

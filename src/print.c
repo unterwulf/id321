@@ -1,10 +1,8 @@
-#define _ISOC99_SOURCE    /* swprintf() */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include <wchar.h>
 #include "alias.h"
 #include "common.h"
 #include "params.h"       /* g_config, NOT_SET */
@@ -16,8 +14,10 @@
 #include "printfmt.h"
 #include "frames.h"       /* get_frame_data() */
 #include "framelist.h"
+#include "u32_char.h"
 
-extern void printwcsf(const struct print_fmt *pf, wchar_t *wcs);
+extern void printfmt(const struct print_fmt *pf, char *str);
+extern void u32_printfmt(const struct print_fmt *pf, u32_char *str);
 
 static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
                              struct print_fmt *pfmt)
@@ -33,39 +33,40 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
 
     if (size == 1)
     {
-        wchar_t int_wcs[4];
+        char int_str[4];
 
-        swprintf(int_wcs, sizeof(int_wcs)/sizeof(wchar_t),
-                 L"%u", *(const uint8_t *)buf);
+        snprintf(int_str, sizeof(int_str), "%u", *(const uint8_t *)buf);
         pfmt->flags |= FL_INT;
-        printwcsf(pfmt, int_wcs);
+        printfmt(pfmt, int_str);
     }
     else
     {
-        wchar_t *wcs;
-        int ret = iconv_alloc(WCHAR_CODESET, g_config.enc_v1, buf, strlen(buf),
-                              (void *)&wcs, NULL);
+        u32_char *u32_str;
+        int ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
+                              buf, strlen(buf),
+                              (void *)&u32_str, NULL);
 
         if (ret != 0)
             return;
 
-        printwcsf(pfmt, wcs);
-        free(wcs);
+        u32_printfmt(pfmt, u32_str);
+        free(u32_str);
     }
 }
 
 static void print_id3v1_tag_field(const char *name, const char *value)
 {
-    wchar_t *wcs = NULL;
-    int ret = iconv_alloc(WCHAR_CODESET, g_config.enc_v1, value, strlen(value),
-                          (void *)&wcs, NULL);
+    u32_char *u32_str = NULL;
+    int ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
+                          value, strlen(value),
+                          (void *)&u32_str, NULL);
 
     printf("%s: ", name);
 
     if (ret == 0)
     {
-        printwcsf(NULL, wcs);
-        free(wcs);
+        u32_printfmt(NULL, u32_str);
+        free(u32_str);
     }
     else
         printf("[ENOMEM]");
@@ -113,14 +114,14 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
 
         if (len > 0)
         {
-            wchar_t *wcs = malloc(sizeof(wcs)*(len+1));
-            if (wcs)
+            u32_char *u32_str = malloc(sizeof(u32_str)*(len+1));
+            if (u32_str)
             {
-                get_frame_data(tag, frame, wcs, len);
-                wcs[len] = L'\0';
-                printwcsf(NULL, wcs);
+                get_frame_data(tag, frame, u32_str, len);
+                u32_str[len] = U32_CHAR('\0');
+                u32_printfmt(NULL, u32_str);
                 printf("\n");
-                free(wcs);
+                free(u32_str);
             }
             else
                 printf("[ENOMEM]\n");
@@ -234,7 +235,7 @@ static void print_tag(const struct id3v1_tag *tag1,
 
                 if (*pos == 'n')
                 {
-                    wchar_t trackno_wcs[4] = L"###";
+                    char trackno_str[] = "###";
                     int trackno = -1;
 
                     if (tag2)
@@ -245,13 +246,12 @@ static void print_tag(const struct id3v1_tag *tag1,
 
                     if (trackno >= 0)
                     {
-                        swprintf(trackno_wcs,
-                            sizeof(trackno_wcs)/sizeof(wchar_t),
-                            L"%u", trackno);
+                        snprintf(trackno_str, sizeof(trackno_str),
+                                 "%u", trackno);
                         pfmt.flags |= FL_INT;
                     }
 
-                    printwcsf(&pfmt, trackno_wcs);
+                    printfmt(&pfmt, trackno_str);
                 }
                 else if ((al = get_alias(*pos)))
                 {
@@ -288,17 +288,17 @@ static void print_tag(const struct id3v1_tag *tag1,
 
                     if (len > 0)
                     {
-                        wchar_t *wcs = malloc(sizeof(wchar_t)*(len+1));
+                        u32_char *u32_str = malloc(sizeof(u32_char)*(len+1));
 
-                        if (wcs)
+                        if (u32_str)
                         {
-                            get_frame_data(tag2, frame, wcs, len);
-                            wcs[len] = L'\0';
-                            printwcsf(&pfmt, wcs);
-                            free(wcs);
+                            get_frame_data(tag2, frame, u32_str, len);
+                            u32_str[len] = U32_CHAR('\0');
+                            u32_printfmt(&pfmt, u32_str);
+                            free(u32_str);
                         }
                         else
-                            printwcsf(&pfmt, L"ENOMEM"); 
+                            printfmt(&pfmt, "ENOMEM"); 
                     }
 
                     frame = NULL;

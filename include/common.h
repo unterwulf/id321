@@ -2,14 +2,13 @@
 #define COMMON_H
 
 #include <sys/types.h>  /* size_t, ssize_t */
-#include <wchar.h>      /* wchar_t */
 #include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v2.h"
 #include "params.h"
+#include "u32_char.h"
 
 #define BLOCK_SIZE 4096
-#define WCHAR_CODESET "WCHAR_T"
 
 #define for_each(i, array) \
     for (i = 0; i < sizeof(array)/sizeof(array[0]); i++)
@@ -40,6 +39,6 @@ int iconv_alloc(const char *tocode, const char *fromcode,
                 const char *src, size_t srcsize,
                 char **dst, size_t *dstsize);
 
-int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...);
+int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...);
 
 #endif /* COMMON_H */

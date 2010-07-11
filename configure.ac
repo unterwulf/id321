@@ -19,8 +19,6 @@ if test "x$ac_cv_func_strnlen_working" = "xyes"; then
 AC_CHECK_FUNCS(strnlen, [], [])
 fi
 
-AC_CHECK_FUNCS(wcsdup, [], [])
-
 AM_ICONV
 
 AM_CONDITIONAL([STATIC_LIB313], [test "x$ac_cv_lib_313_lib313_unpack" = xno])

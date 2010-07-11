@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>        /* sscanf() */
 #include <string.h>
-#include <wchar.h>
 #include "alias.h"
 #include "common.h"
 #include "framelist.h"
@@ -15,6 +14,7 @@
 #include "id3v2.h"
 #include "output.h"
 #include "params.h"
+#include "u32_char.h"
 
 static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 {
@@ -77,9 +77,10 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
                 if (comm->text)
                 {
                     memset(tag1->comment, '\0', sizeof(tag1->comment));
-                    iconvordie(g_config.enc_v1, WCHAR_CODESET,
-                        (char *)comm->text, wcslen(comm->text)*sizeof(wchar_t),
-                        tag1->comment, sizeof(tag1->comment) - 1);
+                    iconvordie(g_config.enc_v1, U32_CHAR_CODESET,
+                               (char *)comm->text,
+                               u32_strlen(comm->text)*sizeof(u32_char),
+                               tag1->comment, sizeof(tag1->comment) - 1);
                 }
 
                 free_id3v2_frm_comm(comm);
@@ -104,20 +105,21 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 
     /* sync genre_id and genre_str */
     {
-        wchar_t *genre_wcs = NULL;
-        int genre_id = get_id3v2_tag_genre(tag2, &genre_wcs);
+        u32_char *genre_u32_str = NULL;
+        int genre_id = get_id3v2_tag_genre(tag2, &genre_u32_str);
 
         if (genre_id >= 0)
         {
             tag1->genre_id = genre_id;
 
-            if (genre_wcs)
+            if (genre_u32_str)
             {
                 memset(tag1->genre_str, '\0', sizeof(tag1->genre_str));
-                iconvordie(g_config.enc_v1, WCHAR_CODESET,
-                           (char *)genre_wcs, wcslen(genre_wcs)*sizeof(wchar_t),
+                iconvordie(g_config.enc_v1, U32_CHAR_CODESET,
+                           (char *)genre_u32_str,
+                           u32_strlen(genre_u32_str)*sizeof(u32_char),
                            tag1->genre_str, sizeof(tag1->genre_str) - 1);
-                free(genre_wcs);
+                free(genre_u32_str);
             }
         }
         else if (genre_id == -ENOENT)
@@ -229,7 +231,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
         if (!comm)
             return -ENOMEM;
 
-        ret = iconv_alloc(WCHAR_CODESET, g_config.enc_v1,
+        ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                           tag1->comment, strlen(tag1->comment),
                           (void *)&comm->text, NULL);
         if (ret != 0)
@@ -246,19 +248,19 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
     if (tag1->genre_id != ID3V1_UNKNOWN_GENRE || tag1->genre_str[0] != '\0')
     {
-        wchar_t *genre_wcs = NULL;
+        u32_char *genre_u32_str = NULL;
         
         if (tag1->genre_str[0] != '\0')
         {
-            ret = iconv_alloc(WCHAR_CODESET, g_config.enc_v1,
+            ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                               tag1->genre_str, strlen(tag1->genre_str),
-                              (void *)&genre_wcs, NULL);
+                              (void *)&genre_u32_str, NULL);
             if (ret != 0)
                 return ret;
         }
                                  
-        ret = set_id3v2_tag_genre(tag2, tag1->genre_id, genre_wcs);
-        free(genre_wcs);
+        ret = set_id3v2_tag_genre(tag2, tag1->genre_id, genre_u32_str);
+        free(genre_u32_str);
 
         if (ret != 0)
             return ret;

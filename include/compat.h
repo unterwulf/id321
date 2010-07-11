@@ -8,9 +8,4 @@
 size_t strnlen(const char *s, size_t maxlen);
 #endif
 
-#ifndef HAVE_WCSDUP
-#include <wchar.h>
-wchar_t *wcsdup(const wchar_t *wcs);
-#endif
-
 #endif /* COMPAT_H */

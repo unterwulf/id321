@@ -1,14 +1,13 @@
-#define _ISOC99_SOURCE /* vswprintf() */
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <wchar.h>
 #include "common.h"
 #include "iconv_wrap.h"
 #include "output.h"
+#include "u32_char.h"
 
 /***
  * readordie
@@ -128,27 +127,27 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
                    char *dst, size_t dstsize)
 {
     id321_iconv_t cd;
-    const char  *in = src;
-    char        *out = dst;
-    size_t       reqsize = dstsize; /* required size of @dst */
-    size_t       inbytesleft = srcsize;
-    size_t       outbytesleft = dstsize;
-    size_t       ret;
-    char         dummy[BUFSIZ];
+    size_t reqsize; /* required size of @dst */
+    size_t ret;
+    char dummy[BUFSIZ];
+    int is_from_u32 = (!strcmp(fromcode, U32_CHAR_CODESET)) ? 1 : 0;
 
     cd = xiconv_open(tocode, fromcode);
 
-    if (!out && dstsize == 0)
+    if (!dst && dstsize == 0)
     {
         /* we need to estimate required buffer size if no buffer passed,
          * so use dummy buffer to let iconv do its work */
-        out = dummy;
-        outbytesleft = reqsize = dstsize = sizeof(dummy);
+        dst = dummy;
+        dstsize = sizeof(dummy);
     }
 
-    do {
+    reqsize = dstsize;
+
+    while (srcsize > 0)
+    {
         errno = 0;
-        ret = id321_iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
+        ret = id321_iconv(cd, (char **)&src, &srcsize, &dst, &dstsize);
 
         if (ret == (size_t)(-1))
         {
@@ -156,27 +155,48 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
             {
                 case EILSEQ:
                 case EINVAL:
-                    /* skip invalid character */
-                    in++;
-                    inbytesleft--;
-                    continue;
+                {
+                    ssize_t chsize = iconvordie(tocode, "ISO-8859-1", "?", 1,
+                                                dst, dstsize);
+
+                    if (chsize <= dstsize)
+                    {
+                        /* skip invalid character */
+                        if (is_from_u32 && srcsize >= sizeof(u32_char))
+                        {
+                            src += sizeof(u32_char);
+                            srcsize -= sizeof(u32_char);
+                        }
+                        else
+                        {
+                            src++;
+                            srcsize--;
+                        }
+                        dst += chsize;
+                        dstsize -= chsize;
+
+                        if (dstsize > 0)
+                            continue;
+                    }
+                    /* else go to E2BIG as buffer too small */
+                }
 
                 case E2BIG:
                     /* we need to estimate required buffer size if the passed
                      * buffer is not large enough, so use dummy buffer to let
                      * iconv finish its work */
-                    out = dummy;
-                    outbytesleft = sizeof(dummy);
-                    reqsize += outbytesleft;
+                    reqsize -= dstsize;
+                    dst = dummy;
+                    dstsize = sizeof(dummy);
+                    reqsize += dstsize;
                     break;
             }
         }
-    } while (inbytesleft > 0);
+    }
 
-    reqsize -= outbytesleft;
     id321_iconv_close(cd);
 
-    return reqsize;
+    return reqsize - dstsize;
 }
 
 /***
@@ -186,7 +206,7 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
  * into internally allocated memory area. *@dst will be pointing to the
  * result, and *@dstsize will contain its size.
  *
- * If @tocode is WCHAR_CODESET, resulting wcstring will be null-terminated
+ * If @tocode is U32_CHAR_CODESET, resulting u32 string will be null-terminated
  * even if @src is not.
  *
  * *@dst must be freed with free() after use.
@@ -199,15 +219,14 @@ int iconv_alloc(const char *tocode, const char *fromcode,
                 char **dst, size_t *dstsize)
 {
     id321_iconv_t cd;
-    char        *buf;
-    char        *tmp;
-    char        *out;
-    size_t       tmppos;
-    const char  *in = src;
-    size_t       outsize = srcsize;
-    size_t       inbytesleft = srcsize;
-    size_t       outbytesleft;
-    size_t       ret;
+    char *buf;
+    char *tmp;
+    char *out;
+    size_t tmppos;
+    size_t outsize = srcsize;
+    size_t outbytesleft;
+    size_t ret;
+    int is_from_u32 = (!strcmp(fromcode, U32_CHAR_CODESET)) ? 1 : 0;
 
     cd = xiconv_open(tocode, fromcode);
 
@@ -215,13 +234,13 @@ int iconv_alloc(const char *tocode, const char *fromcode,
     if (!buf)
         goto oom;
 
-    buf[0] = '\0';
     out = buf;
     outbytesleft = outsize;
 
-    do {
+    while (srcsize > 0)
+    {
         errno = 0;
-        ret = id321_iconv(cd, (char **)&in, &inbytesleft, &out, &outbytesleft);
+        ret = id321_iconv(cd, (char **)&src, &srcsize, &out, &outbytesleft);
 
         if (ret == (size_t)(-1))
         {
@@ -229,10 +248,31 @@ int iconv_alloc(const char *tocode, const char *fromcode,
             {
                 case EILSEQ:
                 case EINVAL:
-                    /* skip invalid character */
-                    in++;
-                    inbytesleft--;
-                    continue;
+                {
+                    ssize_t chsize = iconvordie(tocode, "ISO-8859-1", "?", 1,
+                                                out, outbytesleft);
+
+                    if (chsize <= outbytesleft)
+                    {
+                        /* skip invalid character */
+                        if (is_from_u32 && srcsize >= sizeof(u32_char))
+                        {
+                            src += sizeof(u32_char);
+                            srcsize -= sizeof(u32_char);
+                        }
+                        else
+                        {
+                            src++;
+                            srcsize--;
+                        }
+                        out += chsize;
+                        outbytesleft -= chsize;
+
+                        if (outbytesleft > 0)
+                            continue;
+                    }
+                    /* else go to E2BIG as buffer too small */
+                }
 
                 case E2BIG:
                     tmppos = out - buf;
@@ -246,22 +286,23 @@ int iconv_alloc(const char *tocode, const char *fromcode,
                     out = buf + tmppos;
                     outbytesleft += outsize;
                     outsize *= 2;
-                    out[0] = '\0';
                     continue;
             }
         }
-    } while (inbytesleft > 0);
+    }
 
-    if (!strcmp(tocode, WCHAR_CODESET) &&
-        !(out - buf > (ptrdiff_t)sizeof(wchar_t) &&
-          ((wchar_t *)out)[-1] == L'\0'))
+    id321_iconv_close(cd);
+
+    if (!strcmp(tocode, U32_CHAR_CODESET) &&
+        !(out - buf > (ptrdiff_t)sizeof(u32_char) &&
+          ((u32_char *)out)[-1] == U32_CHAR('\0')))
     {
-        /* make sure that resulting wcstring will be null-terminated */
+        /* make sure that resulting U32 string will be null-terminated */
 
-        if (outbytesleft < sizeof(wchar_t))
+        if (outbytesleft < sizeof(u32_char))
         {
             tmppos = out - buf;
-            tmp = realloc(buf, outsize + sizeof(wchar_t) - outbytesleft);
+            tmp = realloc(buf, outsize + sizeof(u32_char) - outbytesleft);
             if (!tmp)
             {
                 free(buf);
@@ -271,11 +312,10 @@ int iconv_alloc(const char *tocode, const char *fromcode,
             out = buf + tmppos;
         }
 
-        *(wchar_t *)out = L'\0';
-        out += sizeof(wchar_t);
+        *(u32_char *)out = U32_CHAR('\0');
+        out += sizeof(u32_char);
     }
 
-    id321_iconv_close(cd);
     *dst = buf;
     if (dstsize)
         *dstsize = out - buf;
@@ -287,45 +327,45 @@ oom:
     return -ENOMEM;
 }
 
-int swprintf_alloc(wchar_t **wcs, const wchar_t *fmt, ...)
+int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...)
 {
-    wchar_t *wdata;
-    size_t   wsize = 4096;
-    int      ret;
-    va_list  args;
+    u32_char *u32_data;
+    size_t    u32_size = 4096;
+    int       ret;
+    va_list   args;
 
-    wdata = malloc(wsize*sizeof(wchar_t));
-    if (!wdata)
+    u32_data = malloc(u32_size*sizeof(u32_char));
+    if (!u32_data)
         return -ENOMEM;
 
     do {
         va_start(args, fmt);
-        ret = vswprintf(wdata, wsize, fmt, args);
+        ret = u32_vsnprintf(u32_data, u32_size, fmt, args);
         va_end(args);
 
         if (ret == -1)
         {
-            free(wdata);
+            free(u32_data);
             return -EFAULT;
         }
-        else if ((size_t)ret == wsize)
+        else if ((size_t)ret == u32_size)
         {
-            wchar_t *tmp;
+            u32_char *tmp;
 
-            wsize *= 2;
-            tmp = realloc(wdata, wsize);
+            u32_size *= 2;
+            tmp = realloc(u32_data, u32_size);
 
             if (!tmp)
             {
-                free(wdata);
+                free(u32_data);
                 return -ENOMEM;
             }
 
-            wdata = tmp;
+            u32_data = tmp;
         }
-    } while ((size_t)ret == wsize);
+    } while ((size_t)ret == u32_size);
 
-    *wcs = wdata;
+    *u32_str = u32_data;
 
     return ret;
 }

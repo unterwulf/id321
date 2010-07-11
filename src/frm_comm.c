@@ -1,11 +1,9 @@
-#define _GNU_SOURCE       /* wcsdup() */
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>        /* snprintf() */
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
 #include "alias.h"
 #include "id3v2.h"
 #include "output.h"
@@ -15,6 +13,7 @@
 #include "frames.h"
 #include "frm_comm.h"
 #include "framelist.h"
+#include "u32_char.h"
 
 struct id3v2_frm_comm *new_id3v2_frm_comm()
 {
@@ -96,7 +95,7 @@ endloop:
 
     memcpy(tmp_comm->lang, frame->data + 1, ID3V2_LANG_HDR_SIZE);
 
-    ret = iconv_alloc(WCHAR_CODESET, from_enc,
+    ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
                       frame->data + ID3V2_FRM_COMM_HDR_SIZE,
                       text - frame->data - ID3V2_FRM_COMM_HDR_SIZE,
                       (void *)&tmp_comm->desc, NULL);
@@ -106,7 +105,7 @@ endloop:
 
     if (text + 1 < frame->data + frame->size)
     {
-        ret = iconv_alloc(WCHAR_CODESET, from_enc,
+        ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
                           text, frame->size - (text - frame->data),
                           (void *)&tmp_comm->text, NULL);
 
@@ -152,7 +151,7 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
             free(comm->desc);
             if (tmp_comm->desc)
             {
-                comm->desc = wcsdup(tmp_comm->desc);
+                comm->desc = u32_strdup(tmp_comm->desc);
                 if (!comm->desc)
                     return -ENOMEM;
             }
@@ -164,7 +163,7 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
             && ((IS_EMPTY_STR(tmp_comm->desc)
                  && IS_EMPTY_STR(comm->desc))
                 || (tmp_comm->desc && comm->desc
-                        && !wcscmp(tmp_comm->desc, comm->desc))))
+                        && !u32_strcmp(tmp_comm->desc, comm->desc))))
         {
             free_id3v2_frm_comm(tmp_comm);
             /* a matching frame found */
@@ -206,24 +205,33 @@ static int pack_id3v2_frm_comm(unsigned minor,
     if (!new_frame)
         return -ENOMEM;
 
-    /* desc shall include null-terminator */
-    ret = iconv_alloc(frame_enc_name, WCHAR_CODESET,
-                      comm->desc ? (char *)comm->desc : (char *)L"",
-                      (comm->desc ? wcslen(comm->desc) + 1 : 1)*sizeof(wchar_t),
-                      &desc, &desc_size);
-
-    if (ret != 0)
+    /* convert comment description */
     {
-        free(new_frame);
-        return -ENOMEM;
+        u32_char u32_empty_str[] = { U32_CHAR('\0') };
+        u32_char *u32_desc = (comm->desc) ? comm->desc : u32_empty_str;
+
+        /* desc shall include null-terminator */
+        ret = iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
+                          (char *)u32_desc,
+                          (u32_strlen(u32_desc) + 1)*sizeof(u32_char),
+                          &desc, &desc_size);
+
+        if (ret != 0)
+        {
+            free(new_frame);
+            return -ENOMEM;
+        }
     }
 
+    /* convert comment text */
     if (comm->text)
     {
         /* text shall not include null-terminator */
-        ret = iconv_alloc(frame_enc_name, WCHAR_CODESET,
-                      (char *)comm->text, wcslen(comm->text)*sizeof(wchar_t),
-                      &text, &text_size);
+        ret = iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
+                          (char *)comm->text,
+                          u32_strlen(comm->text)*sizeof(u32_char),
+                          &text, &text_size);
+
         if (ret != 0)
         {
             free(new_frame);
@@ -304,7 +312,7 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, struct id3v2_frm_comm *comm,
                     == 0);
 
         if (ret == -ENOENT)
-            return 0; /* it is okay if there is no more matching frames */
+            return 0; /* it is OK if there is no more matching frames */
     }
 
     return ret;
