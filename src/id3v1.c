@@ -13,32 +13,32 @@
     (tag->version != 0 && tag->track != '\0' ? ID3V11_COM_SIZE : ID3V1_COM_SIZE)
 
 
-#define unpack_id3v1_field(tag, buf, field, FLD) \
+#define unpack_id3v1_field(buf, tag, field, FLD) \
     strncpy(tag->field, buf + ID3V1_##FLD##_OFF, ID3V1_##FLD##_SIZE);
 
-#define pack_id3v1_field(buf, tag, field, FLD) \
+#define pack_id3v1_field(tag, field, FLD, buf) \
     strncpy(buf + ID3V1_##FLD##_OFF, tag->field, ID3V1X_##FLD##_SIZE(tag));
 
-#define unpack_id3v12_field(tag, buf, field, FLD) \
+#define unpack_id3v12_field(buf, tag, field, FLD) \
     strncpy(tag->field + ID3V1X_##FLD##_SIZE(tag), \
             buf + ID3V12_##FLD##_OFF, ID3V12_##FLD##_SIZE);
 
-#define pack_id3v12_field(buf, tag, field, FLD) \
+#define pack_id3v12_field(tag, field, FLD, buf) \
     strncpy(buf + ID3V12_##FLD##_OFF, \
             tag->field + ID3V1X_##FLD##_SIZE(tag), \
             ID3V12_##FLD##_SIZE);
 
-#define unpack_id3v1e_field(tag, buf, field, FLD) \
+#define unpack_id3v1e_field(buf, tag, field, FLD) \
     strncpy(tag->field + ID3V1X_##FLD##_SIZE(tag), \
             buf + ID3V1E_##FLD##_OFF, ID3V1E_##FLD##_SIZE);
 
-#define pack_id3v1e_field(buf, tag, field, FLD) \
+#define pack_id3v1e_field(tag, field, FLD, buf) \
     strncpy(buf + ID3V1E_##FLD##_OFF, \
             tag->field + ID3V1X_##FLD##_SIZE(tag), \
             ID3V1E_##FLD##_SIZE);
 
 
-int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size)
+int unpack_id3v1_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 {
     if (size < ID3V1_TAG_SIZE)
         return -E2BIG;
@@ -48,11 +48,11 @@ int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size)
 
     if (!memcmp(buf, ID3V1_HEADER, ID3V1_HEADER_SIZE))
     {
-        unpack_id3v1_field(tag, buf, title,   TIT);
-        unpack_id3v1_field(tag, buf, artist,  ART);
-        unpack_id3v1_field(tag, buf, album,   ALB);
-        unpack_id3v1_field(tag, buf, year,    YER);
-        unpack_id3v1_field(tag, buf, comment, COM);
+        unpack_id3v1_field(buf, tag, title,   TIT);
+        unpack_id3v1_field(buf, tag, artist,  ART);
+        unpack_id3v1_field(buf, tag, album,   ALB);
+        unpack_id3v1_field(buf, tag, year,    YER);
+        unpack_id3v1_field(buf, tag, comment, COM);
         tag->genre_id = buf[ID3V1_GEN_OFF];
 
         if (buf[ID3V11_TRK_IND_OFF] == '\0' && buf[ID3V11_TRK_OFF] != '\0')
@@ -69,7 +69,7 @@ int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     return 0;
 }
 
-int unpack_id3v13_tag(struct id3v1_tag *tag, const char *buf, size_t size)
+int unpack_id3v13_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 {
     struct lib313_tag tag313;
 
@@ -96,7 +96,7 @@ int unpack_id3v13_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     return 0;
 }
 
-int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size)
+int unpack_id3v1_enh_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 {
     const char *legacy;
 
@@ -110,11 +110,11 @@ int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     if (!memcmp(buf, ID3V1E_HEADER, ID3V1E_HEADER_SIZE)
         && !memcmp(legacy, ID3V1_HEADER, ID3V1_HEADER_SIZE))
     {
-        (void)unpack_id3v1_tag(tag, legacy, ID3V1_TAG_SIZE);
+        (void)unpack_id3v1_tag(legacy, ID3V1_TAG_SIZE, tag);
 
-        unpack_id3v1e_field(tag, buf, title,  TIT);
-        unpack_id3v1e_field(tag, buf, artist, ART);
-        unpack_id3v1e_field(tag, buf, album,  ALB);
+        unpack_id3v1e_field(buf, tag, title,  TIT);
+        unpack_id3v1e_field(buf, tag, artist, ART);
+        unpack_id3v1e_field(buf, tag, album,  ALB);
 
         tag->speed = buf[ID3V1E_SPD_OFF];
         strncpy(tag->genre_str, buf + ID3V1E_GN2_OFF, ID3V1E_GN2_SIZE);
@@ -129,7 +129,7 @@ int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     return 0;
 }
 
-int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size)
+int unpack_id3v12_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 {
     const char *legacy;
 
@@ -143,12 +143,12 @@ int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     if (!memcmp(buf, ID3V12_HEADER, ID3V12_HEADER_SIZE)
         && !memcmp(legacy, ID3V1_HEADER, ID3V1_HEADER_SIZE))
     {
-        (void)unpack_id3v1_tag(tag, legacy, ID3V1_TAG_SIZE);
+        (void)unpack_id3v1_tag(legacy, ID3V1_TAG_SIZE, tag);
 
-        unpack_id3v12_field(tag, buf, title,   TIT);
-        unpack_id3v12_field(tag, buf, artist,  ART);
-        unpack_id3v12_field(tag, buf, album,   ALB);
-        unpack_id3v12_field(tag, buf, comment, COM);
+        unpack_id3v12_field(buf, tag, title,   TIT);
+        unpack_id3v12_field(buf, tag, artist,  ART);
+        unpack_id3v12_field(buf, tag, album,   ALB);
+        unpack_id3v12_field(buf, tag, comment, COM);
         strncpy(tag->genre_str, buf + ID3V12_GN2_OFF, ID3V12_GN2_SIZE);
 
         tag->version = 2;
@@ -159,7 +159,7 @@ int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size)
     return 0;
 }
 
-size_t pack_id3v1_tag(char *buf, const struct id3v1_tag *tag)
+size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf)
 {
     size_t  size = ID3V1_TAG_SIZE;
     char   *pos = buf;
@@ -184,10 +184,10 @@ size_t pack_id3v1_tag(char *buf, const struct id3v1_tag *tag)
     {
         size = ID3V12_TAG_SIZE;
         strcpy(pos, ID3V12_HEADER);
-        pack_id3v12_field(pos, tag, title,   TIT);
-        pack_id3v12_field(pos, tag, artist,  ART);
-        pack_id3v12_field(pos, tag, album,   ALB);
-        pack_id3v12_field(pos, tag, comment, COM);
+        pack_id3v12_field(tag, title,   TIT, pos);
+        pack_id3v12_field(tag, artist,  ART, pos);
+        pack_id3v12_field(tag, album,   ALB, pos);
+        pack_id3v12_field(tag, comment, COM, pos);
         strncpy(pos + ID3V12_GN2_OFF, tag->genre_str, ID3V12_GN2_SIZE);
         pos += ID3V12_TAG_SIZE - ID3V1_TAG_SIZE; 
     }
@@ -195,9 +195,9 @@ size_t pack_id3v1_tag(char *buf, const struct id3v1_tag *tag)
     {
         size = ID3V1E_TAG_SIZE;
         strcpy(pos, ID3V1E_HEADER);
-        pack_id3v1e_field(pos, tag, title,   TIT);
-        pack_id3v1e_field(pos, tag, artist,  ART);
-        pack_id3v1e_field(pos, tag, album,   ALB);
+        pack_id3v1e_field(tag, title,   TIT, pos);
+        pack_id3v1e_field(tag, artist,  ART, pos);
+        pack_id3v1e_field(tag, album,   ALB, pos);
         pos[ID3V1E_SPD_OFF] = tag->speed;
         strncpy(pos + ID3V1E_GN2_OFF, tag->genre_str, ID3V1E_GN2_SIZE);
         strncpy(pos + ID3V1E_STM_OFF, tag->starttime, ID3V1E_STM_SIZE);
@@ -209,11 +209,11 @@ size_t pack_id3v1_tag(char *buf, const struct id3v1_tag *tag)
     if (tag->version != 3)
     {
         strcpy(pos, ID3V1_HEADER);
-        pack_id3v1_field(pos, tag, title,   TIT);
-        pack_id3v1_field(pos, tag, artist,  ART);
-        pack_id3v1_field(pos, tag, album,   ALB);
-        pack_id3v1_field(pos, tag, year,    YER);
-        pack_id3v1_field(pos, tag, comment, COM);
+        pack_id3v1_field(tag, title,   TIT, pos);
+        pack_id3v1_field(tag, artist,  ART, pos);
+        pack_id3v1_field(tag, album,   ALB, pos);
+        pack_id3v1_field(tag, year,    YER, pos);
+        pack_id3v1_field(tag, comment, COM, pos);
         pos[ID3V1_GEN_OFF] = tag->genre_id;
 
         if (tag->version != 0 && tag->track != '\0')

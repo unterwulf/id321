@@ -39,7 +39,7 @@ void free_id3v2_frm_comm(struct id3v2_frm_comm *comm)
     free(comm);
 }
 
-int unpack_id3v2_frm_comm(unsigned minor, const struct id3v2_frame *frame,
+int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
                           struct id3v2_frm_comm **comm)
 {
     const char *from_enc;
@@ -136,7 +136,7 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
 
     while ((*frame = peek_next_frame(&tag->frame_head, frame_id, *frame)))
     {
-        ret = unpack_id3v2_frm_comm(tag->header.version, *frame, &tmp_comm);
+        ret = unpack_id3v2_frm_comm(*frame, tag->header.version, &tmp_comm);
 
         if (ret == -EILSEQ)
             continue; /* just skip malformed frame */
@@ -176,9 +176,9 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
     return -ENOENT;
 }
 
-static int pack_id3v2_frm_comm(unsigned minor,
-                               const struct id3v2_frm_comm *comm,
-                               struct id3v2_frame **frame)
+static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
+                               struct id3v2_frame **frame,
+                               unsigned minor)
 {
     const struct alias *al = get_alias('c');
     const char *frame_id;
@@ -281,7 +281,7 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, struct id3v2_frm_comm *comm,
 
     if (ret == -ENOENT && !flags && !IS_EMPTY_STR(comm->text))
     {
-        ret = pack_id3v2_frm_comm(tag->header.version, comm, &new_frame);
+        ret = pack_id3v2_frm_comm(comm, &new_frame, tag->header.version);
 
         if (ret != 0)
             return ret;
@@ -294,8 +294,8 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, struct id3v2_frm_comm *comm,
         {
             if (!IS_EMPTY_STR(comm->text))
             {
-                ret = pack_id3v2_frm_comm(tag->header.version,
-                                          comm, &new_frame);
+                ret = pack_id3v2_frm_comm(comm, &new_frame,
+                                          tag->header.version);
 
                 if (ret != 0)
                     return ret;

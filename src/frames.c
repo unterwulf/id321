@@ -113,7 +113,7 @@ static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
     struct id3v2_frm_comm *comm;
     int ret;
 
-    ret = unpack_id3v2_frm_comm(minor, frame, &comm);
+    ret = unpack_id3v2_frm_comm(frame, minor, &comm);
 
     if (ret != 0)
         return ret;

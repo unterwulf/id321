@@ -58,19 +58,19 @@ static int get_id3v1_tag(struct file *file, unsigned minor,
 
     if (minor == ID3V1E_MINOR || minor == NOT_SET)
         /* read v1 enhanced tag if available */
-        ret = unpack_id3v1_enh_tag(*tag, buf, size);
+        ret = unpack_id3v1_enh_tag(buf, size, *tag);
 
     if (ret != 0 && (minor == 2 || minor == NOT_SET))
         /* read v1.2 tag if available */
-        ret = unpack_id3v12_tag(*tag, buf, size);
+        ret = unpack_id3v12_tag(buf, size, *tag);
 
     if (ret != 0 && (minor == 0 || minor == 1))
         /* read v1.[01] tag if available */
-        ret = unpack_id3v1_tag(*tag, buf, size);
+        ret = unpack_id3v1_tag(buf, size, *tag);
 
     if (ret != 0 && (minor == 3 || minor == NOT_SET))
         /* read v1.3 tag if available */
-        ret = unpack_id3v13_tag(*tag, buf, size);
+        ret = unpack_id3v13_tag(buf, size, *tag);
 
     if (ret != 0)
     {

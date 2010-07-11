@@ -66,7 +66,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
     if (tag1)
     {
         char   buf[ID3V1E_TAG_SIZE];
-        size_t size = pack_id3v1_tag(buf, tag1); 
+        size_t size = pack_id3v1_tag(tag1, buf); 
 
         lseek(file->fd, file->crop.end, SEEK_SET);
         write(file->fd, buf, size);

@@ -79,11 +79,11 @@ struct id3v1_tag
     uint8_t  speed;
 };
 
-int unpack_id3v1_tag(struct id3v1_tag *tag, const char *buf, size_t size);
-int unpack_id3v12_tag(struct id3v1_tag *tag, const char *buf, size_t size);
-int unpack_id3v13_tag(struct id3v1_tag *tag, const char *buf, size_t size);
-int unpack_id3v1_enh_tag(struct id3v1_tag *tag, const char *buf, size_t size);
+int unpack_id3v1_tag(const char *buf, size_t size, struct id3v1_tag *tag);
+int unpack_id3v12_tag(const char *buf, size_t size, struct id3v1_tag *tag);
+int unpack_id3v13_tag(const char *buf, size_t size, struct id3v1_tag *tag);
+int unpack_id3v1_enh_tag(const char *buf, size_t size, struct id3v1_tag *tag);
 
-size_t pack_id3v1_tag(char *buf, const struct id3v1_tag *tag);
+size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf);
 
 #endif /* ID3V1_H */

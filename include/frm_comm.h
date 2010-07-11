@@ -16,8 +16,8 @@ struct id3v2_frm_comm *new_id3v2_frm_comm();
 
 void free_id3v2_frm_comm(struct id3v2_frm_comm *comm);
 
-int unpack_id3v2_frm_comm(unsigned minor,
-                          const struct id3v2_frame *frame,
+int unpack_id3v2_frm_comm(const struct id3v2_frame *frame,
+                          unsigned minor,
                           struct id3v2_frm_comm **comm);
 
 int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,

@@ -39,9 +39,9 @@ void free_id3v2_tag(struct id3v2_tag *tag)
     free(tag);
 }
 
-static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
-                                     const unsigned char *buf,
-                                     unsigned version)
+static void unpack_id3v2_frame_header(const unsigned char *buf,
+                                      unsigned version,
+                                      struct id3v2_frame *frame)
 {
     if (version == 2)
     {
@@ -64,8 +64,6 @@ static int unpack_id3v2_frame_header(struct id3v2_frame *frame,
         if (version == 4)
             frame->size = deunsync_uint32(frame->size);
     }
-
-    return 0;
 }
 
 static ssize_t read_unsync(int fd, void *buf, size_t size, int *pre)
@@ -132,7 +130,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         if (!frame)
             return -ENOMEM;
 
-        unpack_id3v2_frame_header(frame, buf, tag->header.version);
+        unpack_id3v2_frame_header(buf, tag->header.version, frame);
 
         if (frame->size > bytes_left)
         {
@@ -252,7 +250,7 @@ static int validate_id3v2_header(const struct id3v2_header *hdr)
     }
 }
 
-static void unpack_id3v2_header(struct id3v2_header *hdr, const char *buf)
+static void unpack_id3v2_header(const char *buf, struct id3v2_header *hdr)
 {
     hdr->version = (uint8_t)buf[3];
     hdr->revision = (uint8_t)buf[4];
@@ -290,7 +288,7 @@ int find_id3v2_tag(struct id3v2_header *header, FILE *fp_src, FILE *fp_dst)
 
     if (pos == ID3V2_HEADER_LEN)
     {
-        unpack_id3v2_header(header, headerBuf);
+        unpack_id3v2_header(headerBuf, header);
         return 1;
     }
     else
@@ -315,7 +313,7 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
                 return -EILSEQ;
         }
 
-        unpack_id3v2_header(hdr, buf);
+        unpack_id3v2_header(buf, hdr);
 
         if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
         {
@@ -352,9 +350,9 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
  * Pack functions
  */
 
-static size_t pack_id3v2_frame(char *buf, size_t size,
+static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
                                struct id3v2_header *hdr,
-                               const struct id3v2_frame *frame)
+                               char *buf, size_t size)
 {
     size_t  hdr_size = hdr->version == 2 ? 6 : 10;
     uint8_t format_flags = frame->format_flags;
@@ -411,7 +409,7 @@ static size_t pack_id3v2_frame(char *buf, size_t size,
     return hdr_size + payload_size;
 }
 
-static void pack_id3v2_header(char *buf, const struct id3v2_header *hdr)
+static void pack_id3v2_header(const struct id3v2_header *hdr, char *buf)
 {
     uint32_t net_tag_size = htonl(unsync_uint32(hdr->size));
 
@@ -443,8 +441,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
 
     for (frame = tag->frame_head.next; frame != &tag->frame_head;)
     {
-        frame_size = pack_id3v2_frame(*buf + pos, bufsize - pos,
-                                      &header, frame);
+        frame_size = pack_id3v2_frame(frame, &header, *buf+pos, bufsize-pos);
 
         if (frame_size > bufsize - pos)
         {
@@ -542,7 +539,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
 
     header.size = pos - ID3V2_HEADER_LEN;
 
-    pack_id3v2_header(*buf, &header);
+    pack_id3v2_header(&header, *buf);
 
     return pos;
 

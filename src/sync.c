@@ -70,7 +70,7 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
         {
             struct id3v2_frm_comm *comm;
 
-            ret = unpack_id3v2_frm_comm(tag2->header.version, frame, &comm);
+            ret = unpack_id3v2_frm_comm(frame, tag2->header.version, &comm);
 
             if (ret == 0)
             {
