@@ -427,7 +427,7 @@ int init_config(int *argc, char ***argv)
     g_config.ver.major = NOT_SET;
     g_config.ver.minor = NOT_SET;
 
-    g_config.enc_v1 = g_config.enc_iso8859_1 = "ISO-8859-1";
+    g_config.enc_v1 = g_config.enc_iso8859_1 = ISO_8859_1_CODESET;
     g_config.enc_ucs2 = "UCS-2";
     g_config.enc_utf16 = "UTF-16";
     g_config.enc_utf16be = "UTF-16BE";

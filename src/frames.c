@@ -35,7 +35,7 @@ static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
         u32_char u32_empty_str[] = { U32_CHAR('\0') };
         u32_char u32_space_str[] = { U32_CHAR(' '), U32_CHAR('\0') };
 
-        iconvordie(U32_CHAR_CODESET, "ISO-8859-1",
+        iconvordie(U32_CHAR_CODESET, ISO_8859_1_CODESET,
                    comm->lang, ID3V2_LANG_HDR_SIZE,
                    (char *)lang, sizeof(lang)*sizeof(lang[0]));
 

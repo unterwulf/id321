@@ -73,7 +73,7 @@ const char *locale_encoding()
         if (enc && (enc = strchr(enc, '.')) != NULL)
             enc++;
         else
-            enc = "ISO-8859-1";
+            enc = ISO_8859_1_CODESET;
     }
 
     return enc;
@@ -156,8 +156,8 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
                 case EILSEQ:
                 case EINVAL:
                 {
-                    ssize_t chsize = iconvordie(tocode, "ISO-8859-1", "?", 1,
-                                                dst, dstsize);
+                    ssize_t chsize = iconvordie(tocode, ISO_8859_1_CODESET,
+                                                "?", 1, dst, dstsize);
 
                     if (chsize <= dstsize)
                     {
@@ -249,8 +249,8 @@ int iconv_alloc(const char *tocode, const char *fromcode,
                 case EILSEQ:
                 case EINVAL:
                 {
-                    ssize_t chsize = iconvordie(tocode, "ISO-8859-1", "?", 1,
-                                                out, outbytesleft);
+                    ssize_t chsize = iconvordie(tocode, ISO_8859_1_CODESET,
+                                                "?", 1, out, outbytesleft);
 
                     if (chsize <= outbytesleft)
                     {

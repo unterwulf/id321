@@ -8,6 +8,9 @@
 #include "params.h"
 #include "u32_char.h"
 
+/* both GNU and Solaris iconv() understand this codeset name */
+#define ISO_8859_1_CODESET "ISO8859-1"
+
 #define BLOCK_SIZE 4096
 
 #define for_each(i, array) \
