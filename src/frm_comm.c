@@ -9,10 +9,9 @@
 #include "output.h"
 #include "params.h"       /* g_config */
 #include "common.h"
-#include "compat.h"
-#include "frames.h"
 #include "frm_comm.h"
 #include "framelist.h"
+#include "textframe.h"    /* get_id3v2_tag_encoding_name() */
 #include "u32_char.h"
 
 struct id3v2_frm_comm *new_id3v2_frm_comm()

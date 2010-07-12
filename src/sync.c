@@ -7,13 +7,15 @@
 #include "alias.h"
 #include "common.h"
 #include "framelist.h"
-#include "frames.h"       /* set_id3v2_tag_genre_by_id() */
 #include "frm_comm.h"
+#include "frm_tcon.h"     /* get/set_id3v2_tag_genre() */
+#include "frm_trck.h"     /* get_id3v2_tag_trackno() */
 #include "id3v1.h"
 #include "id3v1_genres.h"
 #include "id3v2.h"
 #include "output.h"
 #include "params.h"
+#include "textframe.h"
 #include "u32_char.h"
 
 static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)

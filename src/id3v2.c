@@ -5,13 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "id3v2.h"
-#include "frames.h"
-#include "framelist.h"
-#include "synchsafe.h"
-#include "dump.h"
-#include "output.h"
 #include "common.h"
+#include "dump.h"
+#include "framelist.h"
+#include "id3v2.h"
+#include "output.h"
+#include "synchsafe.h"
 
 #define READORDIE(fd, buf, size, ret) \
     if (readordie(fd, buf, size) != (ssize_t)(size)) \

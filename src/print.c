@@ -13,6 +13,7 @@
 #include "output.h"
 #include "printfmt.h"
 #include "frames.h"       /* get_frame_data() */
+#include "frm_trck.h"     /* get_id3v2_tag_trackno() */
 #include "framelist.h"
 #include "u32_char.h"
 

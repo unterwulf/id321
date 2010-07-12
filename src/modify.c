@@ -3,16 +3,17 @@
 #include <stdio.h>  /* sscanf() */
 #include <stdlib.h>
 #include <string.h>
+#include "alias.h"
 #include "common.h"
+#include "framelist.h"
+#include "frm_comm.h"
+#include "frm_tcon.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
 #include "id3v2.h"
-#include "params.h"
 #include "output.h"
-#include "alias.h"
-#include "framelist.h"
-#include "frames.h"
-#include "frm_comm.h"
+#include "params.h"
+#include "textframe.h"
 #include "u32_char.h"
 
 static int modify_v1_tag(struct id3v1_tag *tag)
