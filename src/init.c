@@ -12,6 +12,7 @@
 #include "opts.h"
 #include "output.h"
 #include "params.h"
+#include "u32_char.h"
 
 #define OPT_SPEED      1
 #define OPT_START_TIME 2
@@ -86,7 +87,7 @@ static inline int setup_encodings(char *enc_str)
     for_each (i, enc)
     {
         print(OS_INFO, "   %s=%s", enc[i].desc, *(enc[i].name));
-        cd = id321_iconv_open(*(enc[i].name), *(enc[i].name));
+        cd = id321_iconv_open(*(enc[i].name), U32_CHAR_CODESET);
         if (cd == (id321_iconv_t)-1)
         {
             print(OS_ERROR, "codeset '%s' is not supported by your iconv",

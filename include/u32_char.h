@@ -7,10 +7,11 @@
 
 typedef uint32_t u32_char;
 
+/* both GNU and Solaris iconv() understand these codeset names */
 #ifdef WORDS_BIGENDIAN
-#define U32_CHAR_CODESET "UTF-32BE"
+#define U32_CHAR_CODESET "UCS-4BE"
 #else
-#define U32_CHAR_CODESET "UTF-32LE"
+#define U32_CHAR_CODESET "UCS-4LE"
 #endif
 
 #define U32_CHAR(c) ((u32_char) (c))
