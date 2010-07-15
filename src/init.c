@@ -23,6 +23,71 @@
 extern void help();
 
 /***
+ * split_colon_separated_list
+ *
+ * @list - string containing colon-separated list to split
+ * @array - array to be filled with list elements
+ *
+ * Note that this function does not unescape escaped colons, it just keeps
+ * them in strings as is. Consider using of unescape_chars().
+ *
+ * Returns number of @array elements filled.
+ */
+
+size_t split_colon_separated_list(char *list, char **array, size_t size)
+{
+    int escaped;
+    size_t origsize = size;
+
+    if (size == 0)
+        return 0;
+
+    *array++ = list;
+    size--;
+
+    if (size > 0)
+        for (; *list; list++)
+        {
+            for (escaped = 0; *list == '\\'; list++)
+                escaped = !escaped;
+
+            if (*list == ':' && !escaped)
+            {
+                *list = '\0';
+                *array++ = list + 1;
+                size--;
+                if (size == 0)
+                    break;
+            }
+        }
+
+    return origsize - size;
+}
+
+/***
+ * unescape_chars - unescape special charactes @chars in string @str
+ *
+ * @str - string to process
+ * @chars - string containing list of characters to be unescaped
+ * @esc - esc-character
+ */
+
+static void unescape_chars(char *str, const char *chars, char esc)
+{
+    char *write;
+
+    for (write = str; *str; str++, write++)
+    {
+        if (*str == esc && *(str + 1) && strchr(chars, *(str + 1)))
+            str++;
+
+        *write = *str;
+    }
+
+    *write = '\0';
+}
+
+/***
  * setup_encodings
  *
  * @enc_str - string containing a colon-separated list of encodings
@@ -38,17 +103,18 @@ extern void help();
 
 static inline int setup_encodings(char *enc_str)
 {
-    unsigned i;
-    char *cur = NULL;
-    char *pos = enc_str;
-    char *new_pos;
+#define ENC_OPT_ARG_CNT 6
+
+    size_t i;
+    size_t argc;
+    char *argv[ENC_OPT_ARG_CNT] = { };
     id321_iconv_t cd;
     static struct 
     {
         const char  *desc;
         const char **name;
     }
-    enc[] =
+    enc[ENC_OPT_ARG_CNT] =
     {
         { "ID3v1",      &g_config.enc_v1 },
         { "ISO-8859-1", &g_config.enc_iso8859_1 },
@@ -58,35 +124,27 @@ static inline int setup_encodings(char *enc_str)
         { "UTF-8",      &g_config.enc_utf8 },
     };
 
-    for_each (i, enc)
+    if (enc_str)
     {
-        new_pos = strchr(pos, ':');
+        argc = split_colon_separated_list(enc_str, argv, ENC_OPT_ARG_CNT);
 
-        if (!new_pos)
-        {
-            if (strlen(pos) != 0)
-                *(enc[i].name) = pos;
-            else if (!IS_EMPTY_STR(cur))
-            {
-                *(enc[i].name) = cur;
-                continue;
-            }
-            break;
-        }
-        else
-        {
-            *new_pos = '\0';
-            if (strlen(pos) != 0)
-                *(enc[i].name) = pos;
-            cur = pos;
-            pos = new_pos + 1;
-        }
+        for (i = 0; i < argc; i++)
+            unescape_chars(argv[i], ":\\", '\\');
+
+        /* if the last arument is an empty string, propagate the value of
+         * the argument before last to all futher arguments */
+        if (argc > 1 && argv[argc-1][0] == '\0')
+            for (i = argc - 1; i < ENC_OPT_ARG_CNT; i++)
+                argv[i] = argv[argc-2];
     }
 
     print(OS_INFO, "Encoding mapping:");
 
-    for_each (i, enc)
+    for (i = 0; i < ENC_OPT_ARG_CNT; i++)
     {
+        if (argv[i])
+            *(enc[i].name) = argv[i];
+
         print(OS_INFO, "   %s=%s", enc[i].desc, *(enc[i].name));
         cd = id321_iconv_open(*(enc[i].name), U32_CHAR_CODESET);
         if (cd == (id321_iconv_t)-1)
@@ -102,22 +160,6 @@ static inline int setup_encodings(char *enc_str)
     return 0;
 }
 
-static void unescape_chars(char *str, const char *chars, char esc)
-{
-    char *read;
-    char *write;
-
-    for (read = str, write = str; *read; read++, write++)
-    {
-        if (read[0] == esc && strchr(chars, read[1]))
-            read++;
-
-        *write = *read;
-    }
-
-    *write = '\0';
-}
-
 /***
  * parse_comment_optarg - parse comment option argument
  *
@@ -126,7 +168,7 @@ static void unescape_chars(char *str, const char *chars, char esc)
  *
  * Comment option argument shall be in the format
  *
- *     [[lang:]desc:]text
+ *     [[<lang>:]<desc>:]<text>
  *
  * where lang and desc can have special value '*' that means any value.
  * Because of the format, colons and asterisks within lang, desc and
@@ -137,7 +179,8 @@ static inline int parse_comment_optarg(char *arg)
 {
 #define COM_OPT_ARG_CNT 3
 
-    int i, j;
+    size_t argc;
+    size_t i;
     char *stack[COM_OPT_ARG_CNT];
     struct
     {
@@ -152,27 +195,17 @@ static inline int parse_comment_optarg(char *arg)
     };
 
     /* at first, fill stack with all values available */
-    stack[0] = arg;
-
-    for (i = 0; (i < COM_OPT_ARG_CNT - 1) && (arg = strchr(arg, ':')); arg++)
-    {
-        if (arg == stack[i] || *(arg - 1) != '\\')
-        {
-            *arg = '\0';
-            stack[++i] = arg + 1;
-        }
-        /* else skip escaped colon */
-    }
+    argc = split_colon_separated_list(arg, stack, COM_OPT_ARG_CNT);
 
     /* then, propagate the collected values to the proper fields */
-    for (j = 0; i >= 0; i--, j++)
+    for (i = 0; argc > 0; argc--, i++)
     {
-        if (!strcmp(stack[i], "*") && conf[j].flag)
-            g_config.options |= conf[j].flag;
+        if (!strcmp(stack[argc-1], "*") && conf[i].flag)
+            g_config.options |= conf[i].flag;
         else
         {
-            unescape_chars(stack[i], ":*\\", '\\');
-            *conf[j].value = stack[i];
+            unescape_chars(stack[argc-1], ":*\\", '\\');
+            *conf[i].value = stack[argc-1];
         }
     }
 
@@ -185,7 +218,7 @@ static inline int parse_comment_optarg(char *arg)
  * parse_frame_optarg - parse frame option argument
  *
  * The routine modifies arbitrary frame-related fields of the g_config
- * structure in accordance with @optarg passed.
+ * structure in accordance with @arg passed.
  *
  * Frame option argument shall be in the format
  *
@@ -195,39 +228,35 @@ static inline int parse_comment_optarg(char *arg)
  * literaly single dash.
  */
 
-static inline int parse_frame_optarg(char *optarg)
+static inline int parse_frame_optarg(char *arg)
 {
-    int i, j;
-    char *stack[3];
-    char *pos;
+#define FRAME_OPT_ARG_CNT 3
 
-    pos = stack[0] = optarg;
+    size_t argc;
+    size_t i;
+    char *argv[FRAME_OPT_ARG_CNT];
+    char **curarg = argv;
 
-    /* at first, fill stack with all values available */
+    /* at first, fill argv with all values available */
+    argc = split_colon_separated_list(arg, argv, FRAME_OPT_ARG_CNT);
 
-    for (i = 0; (i < sizeof(stack) - 1)
-                && (pos = memchr(pos, ':', strlen(pos))); i++)
-    {
-        *pos = '\0';
-        pos++;
-        stack[i+1] = pos; /* push */
-    }
+    for (i = 0; i < argc; i++)
+        unescape_chars(argv[i], ":\\", '\\');
 
     /* then, propagate the collected values to the proper fields */
-
-    j = 0;
     g_config.frame_enc = NULL;
 
     /* parse frame id and frame number */
     {
         char *opb;
 
-        g_config.frame_id = stack[j++];
+        g_config.frame_id = *curarg++;
         opb = strchr(g_config.frame_id, '[');
 
         if (opb)
         {
-            char *clb = strchr(opb + 1, ']');
+            char *index = opb + 1;
+            char *clb = strchr(index, ']');
             long frame_no;
 
             if (!clb || clb[1] != '\0')
@@ -235,11 +264,11 @@ static inline int parse_frame_optarg(char *optarg)
 
             *opb = *clb = '\0';
             
-            if (opb + 1 == clb) /* empty brackets */
+            if (index == clb) /* empty brackets */
                 g_config.options |= ID321_OPT_CREATE_FRAME;
-            else if (!strcmp(opb + 1, "*"))
+            else if (!strcmp(index, "*"))
                 g_config.options |= ID321_OPT_ALL_FRAMES;
-            else if (str_to_long(opb + 1, &frame_no) == 0)
+            else if (str_to_long(index, &frame_no) == 0)
                 g_config.frame_no = (int) frame_no;
             else
                 return -EILSEQ;
@@ -249,42 +278,42 @@ static inline int parse_frame_optarg(char *optarg)
             g_config.frame_no = 0;
             g_config.options |= ID321_OPT_CREATE_FRAME_IF_NOT_EXISTS;
         }
+
+        if (strlen(g_config.frame_id) > ID3V2_FRAME_ID_MAX_SIZE)
+            return -EILSEQ;
     }
 
-    if (i == 0 && !(g_config.options & ID321_OPT_CREATE_FRAME))
+    if (argc == 1 && !(g_config.options & ID321_OPT_CREATE_FRAME))
         g_config.options |= ID321_OPT_RM_FRAME;
 
-    if (i == 2)
+    if (argc == 3)
     {
-        if (!strcasecmp(stack[j], "bin"))
+        if (!strcasecmp(*curarg, "bin"))
             g_config.options |= ID321_OPT_BIN_FRAME;
         else
-            g_config.frame_enc = stack[j];
+            g_config.frame_enc = *curarg;
 
-        j++;
+        curarg++;
     }
 
-    if (i > 0)
+    if (argc > 1)
     {
-        if (!strcmp(stack[j], "-"))
+        if (!strcmp(*curarg, "-"))
         {
-            int bufsize = BLOCK_SIZE;
+            size_t bufsize = BLOCK_SIZE;
+            size_t datasize = 0;
             char *buf = malloc(bufsize);
             char *ptr = buf;
-            ssize_t size = 0;
 
             if (!buf)
                 return -ENOMEM;
 
             do {
-                size_t avail = bufsize - (ptr - buf);
-                ssize_t bytes = fread(ptr, 1, avail, stdin);
-                size += bytes;
+                datasize += fread(ptr, 1, bufsize - datasize, stdin);
 
-                if (bytes == avail && !feof(stdin))
+                if (datasize == bufsize && !feof(stdin))
                 {
-                    char *newbuf;
-                    newbuf = realloc(buf, bufsize*2);
+                    char *newbuf = realloc(buf, bufsize*2);
                     if (!newbuf)
                     {
                         free(buf);
@@ -294,19 +323,14 @@ static inline int parse_frame_optarg(char *optarg)
                     buf = newbuf;
                     bufsize *= 2;
                 }
-            } while(!feof(stdin));
+            } while (!feof(stdin));
 
             g_config.frame_data = buf;
-            g_config.frame_size = size;
-        }
-        else if (!strcmp(stack[j], "\\-"))
-        {
-            g_config.frame_data = "-";
-            g_config.frame_size = 1;
+            g_config.frame_size = datasize;
         }
         else
         {
-            g_config.frame_data = stack[j];
+            g_config.frame_data = (!strcmp(*curarg, "\\-")) ? "-" : *curarg;
             g_config.frame_size = strlen(g_config.frame_data);
         }
     }
@@ -314,15 +338,26 @@ static inline int parse_frame_optarg(char *optarg)
     return 0;
 }
 
-static inline int parse_genre_optarg(char *optarg)
+/***
+ * parse_genre_optarg
+ *
+ * Genre shall be in the format:
+ *
+ *    <id3v1_genre_id>[:<genre_str>]
+ *
+ * where id3v1_genre_id may be specified by name.
+ */
+
+static inline int parse_genre_optarg(char *arg)
 {
-    /* genre shall be in the format id3v1_genre_id[:genre_str]
-     * where id3v1_genre_id may be specified by name */
+#define GENRE_OPT_ARG_CNT 2
+
+    size_t argc;
+    char *argv[FRAME_OPT_ARG_CNT];
     int ret;
     long long_val;
-    char *sep;
     
-    if (optarg[0] == '\0')
+    if (arg[0] == '\0')
     {
         g_config.options |= ID321_OPT_RM_GENRE_FRAME | ID321_OPT_SET_GENRE_ID;
         g_config.genre_id = ID3V1_UNKNOWN_GENRE;
@@ -330,18 +365,15 @@ static inline int parse_genre_optarg(char *optarg)
         return 0;
     }
 
-    sep = strchr(optarg, ':');
+    argc = split_colon_separated_list(arg, argv, GENRE_OPT_ARG_CNT);
 
-    if (sep)
-    {
-        *sep = '\0';
-        g_config.genre_str = sep + 1;
-    }
+    if (argc == 2)
+        g_config.genre_str = argv[1];
 
-    if (sep == optarg)
+    if (argv[0][0] == '\0')
         return 0; /* genre_id is omitted */
 
-    ret = str_to_long(optarg, &long_val);
+    ret = str_to_long(argv[0], &long_val);
     if (ret == 0 && long_val >= 0 && long_val <= 0xFF)
     {
         g_config.genre_id = long_val;
@@ -349,7 +381,7 @@ static inline int parse_genre_optarg(char *optarg)
     }
     else
     {
-        g_config.genre_id = get_id3v1_genre_id(optarg);
+        g_config.genre_id = get_id3v1_genre_id(argv[0]);
         if (g_config.genre_id == ID3V1_UNKNOWN_GENRE)
             return -EILSEQ;
         g_config.options |= ID321_OPT_SET_GENRE_ID;
@@ -568,7 +600,7 @@ int init_config(int *argc, char ***argv)
     /* no debug output before this line is possible (i.e. only errors) */
     init_output(debug_mask);
 
-    ret = setup_encodings(enc_str ? enc_str : "");
+    ret = setup_encodings(enc_str);
     if (ret != 0)
         return -1;
 
