@@ -1,0 +1,16 @@
+0.0.2   2010-06-16
+
+* bug fix: bus error on Solaris
+* added libiconv autodetection
+* wchar_t -> u32_char
+* bug fix: id3v1_tag is not zeroed before being filled with unpacked values
+* ISO-8859-1 codeset name changed from "ISO-8859-1" to "ISO8859-1"
+* use the codeset names "UCS-4LE" and "UCS-4BE" for u32_char
+* bug fix: asterisk should not have special meaning in comment text
+* bug fix: the only two first colons should be parsed in the -c option argument
+* bug fix: one character comment frames are not unpacked well
+* improved command-line options argument parsing
+* implemented language codes validation
+* improved output of ID3v2.4 text fields containing multiple strings
+
+0.0.1   2010-06-04 
