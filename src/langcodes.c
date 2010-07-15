@@ -4,11 +4,33 @@
  * Codes for the Representation of Names of Languages
  * Codes arranged alphabetically by alpha-3/ISO 639-2 Code
  *
- * Note: ISO 639-2 is the alpha-3 code in Codes for the representation of names of languages-- Part 2. There are 21 languages that have alternative codes for bibliographic or terminology purposes. In those cases, each is listed separately and they are designated as "B" (bibliographic) or "T" (terminology). In all other cases there is only one ISO 639-2 code. Multiple codes assigned to the same language are to be considered synonyms. ISO 639-1 is the alpha-2 code.
- *
+ * Note: ISO 639-2 is the alpha-3 code in Codes for the representation of
+ * names of languages -- Part 2. There are 21 languages that have alternative
+ * codes for bibliographic or terminology purposes. In those cases, each is
+ * listed separately and they are designated as "B" (bibliographic) or
+ * "T" (terminology). In all other cases there is only one ISO 639-2 code.
+ * Multiple codes assigned to the same language are to be considered synonyms.
+ * ISO 639-1 is the alpha-2 code.
  */
 
-const *char langcodes[] = {
+#include <string.h>
+#include "common.h"
+#include "id3v2.h"
+
+static const char langcodes[][ID3V2_LANG_HDR_SIZE] = {
+    "XXX",
+
+    /* The non ISO 639-2 code 'XXX' is from the ID3v2 spec and meant
+     * to express unknown language. Although ISO 639-2 already has 'und'
+     * code for the same reason, the ID3v2 spec have introduced one more.
+     * What a pity.
+     *
+     * From the ID3v2.4 specification:
+     * "The three byte language field, present in several frames, is used to
+     * describe the language of the frame's content, according to ISO-639-2
+     * [ISO-639-2]. The language should be represented in lower case. If the
+     * language is not known the string "XXX" should be used." */
+
     "aar", "abk", "ace", "ach", "ada", "ady", "afa", "afh", "afr", "ain",
     "aka", "akk", "alb", "sqi", "ale", "alg", "alt", "amh", "ang", "anp",
     "apa", "ara", "arc", "arg", "arm", "hye", "arn", "arp", "art", "arw",
@@ -65,3 +87,17 @@ const *char langcodes[] = {
     "yap", "yid", "yor", "ypk", "zap", "zbl", "zen", "zha", "chi", "zho",
     "znd", "zul", "zun", "zxx", "zza"
 };
+
+int is_valid_langcode(const char *langcode)
+{
+    size_t i;
+
+    if (strlen(langcode) != ID3V2_LANG_HDR_SIZE)
+        return 0;
+
+    for_each (i, langcodes)
+        if (!memcmp(langcode, langcodes[i], ID3V2_LANG_HDR_SIZE))
+            return 1;
+
+    return 0;
+}

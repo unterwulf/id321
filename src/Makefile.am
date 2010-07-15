@@ -17,4 +17,5 @@ id321_SOURCES = main.c print.c delete.c modify.c sync.c copy.c \
                 id3v1.c id3v1_genres.c id3v1e_speed.c id3v2.c id3v23.c \
                 printfmt.c output.c iconv_ucs2.c compat.c u32_char.c \
                 synchsafe.c common.c alias.c \
+                langcodes.c \
                 help.c

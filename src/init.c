@@ -10,6 +10,7 @@
 #include "id3v1_genres.h"
 #include "id3v2.h"
 #include "id3v1e_speed.h"
+#include "langcodes.h"
 #include "opts.h"
 #include "output.h"
 #include "params.h"
@@ -550,7 +551,7 @@ int init_config(int *argc, char ***argv)
 
             case 'c':
                 ret = parse_comment_optarg(opt_arg);
-                FATAL(ret != 0, "invalid comment language specified");
+                FATAL(ret != 0, "invalid comment spec specified");
                 break;
 
             case 'a': g_config.artist = opt_arg; break;
@@ -630,6 +631,12 @@ int init_config(int *argc, char ***argv)
               "non standard genre id '%u' specified; "
               "if you are sure what you are doing use -E to force this",
               g_config.genre_id);
+
+        FATAL(g_config.comment_lang
+              && !is_valid_langcode(g_config.comment_lang),
+              "non standard language code '%s' specified; "
+              "if you are sure what you are doing use -E to force this",
+              g_config.comment_lang);
     }
 
     *argc -= opt_ind;
