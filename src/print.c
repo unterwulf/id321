@@ -68,11 +68,10 @@ static void print_id3v1_tag_field(const char *name, const char *value)
     {
         u32_printfmt(NULL, u32_str);
         free(u32_str);
+        putchar('\n');
     }
     else
-        printf("[ENOMEM]");
-
-    printf("\n");
+        puts("[ENOMEM]");
 }
 
 static void print_id3v1_tag(const struct id3v1_tag *tag)
@@ -121,20 +120,20 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
                 get_frame_data(tag, frame, u32_str, len);
                 u32_str[len] = U32_CHAR('\0');
                 u32_printfmt(NULL, u32_str);
-                printf("\n");
+                putchar('\n');
                 free(u32_str);
             }
             else
-                printf("[ENOMEM]\n");
+                puts("[ENOMEM]");
         }
         else if (len == 0)
-            printf("\n");
+            putchar('\n');
         else if (len == -ENOSYS)
-            printf("[parser for this frame is not implemented yet]\n");
+            puts("[parser for this frame is not implemented yet]");
         else if (len == -EINVAL)
-            printf("[unknown frame]\n");
+            puts("[unknown frame]");
         else if (len == -EILSEQ)
-            printf("[malformed frame]\n");
+            puts("[malformed frame]");
     }
 }
 
@@ -314,12 +313,10 @@ static void print_tag(const struct id3v1_tag *tag1,
 
     switch (state)
     {
-        case st_escape: putchar('\\'); break;
-        case st_normal: break;
-        default:        printf("%s", lastspec); break;
+        case st_escape: puts("\\"); break;
+        case st_normal: putchar('\n'); break;
+        default:        puts(lastspec); break;
     }
-
-    putchar('\n');
 }
 
 int print_tags(const char *filename)

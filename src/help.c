@@ -3,7 +3,7 @@
 
 void help()
 {
-    printf(
+    puts(
 "id321 " VERSION " Copyright (c) 2010 Vitaly Sinilin\n"
 "\n"
 "usage: id321 [pr[int]] [VEROPT] [-eENC] [-f FMT|-F FRAME] FILE...\n"
@@ -30,6 +30,6 @@ void help()
 "       --no-unsync                   do not unsynchronise ID3v2 tags\n"
 "       -v, --verbose                 be verbose\n"
 "       -V, --version                 print the version number\n"
-"       -h, --help                    print this message\n"
+"       -h, --help                    print this message"
     );
 }

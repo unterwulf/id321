@@ -1,6 +1,6 @@
 #include <errno.h>
 #include <inttypes.h>
-#include <stdio.h>        /* fread(), printf(), stdin */
+#include <stdio.h>        /* fread(), puts(), stdin */
 #include <stdlib.h>       /* atoi() */
 #include <string.h>
 #include "common.h"
@@ -489,7 +489,7 @@ int init_config(int *argc, char ***argv)
                 exit(EXIT_SUCCESS);
 
             case 'V':
-                printf("id321 " VERSION "\n");
+                puts("id321 " VERSION);
                 exit(EXIT_SUCCESS);
 
             case '1':
