@@ -386,8 +386,19 @@ int modify_tags(const char *filename)
         tag1->genre_id = ID3V1_UNKNOWN_GENRE; 
     }
 
-    if ((g_config.ver.major == 2 || (g_config.ver.major == NOT_SET && !tag1))
-        && !tag2)
+    if (tag2 && g_config.ver.major == 2 && g_config.ver.minor != NOT_SET
+        && g_config.ver.minor != tag2->header.version)
+    {
+        print(OS_ERROR, "%s: present ID3v2 tag has a different "
+                        "minor version, conversion is not implemented "
+                        "yet, skipping this file", filename);
+
+        /* TODO: convert between ID3v2 minor versions */
+
+        ret = -ENOSYS;
+    }
+    else if ((g_config.ver.major == 2
+              || (g_config.ver.major == NOT_SET && !tag1)) && !tag2)
     {
         tag2 = new_id3v2_tag();
 
