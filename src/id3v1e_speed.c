@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <stddef.h>
 #include <string.h>
 #include "common.h"
 
@@ -17,7 +18,7 @@ id3v1e_speed[] =
 
 const char *get_id3v1e_speed_str(uint8_t speed_id)
 {
-    uint8_t i;
+    size_t i;
 
     for_each (i, id3v1e_speed)
         if (id3v1e_speed[i].id == speed_id)
@@ -28,7 +29,7 @@ const char *get_id3v1e_speed_str(uint8_t speed_id)
 
 uint8_t get_id3v1e_speed_id(const char *speed_str)
 {
-    uint8_t i;
+    size_t i;
 
     for_each (i, id3v1e_speed)
         if (!strcmp(id3v1e_speed[i].str, speed_str))

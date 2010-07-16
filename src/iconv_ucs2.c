@@ -24,7 +24,7 @@
 struct iconv_ucs2
 {
     iconv_t cd;
-    unsigned pos;
+    size_t pos;
     unsigned add_bom;
 };
 

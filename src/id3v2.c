@@ -222,7 +222,7 @@ int read_id3v2_ext_header(int fd, struct id3v2_tag *tag)
 
 static int validate_id3v2_header(const struct id3v2_header *hdr)
 {
-    unsigned i;
+    size_t i;
     static const struct flagmask
     {
         uint8_t version;
@@ -298,7 +298,7 @@ int find_id3v2_tag(struct id3v2_header *header, FILE *fp_src, FILE *fp_dst)
 static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
 {
     char         buf[ID3V2_HEADER_LEN];
-    int          pos;
+    size_t       pos;
     const char  *id = footer ? "3DI" : "ID3";
 
     READORDIE(fd, buf, ID3V2_HEADER_LEN, -EFAULT);

@@ -402,7 +402,7 @@ id3_frame_handler_table_t v24_frames[] = {
 int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
                    u32_char *buf, size_t size)
 {
-    unsigned i;
+    size_t i;
     id3_frame_handler_table_t *table = NULL;
     int idlen = tag->header.version == 2 ? 3 : 4;
 

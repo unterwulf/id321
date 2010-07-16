@@ -1,6 +1,6 @@
 #include <errno.h>
 #include <locale.h>
-#include <stdlib.h> /* EXIT_* */
+#include <stdlib.h> /* EXIT_*, size_t */
 #include "common.h" /* for_each() */
 #include "output.h"
 #include "params.h"
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        unsigned i;
+        size_t i;
 
         for_each (i, actions)
             if (actions[i].action == g_config.action)

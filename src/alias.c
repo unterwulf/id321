@@ -12,7 +12,7 @@
 
 const struct alias *get_alias(char alias)
 {
-    unsigned i;
+    size_t i;
     static const struct alias map[] =
     {
         { 'a', "TP1", "TPE1", "TPE1", OFF1SIZ1CONF(artist)     },

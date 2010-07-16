@@ -139,7 +139,7 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
 
 static int is_valid_frame_id_str(const char *str, size_t len)
 {
-    unsigned i;
+    size_t i;
     int res = 1;
 
     for (i = 0; i < len; i++)

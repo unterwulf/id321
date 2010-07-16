@@ -1,7 +1,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>        /* fread(), puts(), stdin */
-#include <stdlib.h>       /* atoi() */
+#include <stdlib.h>       /* atoi(), size_t */
 #include <string.h>
 #include "common.h"
 #include "config.h"
@@ -467,7 +467,7 @@ int init_config(int *argc, char ***argv)
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')
     {
-        unsigned i;
+        size_t i;
 
         for_each (i, actions)
         {

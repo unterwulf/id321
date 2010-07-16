@@ -13,9 +13,10 @@
  * ISO 639-1 is the alpha-2 code.
  */
 
-#include <string.h>
-#include "common.h"
-#include "id3v2.h"
+#include <stddef.h> /* size_t */
+#include <string.h> /* memcmp() */
+#include "common.h" /* foreach() {...} */
+#include "id3v2.h"  /* ID3V2_LANG_HDR_SIZE */
 
 static const char langcodes[][ID3V2_LANG_HDR_SIZE] = {
     "XXX",

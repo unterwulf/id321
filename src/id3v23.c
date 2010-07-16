@@ -3,7 +3,7 @@
 
 const char *map_v23_to_v24(const char *v23frame)
 {
-    unsigned i;
+    size_t i;
     static const struct
     {
         const char *v23;
