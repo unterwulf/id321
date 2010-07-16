@@ -107,7 +107,30 @@ static int get_v23_str_frame(const struct id3v2_frame *frame,
 static int get_v24_str_frame(const struct id3v2_frame *frame,
                              u32_char *buf, size_t size)
 {
-    return get_str_frame(4, frame, buf, size);
+    int u32_size = get_str_frame(4, frame, buf, size);
+
+    /* The ID3v2.4 informal standard says:
+     *
+     * "All text information frames supports multiple strings, stored as
+     * a null separated list, where null is reperesented by the termination
+     * code for the charater encoding."
+     *
+     * To print such lists as plain text we will just replace all termination
+     * codes with '/', so they will look just like ID3v2.3 values. */
+
+    if (u32_size > 0)
+    {
+        size_t i;
+
+        if (u32_size < size)
+            size = u32_size;
+
+        for (i = 0; i < size; i++)
+            if (buf[i] == U32_CHAR('\0'))
+                buf[i] = U32_CHAR('/');
+    }
+
+    return u32_size;
 }
 
 static int get_url_frame(const struct id3v2_frame *frame,
