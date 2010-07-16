@@ -139,13 +139,11 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
 
 static int is_valid_frame_id_str(const char *str, size_t len)
 {
-    size_t i;
-    int res = 1;
+    for (; len > 0; str++, len--)
+        if (!isupper(*str) && !isdigit(*str))
+            return 0;
 
-    for (i = 0; i < len; i++)
-        res &= isupper(str[i]) || isdigit(str[i]);
-
-    return res;
+    return 1;
 }
 
 static void print_tag(const struct id3v1_tag *tag1,
