@@ -402,9 +402,8 @@ id3_frame_handler_table_t v24_frames[] = {
 int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
                    u32_char *buf, size_t size)
 {
-    size_t i;
     id3_frame_handler_table_t *table = NULL;
-    int idlen = tag->header.version == 2 ? 3 : 4;
+    size_t idlen = tag->header.version == 2 ? 3 : 4;
 
     switch (tag->header.version)
     {
@@ -414,12 +413,12 @@ int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
         default: return -EINVAL; /* no need to report error here */
     }
 
-    for (i = 0; table[i].id != NULL; i++)
+    for (; table->id != NULL; table++)
     {
-        if (!memcmp(table[i].id, frame->id, idlen))
+        if (!memcmp(table->id, frame->id, idlen))
         {
-            if (table[i].get_data)
-                return table[i].get_data(frame, buf, size);
+            if (table->get_data)
+                return table->get_data(frame, buf, size);
             else
                 return -ENOSYS;
         }
