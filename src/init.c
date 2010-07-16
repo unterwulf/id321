@@ -8,6 +8,7 @@
 #include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"
+#include "id3v2.h"
 #include "id3v1e_speed.h"
 #include "opts.h"
 #include "output.h"
@@ -121,7 +122,7 @@ static void unescape_chars(char *str, const char *chars, char esc)
  * parse_comment_optarg - parse comment option argument
  *
  * The routine modifies comment-related fields of the g_config structure
- * in accordance with @optarg passed.
+ * in accordance with @arg passed.
  *
  * Comment option argument shall be in the format
  *
@@ -132,45 +133,38 @@ static void unescape_chars(char *str, const char *chars, char esc)
  * test shall be escaped with '\' not to have their special meaning.
  */
 
-static inline int parse_comment_optarg(char *optarg)
+static inline int parse_comment_optarg(char *arg)
 {
+#define COM_OPT_ARG_CNT 3
+
     int i, j;
-    char *stack[3];
-    char *pos;
+    char *stack[COM_OPT_ARG_CNT];
     struct
     {
         const char **value;
-        uint8_t flag;
+        unsigned int flag;
     }
-    conf[] =
+    conf[COM_OPT_ARG_CNT] =
     {
         { &g_config.comment,      0 },
         { &g_config.comment_desc, ID321_OPT_ANY_COMM_DESC },
         { &g_config.comment_lang, ID321_OPT_ANY_COMM_LANG }
     };
 
-    pos = stack[0] = optarg;
-
     /* at first, fill stack with all values available */
+    stack[0] = arg;
 
-    for (i = 0; (i < sizeof(stack) - 1)
-                && (pos = memchr(pos, ':', strlen(pos))); i++)
+    for (i = 0; (i < COM_OPT_ARG_CNT - 1) && (arg = strchr(arg, ':')); arg++)
     {
-        if (pos - 1 >= stack[i] && pos[-1] == '\\')
+        if (arg == stack[i] || *(arg - 1) != '\\')
         {
-            /* skip escaped colon */
-            i--;
-            pos++;
-            continue;
+            *arg = '\0';
+            stack[++i] = arg + 1;
         }
-
-        *pos = '\0';
-        pos++;
-        stack[i+1] = pos;
+        /* else skip escaped colon */
     }
 
     /* then, propagate the collected values to the proper fields */
-
     for (j = 0; i >= 0; i--, j++)
     {
         if (!strcmp(stack[i], "*") && conf[j].flag)
@@ -182,7 +176,8 @@ static inline int parse_comment_optarg(char *optarg)
         }
     }
 
-    return (g_config.comment_lang && strlen(g_config.comment_lang) != 3)
+    return (g_config.comment_lang
+            && strlen(g_config.comment_lang) != ID3V2_LANG_HDR_SIZE)
            ? -EFAULT : 0;
 }
 
