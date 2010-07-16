@@ -5,11 +5,9 @@
 #include "printfmt.h"
 #include "u32_char.h"
 
-static void print_padding(char ch, int len)
+static inline void print_padding(char ch, size_t len)
 {
-    int n;
-
-    for (n = 0; n < len; n++)
+    for (; len > 0; len--)
         putchar(ch);
 }
 
