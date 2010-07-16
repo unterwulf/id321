@@ -173,7 +173,7 @@ static inline int parse_comment_optarg(char *optarg)
 
     for (j = 0; i >= 0; i--, j++)
     {
-        if (!strcmp(stack[i], "*"))
+        if (!strcmp(stack[i], "*") && conf[j].flag)
             g_config.options |= conf[j].flag;
         else
         {
