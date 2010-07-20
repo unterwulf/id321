@@ -116,6 +116,9 @@ typedef struct id3_frame_handler_table_t
 struct id3v2_tag *new_id3v2_tag();
 void free_id3v2_tag(struct id3v2_tag *tag);
 
+int is_valid_frame_id_str(const char *str, size_t len);
+int is_valid_frame_id(const char *str);
+
 int read_id3v2_header(int fd, struct id3v2_header *hdr);
 int read_id3v2_footer(int fd, struct id3v2_header *hdr);
 int read_id3v2_ext_header(int fd, struct id3v2_tag *tag);

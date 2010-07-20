@@ -1,8 +1,8 @@
+#include <ctype.h>        /* isdigit() */
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <errno.h>
 #include "alias.h"
 #include "common.h"
 #include "params.h"       /* g_config, NOT_SET */
@@ -135,15 +135,6 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
         else if (len == -EILSEQ)
             puts("[malformed frame]");
     }
-}
-
-static int is_valid_frame_id_str(const char *str, size_t len)
-{
-    for (; len > 0; str++, len--)
-        if (!isupper(*str) && !isdigit(*str))
-            return 0;
-
-    return 1;
 }
 
 static void print_tag(const struct id3v1_tag *tag1,

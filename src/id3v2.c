@@ -1,4 +1,5 @@
 #include <arpa/inet.h> /* ntohl(), htonl() */
+#include <ctype.h>     /* isdigit(), isupper() */
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -36,6 +37,25 @@ void free_id3v2_tag(struct id3v2_tag *tag)
 
     free_frame_list(&tag->frame_head);
     free(tag);
+}
+
+int is_valid_frame_id_str(const char *str, size_t len)
+{
+    for (; len > 0; str++, len--)
+        if (!isupper(*str) && !isdigit(*str))
+            return 0;
+
+    return 1;
+}
+
+int is_valid_frame_id(const char *str)
+{
+    size_t len = strlen(str);
+
+    if (len > ID3V2_FRAME_ID_MAX_SIZE)
+        return 0;
+
+    return is_valid_frame_id_str(str, len);
 }
 
 static void unpack_id3v2_frame_header(const unsigned char *buf,

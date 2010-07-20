@@ -637,6 +637,12 @@ int init_config(int *argc, char ***argv)
               "non standard language code '%s' specified; "
               "if you are sure what you are doing use -E to force this",
               g_config.comment_lang);
+
+        FATAL(g_config.action == ID3_MODIFY && g_config.frame_id
+              && !is_valid_frame_id(g_config.frame_id),
+              "invalid frame ID '%s' specified; "
+              "if you are sure what you are doing use -E to force this",
+              g_config.frame_id);
     }
 
     *argc -= opt_ind;
