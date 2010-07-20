@@ -51,7 +51,8 @@ uint32_t deunsync_uint32(ss_uint32_t src)
  * @dstsize the value in @dst is truncated.
  */
 
-size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
+size_t unsync_buf(char *dst, size_t dstsize,
+                  const char *src, size_t srcsize, char post)
 {
     size_t ressize = dstsize;
 
@@ -61,7 +62,7 @@ size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
         
         if (*src == '\xFF' &&
             (srcsize > 1 && ((*(src+1) & '\xE0') == '\xE0' || *(src+1) == '\0')
-             || srcsize == 1))
+             || srcsize == 1 && (post & '\xE0') == '\xE0' || post == '\0'))
         {
             if (dstsize > 1)
             {
@@ -77,19 +78,19 @@ size_t unsync_buf(char *dst, size_t dstsize, const char *src, size_t srcsize)
     for (ressize += srcsize; srcsize > 0; src++, srcsize--)
         if (*src == '\xFF' &&
             (srcsize > 1 && ((*(src+1) & '\xE0') == '\xE0' || *(src+1) == '\0')
-             || srcsize == 1))
+             || srcsize == 1 && (post & '\xE0') == '\xE0' || post == '\0'))
             ressize++;
 
     return ressize - dstsize;
 }
 
-size_t deunsync_buf(char *buf, size_t size, int pre)
+size_t deunsync_buf(char *buf, size_t size, char pre)
 {
     char *wrptr = buf;
     size_t origsize = size;
 
     /* checking precondition */
-    if (pre == 1 && size > 0 && *buf == '\0')
+    if (pre == '\xFF' && size > 0 && *buf == '\0')
     {
         buf++;
         size--;

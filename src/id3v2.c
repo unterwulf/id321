@@ -65,7 +65,7 @@ static void unpack_id3v2_frame_header(const unsigned char *buf,
     }
 }
 
-static ssize_t read_unsync(int fd, void *buf, size_t size, int *pre)
+static ssize_t read_unsync(int fd, void *buf, size_t size, char *pre)
 {
     size_t realsize;
     ssize_t bytes_read = 0;
@@ -74,7 +74,7 @@ static ssize_t read_unsync(int fd, void *buf, size_t size, int *pre)
     {
         bytes_read += size;
         realsize = deunsync_buf(buf, size, *pre);
-        *pre = (((uint8_t *)buf)[size - 1] == 0xFF);
+        *pre = ((char *)buf)[size - 1];
 
         if (realsize < size)
         {
@@ -93,7 +93,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
     uint8_t buf[ID3V2_FRAME_HEADER_SIZE];
     size_t  bytes_left = tag->header.size;
     size_t  frame_header_size = ID3V2_FRAME_HEADER_SIZE;
-    int     pre = 0;
+    char    pre = '\0';
     ssize_t bytes_read = 0;
 
     if (tag->header.version == 2)
@@ -172,7 +172,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         if (tag->header.version == 4
                 && frame->format_flags & ID3V24_FRM_FMT_FLAG_UNSYNC)
         {
-            frame->size = deunsync_buf(frame->data, frame->size, 0);
+            frame->size = deunsync_buf(frame->data, frame->size, '\0');
         }
 
         append_frame(&tag->frame_head, frame);
@@ -351,6 +351,7 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
 
 static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
                                struct id3v2_header *hdr,
+                               char post,
                                char *buf, size_t size)
 {
     size_t  hdr_size = hdr->version == 2 ? 6 : 10;
@@ -366,7 +367,7 @@ static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
     if (hdr->version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
     {
         payload_size = unsync_buf(buf, size - hdr_size,
-                                  frame->data, frame->size);
+                                  frame->data, frame->size, post);
 
         /* check if unsynchronisation has changed the frame payload */
         if (payload_size != frame->size)
@@ -440,16 +441,32 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
 
     for (frame = tag->frame_head.next; frame != &tag->frame_head;)
     {
-        frame_size = pack_id3v2_frame(frame, &header, *buf+pos, bufsize-pos);
+        char post = (frame->next == &tag->frame_head)
+                    ? '\xFF' : frame->next->id[0];
+
+        /* According to the ID3v2.3 and ID3v2.4 specifications the last byte
+         * of the last frame in the tag should be unsynchronised in case
+         * it is 0xFF. unsync_buf() implements this functionality in
+         * a general way, it takes a byte after buffer to decide whether 
+         * the last byte should be unsynchronised or not. So we pass
+         * '\xFF' as a byte after buffer for the last frame to show that
+         * the last byte needs to be unsynchronised.
+         *
+         * Note that for the rest of frames we pass the first byte of the 
+         * next frame ID as a byte after buffer because it will actually be
+         * such a byte. According to the standards frame ID should be
+         * composed of [A-Z0-9], so it will guarantee that the last byte of
+         * each frame but last will not be unsynchronised. */
+
+        frame_size = pack_id3v2_frame(frame, &header, post,
+                                      *buf+pos, bufsize-pos);
 
         if (frame_size > bufsize - pos)
         {
             char *newbuf;
             size_t newbufsize = 2*bufsize;
 
-            /* one extra byte is reserved for null byte which can
-             * be needed to unsync the last frame ended with 0xFF */
-            while (newbufsize < pos + frame_size + 1)
+            while (newbufsize < pos + frame_size)
                 newbufsize *= 2;
 
             newbuf = realloc(*buf, newbufsize);
@@ -471,15 +488,13 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     {
         size_t reqbufsize = ID3V2_HEADER_LEN +
                             unsync_buf(NULL, 0, *buf + ID3V2_HEADER_LEN,
-                                       pos - ID3V2_HEADER_LEN);
+                                       pos - ID3V2_HEADER_LEN, '\xFF');
 
         /* check if unsynchronisation has changed the tag payload */
         if (reqbufsize != pos)
         {
-            /* one extra byte is reserved for null byte which can
-             * be needed to unsync the last frame ended with 0xFF */
-            size_t  newbufsize = reqbufsize + 1;
-            char   *newbuf = malloc(newbufsize);
+            size_t newbufsize = reqbufsize;
+            char *newbuf = malloc(newbufsize);
 
             if (!newbuf)
                 goto oom;
@@ -487,7 +502,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
             (void)unsync_buf(newbuf + ID3V2_HEADER_LEN,
                              reqbufsize - ID3V2_HEADER_LEN,
                              *buf + ID3V2_HEADER_LEN,
-                             pos - ID3V2_HEADER_LEN);
+                             pos - ID3V2_HEADER_LEN, '\xFF');
 
             memcpy(newbuf, *buf, ID3V2_HEADER_LEN);
             free(*buf);
@@ -501,14 +516,6 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
             header.flags |= ID3V2_FLAG_UNSYNC;
         }
     }
-
-    /* it is time to check if the last byte of the last frame should be
-     * unsynchronised, if so we will do it by adding one byte of padding
-     * space */
-
-    if ((uint8_t)(*buf)[pos - 1] == 0xFF
-        && !(g_config.options & ID321_OPT_NO_UNSYNC))
-        *buf[pos++] = '\0';
 
     /* if new tag size has not been specified, we will try to use old tag 
      * space not changed */
