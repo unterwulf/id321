@@ -48,6 +48,15 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
         if (tag2_size < 0)
         {
             close_file(file);
+            switch (tag2_size)
+            {
+                case -E2BIG:
+                    print(OS_ERROR, "%s: tag too big", filename);
+                    break;
+                case -EINVAL:
+                    print(OS_ERROR, "%s: frame too big", filename);
+                    break;
+            }
             return NOMEM_OR_FAULT(tag2_size);
         }
     }

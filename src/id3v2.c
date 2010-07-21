@@ -112,12 +112,12 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
 {
     uint8_t buf[ID3V2_FRAME_HEADER_SIZE];
     size_t  bytes_left = tag->header.size;
-    size_t  frame_header_size = ID3V2_FRAME_HEADER_SIZE;
+    size_t  frame_header_size = (tag->header.version == 2)
+                                ? ID3V22_FRAME_HEADER_SIZE
+                                : ID3V2_FRAME_HEADER_SIZE;
     char    pre = '\0';
     ssize_t bytes_read = 0;
 
-    if (tag->header.version == 2)
-        frame_header_size = ID3V22_FRAME_HEADER_SIZE;
 
     while (bytes_left > frame_header_size)
     {
@@ -369,15 +369,32 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
  * Pack functions
  */
 
+/***
+ * pack_id3v2_frame
+ *
+ * Returns packed frame size or (size_t)-1 if the frame is too big to be
+ * packed correctly.
+ */
+
 static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
                                struct id3v2_header *hdr,
                                char post,
                                char *buf, size_t size)
 {
-    size_t  hdr_size = hdr->version == 2 ? 6 : 10;
+    size_t  hdr_size = (hdr->version == 2)
+                       ? ID3V22_FRAME_HEADER_SIZE
+                       : ID3V2_FRAME_HEADER_SIZE;
     uint8_t format_flags = frame->format_flags;
     size_t  payload_size;
     char   *hdr_buf = buf;
+    static const uint32_t frame_max_size[] =
+    {
+        /* unused */ 0,
+        /* unused */ 0,
+        /*  v2.2  */ ID3V22_FRAME_MAX_SIZE,
+        /*  v2.3  */ ID3V23_FRAME_MAX_SIZE,
+        /*  v2.4  */ ID3V24_FRAME_MAX_SIZE,
+    };
 
     if (size < hdr_size + frame->size)
         return hdr_size + frame->size;
@@ -406,9 +423,12 @@ static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
         payload_size = frame->size;
     }
 
+    /* check frame payload size */
+    if (payload_size > frame_max_size[hdr->version])
+        return (size_t)-1;
+
     if (hdr->version == 2)
     {
-        /* TODO: check max frame size */
         memcpy(hdr_buf, frame->id, 3);
         /* no need to do htonl(payload_size), as we use shift operator here */
         hdr_buf[3] = (uint8_t)((payload_size >> 16) & 0xFF);
@@ -420,6 +440,7 @@ static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
         uint32_t net_payload_size = (hdr->version == 4)
                                     ? htonl(unsync_uint32(payload_size))
                                     : htonl(payload_size);
+
         memcpy(hdr_buf, frame->id, 4);
         memcpy(hdr_buf + 4, &net_payload_size, sizeof(uint32_t));
         hdr_buf[8] = frame->status_flags;
@@ -481,7 +502,14 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         frame_size = pack_id3v2_frame(frame, &header, post,
                                       *buf+pos, bufsize-pos);
 
-        if (frame_size > bufsize - pos)
+        if (frame_size == (size_t)-1)
+        {
+            /* frame too big */
+            free(*buf);
+            *buf = NULL;
+            return -EINVAL;
+        }
+        else if (frame_size > bufsize - pos)
         {
             char *newbuf;
             size_t newbufsize = 2*bufsize;
@@ -564,6 +592,14 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     }
 
     header.size = pos - ID3V2_HEADER_LEN;
+
+    if (header.size > ID3V2_TAG_MAX_SIZE)
+    {
+        /* tag too big */
+        free(*buf);
+        *buf = NULL;
+        return -E2BIG;
+    }
 
     pack_id3v2_header(&header, *buf);
 

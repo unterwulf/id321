@@ -17,6 +17,12 @@
 #define ID3V22_FRAME_HEADER_SIZE    6
 #define ID3V2_FRAME_ID_MAX_SIZE     4
 
+#define ID3V2_TAG_MAX_SIZE          0xFFFFFFFUL  /* 256 MB  */
+
+#define ID3V22_FRAME_MAX_SIZE       0xFFFFFFL    /* 16 MB   */
+#define ID3V23_FRAME_MAX_SIZE       0xFFFFFFFFUL /* 4096 MB */
+#define ID3V24_FRAME_MAX_SIZE       0xFFFFFFFUL  /* 256 MB  */
+
 #define ID3V22_FLAG_MASK            0xC0
 #define ID3V23_FLAG_MASK            0xE0
 #define ID3V24_FLAG_MASK            0xF0
