@@ -15,7 +15,7 @@ int delete_tags(const char *filename)
 
     if (!file)
         return -EFAULT;
-    
+
     /* the order makes sense */
     if (g_config.ver.major == 1 || g_config.ver.major == NOT_SET)
     {

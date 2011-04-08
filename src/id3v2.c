@@ -488,12 +488,12 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         /* According to the ID3v2.3 and ID3v2.4 specifications the last byte
          * of the last frame in the tag should be unsynchronised in case
          * it is 0xFF. unsync_buf() implements this functionality in
-         * a general way, it takes a byte after buffer to decide whether 
+         * a general way, it takes a byte after buffer to decide whether
          * the last byte should be unsynchronised or not. So we pass
          * '\xFF' as a byte after buffer for the last frame to show that
          * the last byte needs to be unsynchronised.
          *
-         * Note that for the rest of frames we pass the first byte of the 
+         * Note that for the rest of frames we pass the first byte of the
          * next frame ID as a byte after buffer because it will actually be
          * such a byte. According to the standards frame ID should be
          * composed of [A-Z0-9], so it will guarantee that the last byte of
@@ -565,7 +565,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         }
     }
 
-    /* if new tag size has not been specified, we will try to use old tag 
+    /* if new tag size has not been specified, we will try to use old tag
      * space not changed */
 
     newsize = g_config.options & ID321_OPT_CHANGE_SIZE

@@ -110,7 +110,7 @@ static inline int setup_encodings(char *enc_str)
     size_t argc;
     char *argv[ENC_OPT_ARG_CNT] = { };
     id321_iconv_t cd;
-    static struct 
+    static struct
     {
         const char  *desc;
         const char **name;
@@ -264,7 +264,7 @@ static inline int parse_frame_optarg(char *arg)
                 return -EILSEQ;
 
             *opb = *clb = '\0';
-            
+
             if (index == clb) /* empty brackets */
                 g_config.options |= ID321_OPT_CREATE_FRAME;
             else if (!strcmp(index, "*"))
@@ -357,7 +357,7 @@ static inline int parse_genre_optarg(char *arg)
     char *argv[FRAME_OPT_ARG_CNT];
     int ret;
     long long_val;
-    
+
     if (arg[0] == '\0')
     {
         g_config.options |= ID321_OPT_RM_GENRE_FRAME | ID321_OPT_SET_GENRE_ID;
@@ -537,7 +537,7 @@ int init_config(int *argc, char ***argv)
                 }
                 break;
 
-            case 's':                
+            case 's':
                 ret = str_to_long(opt_arg, &long_val);
                 FATAL(ret != 0 || long_val < 0, "invalid tag size specified");
                 g_config.size = long_val;
@@ -607,7 +607,7 @@ int init_config(int *argc, char ***argv)
 
     FATAL(g_config.action == ID3_SYNC && g_config.ver.major == NOT_SET,
           "target version for synchronisation is not specified");
-    
+
     if (!(g_config.options & ID321_OPT_EXPERT))
     {
         FATAL(g_config.action == ID3_DELETE

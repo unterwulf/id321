@@ -143,7 +143,7 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
                 comm->desc = NULL;
         }
 
-        if (!memcmp(tmp_comm->lang, comm->lang, ID3V2_LANG_HDR_SIZE) 
+        if (!memcmp(tmp_comm->lang, comm->lang, ID3V2_LANG_HDR_SIZE)
             && ((IS_EMPTY_STR(tmp_comm->desc)
                  && IS_EMPTY_STR(comm->desc))
                 || (tmp_comm->desc && comm->desc

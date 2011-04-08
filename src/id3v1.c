@@ -103,7 +103,7 @@ int unpack_id3v1_enh_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 
     if (size < ID3V1E_TAG_SIZE)
         return -E2BIG;
-    
+
     /* we will find a tag at the end of the buffer */
     buf += size - ID3V1E_TAG_SIZE;
     legacy = buf + ID3V1E_TAG_SIZE - ID3V1_TAG_SIZE;
@@ -136,7 +136,7 @@ int unpack_id3v12_tag(const char *buf, size_t size, struct id3v1_tag *tag)
 
     if (size < ID3V12_TAG_SIZE)
         return -E2BIG;
-    
+
     /* we will find a tag at the end of the buffer */
     buf += size - ID3V12_TAG_SIZE;
     legacy = buf + ID3V12_TAG_SIZE - ID3V1_TAG_SIZE;
@@ -190,7 +190,7 @@ size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf)
         pack_id3v12_field(tag, album,   ALB, pos);
         pack_id3v12_field(tag, comment, COM, pos);
         strncpy(pos + ID3V12_GN2_OFF, tag->genre_str, ID3V12_GN2_SIZE);
-        pos += ID3V12_TAG_SIZE - ID3V1_TAG_SIZE; 
+        pos += ID3V12_TAG_SIZE - ID3V1_TAG_SIZE;
     }
     else if (tag->version == ID3V1E_MINOR)
     {
@@ -203,7 +203,7 @@ size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf)
         strncpy(pos + ID3V1E_GN2_OFF, tag->genre_str, ID3V1E_GN2_SIZE);
         strncpy(pos + ID3V1E_STM_OFF, tag->starttime, ID3V1E_STM_SIZE);
         strncpy(pos + ID3V1E_ETM_OFF, tag->endtime, ID3V1E_ETM_SIZE);
-        pos += ID3V1E_TAG_SIZE - ID3V1_TAG_SIZE; 
+        pos += ID3V1E_TAG_SIZE - ID3V1_TAG_SIZE;
     }
 
     /* all versions but 3rd have the same format for the last 128 bytes */

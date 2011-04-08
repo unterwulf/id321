@@ -36,7 +36,7 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 
         if (!frame_id)
             return -EINVAL;
-        
+
         frame = peek_frame(&tag2->frame_head, frame_id);
 
         if (frame && frame->size > 1)
@@ -142,7 +142,7 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
  * The routine parses the string with the following timestamp format as per
  * the enhanced tag specification:
  *
- *    MMM:SS 
+ *    MMM:SS
  *
  * Returns time in seconds or -1 if passed string is not a valid timestamp
  * string.
@@ -217,7 +217,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
         ret = update_id3v2_tag_text_frame(tag2, frame_id, frame_enc_byte,
                                           buf, bufsize);
-        
+
         free(buf);
 
         if (ret != 0)
@@ -251,7 +251,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     if (tag1->genre_id != ID3V1_UNKNOWN_GENRE || tag1->genre_str[0] != '\0')
     {
         u32_char *genre_u32_str = NULL;
-        
+
         if (tag1->genre_str[0] != '\0')
         {
             ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
@@ -260,7 +260,7 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
             if (ret != 0)
                 return ret;
         }
-                                 
+
         ret = set_id3v2_tag_genre(tag2, tag1->genre_id, genre_u32_str);
         free(genre_u32_str);
 

@@ -10,8 +10,8 @@ struct alias
     const char  *v22;
     const char  *v23;
     const char  *v24;
-    size_t       v1offset;     
-    size_t       v1size;     
+    size_t       v1offset;
+    size_t       v1size;
     const char **conf;
 };
 

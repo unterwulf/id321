@@ -383,7 +383,7 @@ int modify_tags(const char *filename)
 
         tag1->version =
             (g_config.ver.minor != NOT_SET) ? g_config.ver.minor : 3;
-        tag1->genre_id = ID3V1_UNKNOWN_GENRE; 
+        tag1->genre_id = ID3V1_UNKNOWN_GENRE;
     }
 
     if (tag2 && g_config.ver.major == 2 && g_config.ver.minor != NOT_SET

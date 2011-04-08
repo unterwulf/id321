@@ -90,7 +90,7 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
     int         ret;
 
     assert(al);
-    frame_id = alias_to_frame_id(al, tag->header.version); 
+    frame_id = alias_to_frame_id(al, tag->header.version);
 
     if (genre_id != ID3V1_UNKNOWN_GENRE)
     {
@@ -102,7 +102,7 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
             case 4:
                 u32_size = u32_snprintf_alloc(&u32_data, "%u%lc%ls",
                                genre_id, U32_CHAR('\0'), genre_u32_str);
-                
+
                 if (u32_size > 0 && genre_u32_str[0] == U32_CHAR('\0'))
                     u32_size--; /* no need to have the separator */
                 break;

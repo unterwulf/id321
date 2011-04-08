@@ -57,7 +57,7 @@
 #define ID3V1E_STM_OFF          215
 #define ID3V1E_ETM_OFF          221
 
-struct id3v1_tag 
+struct id3v1_tag
 {
     unsigned version;
     char     title[ID3V13_MAX_TIT_SIZE+1];

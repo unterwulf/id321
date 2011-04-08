@@ -59,7 +59,7 @@ size_t unsync_buf(char *dst, size_t dstsize,
     for (; srcsize > 0 && dstsize > 0; src++, dst++, srcsize--, dstsize--)
     {
         *dst = *src;
-        
+
         if (*src == '\xFF' &&
             (srcsize > 1 && ((*(src+1) & '\xE0') == '\xE0' || *(src+1) == '\0')
              || srcsize == 1 && (post & '\xE0') == '\xE0' || post == '\0'))

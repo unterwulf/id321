@@ -29,7 +29,7 @@ u32_char *u32_strcpy(u32_char *dst, const u32_char *src)
 u32_char *u32_strncpy(u32_char *dst, const u32_char *src, size_t size)
 {
     u32_char *dstptr = dst;
-    
+
     for (; size > 0 && (*dstptr = *src) != U32_CHAR('\0');
          src++, dstptr++, size--)
         ;
@@ -54,7 +54,7 @@ u32_char *u32_strdup(const u32_char *str)
 size_t u32_strlen(const u32_char *str)
 {
     const u32_char *ptr;
-    
+
     for (ptr = str; *ptr != U32_CHAR('\0'); ptr++)
         ;
 
@@ -64,7 +64,7 @@ size_t u32_strlen(const u32_char *str)
 size_t u32_strnlen(const u32_char *str, size_t maxlen)
 {
     const u32_char *ptr;
-    
+
     for (ptr = str; *ptr != U32_CHAR('\0') && maxlen > 0; ptr++, maxlen--)
         ;
 
@@ -242,7 +242,7 @@ int u32_vsnprintf(u32_char *str, size_t size, const char *fmt, va_list ap)
                         }
                         else
                         {
-                            
+
                         }
                         break;
                     case 'c':

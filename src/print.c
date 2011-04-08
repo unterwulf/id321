@@ -26,7 +26,7 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
     size_t size;
     const struct alias *al = get_alias(alias);
     const void *buf;
-    
+
     if (!al)
         return;
 
@@ -287,7 +287,7 @@ static void print_tag(const struct id3v1_tag *tag1,
                             free(u32_str);
                         }
                         else
-                            printfmt(&pfmt, "ENOMEM"); 
+                            printfmt(&pfmt, "ENOMEM");
                     }
 
                     frame = NULL;

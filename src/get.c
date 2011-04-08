@@ -174,7 +174,7 @@ int get_tags(const char *filename, struct version ver,
 
     if (ret != 0 && *tag1)
     {
-        free(*tag1); 
+        free(*tag1);
         *tag1 = NULL;
     }
 
