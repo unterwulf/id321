@@ -89,17 +89,18 @@ static ssize_t read_unsync(int fd, void *buf, size_t size, char *pre)
 {
     size_t realsize;
     ssize_t bytes_read = 0;
+    char *ptr = buf;
 
-    while (readordie(fd, buf, size) == (ssize_t)size)
+    while (readordie(fd, ptr, size) == (ssize_t)size)
     {
         bytes_read += size;
-        realsize = deunsync_buf(buf, size, *pre);
-        *pre = ((char *)buf)[size - 1];
+        realsize = deunsync_buf(ptr, size, *pre);
+        *pre = *(ptr + size - 1);
 
         if (realsize < size)
         {
             size -= realsize;
-            buf += realsize;
+            ptr += realsize;
         }
         else
             return bytes_read;

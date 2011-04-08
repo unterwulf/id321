@@ -50,7 +50,7 @@ void *alias_to_v1_data(const struct alias *alias,
     if (size)
         *size = alias->v1size;
 
-    return (void *)tag + alias->v1offset;
+    return (char *)tag + alias->v1offset;
 }
 
 const char *alias_to_config_data(const struct alias *alias)

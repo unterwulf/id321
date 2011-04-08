@@ -22,8 +22,9 @@ ssize_t readordie(int fd, void *buf, size_t len)
 {
     ssize_t ret;
     ssize_t left = len;
+    char *ptr = buf;
 
-    while (left != 0 && (ret = read(fd, buf, left)) != 0)
+    while (left != 0 && (ret = read(fd, ptr, left)) != 0)
     {
         if (ret == -1)
         {
@@ -33,7 +34,7 @@ ssize_t readordie(int fd, void *buf, size_t len)
             return -errno;
         }
         left -= ret;
-        buf += ret;
+        ptr += ret;
     }
 
     return len - left;
@@ -43,10 +44,11 @@ ssize_t writeordie(int fd, const void *buf, size_t count)
 {
     size_t written = 0;
     ssize_t len;
+    const char *ptr = buf;
 
     while (written < count)
     {
-        len = write(fd, buf + written, count - written);
+        len = write(fd, ptr, count - written);
 
         if (len < 0)
         {
@@ -55,8 +57,8 @@ ssize_t writeordie(int fd, const void *buf, size_t count)
             else
                 break;
         }
-        else
-            written += len;
+        written += len;
+        ptr += len;
     }
 
     return written;
