@@ -1,6 +1,7 @@
 *.o
 *.mp3
 tags
+cscope.out
 .deps/
 /autom4te.cache/
 /aclocal.m4
