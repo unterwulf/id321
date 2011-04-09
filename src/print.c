@@ -333,13 +333,37 @@ int print_tags(const char *filename)
         struct id3v2_frame *frame = NULL;
 
         if (tag2)
+        {
             frame = peek_frame(&tag2->frame_head, g_config.frame_id);
 
+            if (!(g_config.options & ID321_OPT_ALL_FRAMES))
+            {
+                int i;
+                for (i = g_config.frame_no; frame && i > 0; i--)
+                {
+                    frame = peek_next_frame(&tag2->frame_head,
+                            g_config.frame_id, frame);
+                }
+            }
+        }
+
         if (frame)
-            fwrite(frame->data, frame->size, 1, stdout);
+        {
+            if (g_config.options & ID321_OPT_ALL_FRAMES)
+            {
+                while (frame)
+                {
+                    fwrite(frame->data, frame->size, 1, stdout);
+                    frame = peek_next_frame(&tag2->frame_head,
+                                            g_config.frame_id, frame);
+                }
+            }
+            else
+                fwrite(frame->data, frame->size, 1, stdout);
+        }
         else
-            print(OS_ERROR, "%s: file has no ID3v2 frame '%s'",
-                  filename, g_config.frame_id);
+            print(OS_ERROR, "%s: file has no matching ID3v2 frame '%s[%d]'",
+                  filename, g_config.frame_id, g_config.frame_no);
     }
     else
     {
