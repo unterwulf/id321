@@ -37,7 +37,7 @@ static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
 
         iconvordie(U32_CHAR_CODESET, ISO_8859_1_CODESET,
                    comm->lang, ID3V2_LANG_HDR_SIZE,
-                   (char *)lang, sizeof(lang)*sizeof(lang[0]));
+                   (char *)lang, sizeof(lang));
 
         u32_snprintf(buf, size, "%ls%ls[%.*ls]: %ls",
                     comm->desc ? comm->desc : u32_empty_str,
