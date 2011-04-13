@@ -31,18 +31,18 @@ static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
 
     if (reqsize <= size)
     {
-        u32_char lang[ID3V2_LANG_HDR_SIZE] = { };
+        u32_char u32_lang[ID3V2_LANG_HDR_SIZE] = { };
         u32_char u32_empty_str[] = { U32_CHAR('\0') };
         u32_char u32_space_str[] = { U32_CHAR(' '), U32_CHAR('\0') };
 
         iconvordie(U32_CHAR_CODESET, ISO_8859_1_CODESET,
                    comm->lang, ID3V2_LANG_HDR_SIZE,
-                   (char *)lang, sizeof(lang));
+                   (char *)u32_lang, sizeof(u32_lang));
 
         u32_snprintf(buf, size, "%ls%ls[%.*ls]: %ls",
                      comm->desc ? comm->desc : u32_empty_str,
                      comm->desc && comm->desc[0] ? u32_space_str : u32_empty_str,
-                     ID3V2_LANG_HDR_SIZE, lang,
+                     ID3V2_LANG_HDR_SIZE, u32_lang,
                      comm->text ? comm->text : u32_empty_str);
     }
 
