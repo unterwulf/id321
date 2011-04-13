@@ -42,8 +42,8 @@ static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
         u32_snprintf(buf, size, "%ls%ls[%.*ls]: %ls",
                      comm->desc ? comm->desc : u32_empty_str,
                      comm->desc && comm->desc[0] ? u32_space_str : u32_empty_str,
-                     ID3V2_LANG_HDR_SIZE, lang, comm->text ?
-                     comm->text : u32_empty_str);
+                     ID3V2_LANG_HDR_SIZE, lang,
+                     comm->text ? comm->text : u32_empty_str);
     }
 
     free_id3v2_frm_comm(comm);
