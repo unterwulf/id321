@@ -1,8 +1,8 @@
+#include <config.h>  /* WORDS_BIGENDIAN, ICONV_CONST */
 #include <errno.h>
 #include <iconv.h>
 #include <stdlib.h>
 #include <strings.h> /* strcasecmp() */
-#include "config.h"  /* WORDS_BIGENDIAN, ICONV_CONST */
 
 /***
  * It seems that iconv implementations tend not to consider BOM as part of

@@ -1,10 +1,10 @@
+#include <config.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>        /* fread(), puts(), stdin */
 #include <stdlib.h>       /* atoi(), size_t */
 #include <string.h>
 #include "common.h"
-#include "config.h"
 #include "iconv_wrap.h"
 #include "id3v1.h"
 #include "id3v1_genres.h"

@@ -1,7 +1,7 @@
 #ifndef COMPAT_H
 #define COMPAT_H
 
-#include "config.h"
+#include <config.h>
 
 #ifndef HAVE_STRNLEN
 #include <string.h>

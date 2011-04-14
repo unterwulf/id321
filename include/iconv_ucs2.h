@@ -1,7 +1,7 @@
 #ifndef ICONV_UCS2_H
 #define ICONV_UCS2_H
 
-#include "config.h"
+#include <config.h>
 
 typedef void *iconv_ucs2_t;
 

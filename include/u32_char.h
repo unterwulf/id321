@@ -1,9 +1,9 @@
 #ifndef U32_CHAR_H
 #define U32_CHAR_H
 
+#include <config.h>
 #include <inttypes.h>
 #include <stdarg.h>
-#include "config.h"
 
 typedef uint32_t u32_char;
 
