@@ -1,3 +1,4 @@
+AC_PREREQ(2.64)
 AC_INIT([id321],[0.0.2],[vs@kp4.ru])
 AC_CONFIG_AUX_DIR([build])
 AM_INIT_AUTOMAKE([-Wall])
