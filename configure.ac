@@ -16,7 +16,7 @@ AC_CHECK_LIB(313, lib313_pack)
 AC_C_BIGENDIAN
 
 AC_FUNC_STRNLEN
-if test "x$ac_cv_func_strnlen_working" = "xyes"; then
+if test "x$ac_cv_func_strnlen_working" = xyes; then
 AC_CHECK_FUNCS(strnlen, [], [])
 fi
 
