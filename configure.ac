@@ -13,8 +13,10 @@ AC_HEADER_STDC
 AC_C_BIGENDIAN
 
 AC_FUNC_STRNLEN
-if test "x$ac_cv_func_strnlen_working" = xyes; then
-AC_CHECK_FUNCS(strnlen, [], [])
+
+if test "x$ac_cv_func_strnlen_working" = xyes
+then
+  AC_CHECK_FUNCS(strnlen, [], [])
 fi
 
 AM_ICONV
