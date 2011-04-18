@@ -10,9 +10,6 @@ AC_PROG_INSTALL
 
 AC_HEADER_STDC
 
-AC_CHECK_LIB(313, lib313_unpack)
-AC_CHECK_LIB(313, lib313_pack)
-
 AC_C_BIGENDIAN
 
 AC_FUNC_STRNLEN
@@ -22,7 +19,28 @@ fi
 
 AM_ICONV
 
-AM_CONDITIONAL([STATIC_LIB313], [test "x$ac_cv_lib_313_lib313_unpack" = xno])
+AC_ARG_WITH([lib313],
+            [AS_HELP_STRING([--without-lib313],
+                            [do not use external lib313])],
+            [lib313=${withval}], [lib313=yes])
+
+if test "x$lib313" = xyes
+then
+  AC_CHECK_LIB(313, lib313_unpack)
+  AC_CHECK_LIB(313, lib313_pack)
+  AC_MSG_CHECKING([for lib313])
+  if test "x$ac_cv_lib_313_lib313_unpack" = xyes
+  then
+    AC_MSG_RESULT([found])
+  else
+    lib313=no
+    AC_MSG_RESULT([not found, building with internal lib313])
+  fi
+else
+  AC_MSG_RESULT([building with internal lib313])
+fi
+
+AM_CONDITIONAL([STATIC_LIB313], [test "x$lib313" = xno])
 
 AC_DEFINE([UCS2_WORKAROUND], [1],
           [Define it 0 if your iconv() uses BOM in UCS-2 encoding.])
