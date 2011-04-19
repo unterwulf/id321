@@ -132,7 +132,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         }
         else
         {
-            READORDIE(fd, buf, frame_header_size, -1);
+            READORDIE(fd, buf, frame_header_size, -EFAULT);
             bytes_read = frame_header_size;
         }
 
