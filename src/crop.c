@@ -17,8 +17,10 @@
 int crop_id3v1_tag(struct file *file, unsigned minor)
 {
     char buf[4];
+    off_t orig_crop_end = file->crop.end;
 
-    if (minor == 0 || minor == 1 || minor == 3 || minor == NOT_SET)
+    if (minor == 0 || minor == 1 || minor == 2 || minor == 3 ||
+        minor == ID3V1E_MINOR || minor == NOT_SET)
     {
         if (file->crop.start + ID3V1_TAG_SIZE > file->crop.end)
             return -ENOENT;
@@ -67,7 +69,11 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
         }
     }
 
-    return ID3V1_TAG_SIZE;
+    if (minor == 0 || minor == 1 || minor == 3 || minor == NOT_SET)
+        return ID3V1_TAG_SIZE;
+
+    file->crop.end = orig_crop_end;
+    return -ENOENT;
 }
 
 int crop_id3v2_tag(struct file *file, unsigned minor)
