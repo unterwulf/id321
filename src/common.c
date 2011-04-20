@@ -12,20 +12,22 @@
 /***
  * readordie
  *
- * The routine reads from file descriptior @fd until @len bytes has been
+ * The routine reads from the file descriptor @fd until @len bytes has been
  * read or EOF has been reached.
  *
- * Returns the number of bytes read, or -errno on error.
+ * Returns 0 if a chunk of len bytes has been read successfully, or -ENOENT
+ * if EOF has been reached, or -errno on all read() errors but EINTR.
  */
 
-ssize_t readordie(int fd, void *buf, size_t len)
+int readordie(int fd, void *buf, size_t len)
 {
     ssize_t ret;
-    ssize_t left = len;
     char *ptr = buf;
 
-    while (left != 0 && (ret = read(fd, ptr, left)) != 0)
+    while (len > 0)
     {
+        ret = read(fd, ptr, len);
+
         if (ret == -1)
         {
             if (errno == EINTR)
@@ -33,35 +35,48 @@ ssize_t readordie(int fd, void *buf, size_t len)
             perror("read");
             return -errno;
         }
-        left -= ret;
+        else if (ret == 0)
+            return -ENOENT;
+
+        len -= ret;
         ptr += ret;
     }
 
-    return len - left;
+    return 0;
 }
 
-ssize_t writeordie(int fd, const void *buf, size_t count)
+/***
+ * writeordie
+ *
+ * The routine writes the buffer pointed to by @buf to the file descriptor
+ * @fd until @len bytes has been written.
+ *
+ * Returns 0 if the whole buffer has been written successfully, or -errno
+ * on all write() errors but EINTR.
+ */
+
+int writeordie(int fd, const void *buf, size_t len)
 {
-    size_t written = 0;
-    ssize_t len;
+    ssize_t ret;
     const char *ptr = buf;
 
-    while (written < count)
+    while (len > 0)
     {
-        len = write(fd, ptr, count - written);
+        ret = write(fd, ptr, len);
 
-        if (len < 0)
+        if (ret < 0)
         {
             if (errno == EINTR)
                 continue;
             else
-                break;
+                return -errno;
         }
-        written += len;
-        ptr += len;
+
+        len -= ret;
+        ptr += ret;
     }
 
-    return written;
+    return 0;
 }
 
 const char *locale_encoding()

@@ -27,8 +27,8 @@ int get_tags(const char *filename, struct version ver,
 int write_tags(const char *filename, const struct id3v1_tag *tag1,
                const struct id3v2_tag *tag2);
 
-ssize_t readordie(int fd, void *buf, size_t len);
-ssize_t writeordie(int fd, const void *buf, size_t count);
+int readordie(int fd, void *buf, size_t len);
+int writeordie(int fd, const void *buf, size_t len);
 const char *locale_encoding();
 int str_to_long(const char *nptr, long *ret);
 

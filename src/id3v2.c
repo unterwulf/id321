@@ -14,7 +14,7 @@
 #include "synchsafe.h"
 
 #define READORDIE(fd, buf, size, ret) \
-    if (readordie(fd, buf, size) != (ssize_t)(size)) \
+    if (readordie(fd, buf, size) != 0) \
         return ret;
 
 #define IS_WHOLE_TAG_UNSYNC(hdr) \
@@ -91,7 +91,7 @@ static ssize_t read_unsync(int fd, void *buf, size_t size, char *pre)
     ssize_t bytes_read = 0;
     char *ptr = buf;
 
-    while (readordie(fd, ptr, size) == (ssize_t)size)
+    while (readordie(fd, ptr, size) == 0)
     {
         bytes_read += size;
         realsize = deunsync_buf(ptr, size, *pre);
@@ -179,12 +179,12 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
         }
         else
         {
-            bytes_read = readordie(fd, frame->data, frame->size);
-            if (bytes_read != (ssize_t)frame->size)
+            if (readordie(fd, frame->data, frame->size) != 0)
             {
                 free_frame(frame);
                 return -EFAULT;
             }
+            bytes_read = frame->size;
         }
 
         bytes_left -= bytes_read;

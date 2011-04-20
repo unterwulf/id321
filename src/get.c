@@ -30,9 +30,9 @@
 static int get_id3v1_tag(struct file *file, unsigned minor,
                          struct id3v1_tag **tag)
 {
-    char    buf[ID3V1E_TAG_SIZE];
-    ssize_t size;
-    int     ret;
+    char   buf[ID3V1E_TAG_SIZE];
+    size_t size;
+    int    ret;
 
     ret = crop_id3v1_tag(file, NOT_SET);
 
@@ -41,12 +41,11 @@ static int get_id3v1_tag(struct file *file, unsigned minor,
     else if (ret < 0)
         return -EFAULT;
 
-    assert(ret <= sizeof(buf));
+    size = ret;
+    assert(size <= sizeof(buf));
 
     lseek(file->fd, file->crop.end, SEEK_SET);
-    size = readordie(file->fd, buf, ret);
-
-    if (size < 0 || size != ret)
+    if (readordie(file->fd, buf, size) != 0)
         return -EFAULT;
 
     *tag = malloc(sizeof(struct id3v1_tag));
