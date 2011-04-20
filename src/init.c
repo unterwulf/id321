@@ -66,7 +66,7 @@ size_t split_colon_separated_list(char *list, char **array, size_t size)
 }
 
 /***
- * unescape_chars - unescape special charactes @chars in string @str
+ * unescape_chars - unescape special characters @chars in string @str
  *
  * @str - string to process
  * @chars - string containing list of characters to be unescaped
