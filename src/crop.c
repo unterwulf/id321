@@ -18,9 +18,11 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
 {
     char buf[4];
 
-    if ((minor == 0 || minor == 1 || minor == 3 || minor == NOT_SET)
-        && file->crop.end - ID3V1_TAG_SIZE >= file->crop.start)
+    if (minor == 0 || minor == 1 || minor == 3 || minor == NOT_SET)
     {
+        if (file->crop.start + ID3V1_TAG_SIZE > file->crop.end)
+            return -ENOENT;
+
         lseek(file->fd, file->crop.end - ID3V1_TAG_SIZE, SEEK_SET);
         read(file->fd, buf, ID3V1_HEADER_SIZE);
 
