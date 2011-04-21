@@ -34,7 +34,7 @@ static int get_id3v1_tag(struct file *file, unsigned minor,
     size_t size;
     int    ret;
 
-    ret = trim_id3v1_tag(file, NOT_SET);
+    ret = trim_id3v1_tag(file, minor);
 
     if (ret == -ENOENT)
         return ret;
