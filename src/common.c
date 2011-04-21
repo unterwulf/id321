@@ -12,11 +12,12 @@
 /***
  * readordie
  *
- * The routine reads from the file descriptor @fd until @len bytes has been
- * read or EOF has been reached.
+ * Reads from the file descriptor @fd until @len bytes has been read
+ * or EOF has been reached.
  *
- * Returns 0 if a chunk of len bytes has been read successfully, or -ENOENT
- * if EOF has been reached, or -errno on all read() errors but EINTR.
+ * Returns 0 if a chunk of @len bytes has been read successfully, or
+ *        -ENOENT if EOF has been reached, or
+ *        -errno on any read() error but EINTR.
  */
 
 int readordie(int fd, void *buf, size_t len)
@@ -48,11 +49,11 @@ int readordie(int fd, void *buf, size_t len)
 /***
  * writeordie
  *
- * The routine writes the buffer pointed to by @buf to the file descriptor
- * @fd until @len bytes has been written.
+ * Writes the buffer pointed to by @buf to the file descriptor @fd
+ * until @len bytes has been written.
  *
- * Returns 0 if the whole buffer has been written successfully, or -errno
- * on all write() errors but EINTR.
+ * Returns 0 if the whole buffer has been written successfully, or
+ *        -errno on any write() error but EINTR.
  */
 
 int writeordie(int fd, const void *buf, size_t len)
@@ -132,8 +133,9 @@ id321_iconv_t xiconv_open(const char *tocode, const char *fromcode)
  * @dst - destination buffer
  * @dstsize - destination buffer size
  *
- * Converts the buffer @src of size @srcsize from @fromcode to @tocode and
- * places result into the buffer @dst of size @dstsize.
+ * Converts the buffer of size @srcsize pointed to by @src from @fromcode
+ * to @tocode and places result into the buffer of size @dstsize pointed to
+ * by @dst.
  *
  * Returns the number of bytes which would have been written if @dst had
  * been large enough.
@@ -219,16 +221,18 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
 /***
  * iconv_alloc
  *
- * Converts the buffer @src from @fromcode to @tocode and places result
- * into internally allocated memory area. *@dst will be pointing to the
- * result, and *@dstsize will contain its size.
+ * Converts the buffer of size @srcsize pointed to by @src from @fromcode
+ * to @tocode and places result into an internally allocated memory area.
+ * The pointer *@dst will be pointing to the result, and *@dstsize will
+ * contain its size.
  *
  * If @tocode is U32_CHAR_CODESET, resulting u32 string will be null-terminated
  * even if @src is not.
  *
  * *@dst must be freed with free() after use.
  *
- * Returns 0 on success, or -ENOMEM on out of memory error.
+ * Returns 0 on success, or
+ *        -ENOMEM on out of memory error.
  */
 
 int iconv_alloc(const char *tocode, const char *fromcode,
