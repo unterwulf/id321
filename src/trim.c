@@ -5,16 +5,16 @@
 #include "id3v1.h"
 #include "output.h"
 #include "params.h" /* NOT_SET */
-#include "crop.h"
+#include "trim.h"
 #include "file.h"
 
 /***
- * crop_id3v1_tag - crop ID3v1 tag from @file
+ * trim_id3v1_tag - trim ID3v1 tag from @file
  *
- * Returns size of the tag cropped or negative errno on error.
+ * Returns size of the tag trimmed or negative errno on error.
  */
 
-int crop_id3v1_tag(struct file *file, unsigned minor)
+int trim_id3v1_tag(struct file *file, unsigned minor)
 {
     char buf[4];
     off_t orig_crop_end = file->crop.end;
@@ -76,7 +76,7 @@ int crop_id3v1_tag(struct file *file, unsigned minor)
     return -ENOENT;
 }
 
-int crop_id3v2_tag(struct file *file, unsigned minor)
+int trim_id3v2_tag(struct file *file, unsigned minor)
 {
     struct id3v2_header hdr;
     int ret;

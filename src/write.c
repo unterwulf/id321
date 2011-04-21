@@ -5,7 +5,7 @@
 #include "output.h"
 #include "params.h" /* NOT_SET */
 #include "common.h" /* BLOCK_SIZE */
-#include "crop.h"
+#include "trim.h"
 #include "id3v1.h"
 #include "id3v2.h"
 #include "file.h"
@@ -25,7 +25,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
 
     if (tag1)
     {
-        ret = crop_id3v1_tag(file, NOT_SET);
+        ret = trim_id3v1_tag(file, NOT_SET);
 
         if (ret < 0 && ret != -ENOENT)
         {
@@ -36,7 +36,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
 
     if (tag2)
     {
-        ret = crop_id3v2_tag(file, NOT_SET);
+        ret = trim_id3v2_tag(file, NOT_SET);
 
         if (ret < 0 && ret != -ENOENT)
         {

@@ -8,7 +8,7 @@
 #include "id3v1.h"
 #include "id3v2.h"
 #include "output.h"
-#include "crop.h"
+#include "trim.h"
 #include "file.h"
 #include "dump.h"
 
@@ -34,7 +34,7 @@ static int get_id3v1_tag(struct file *file, unsigned minor,
     size_t size;
     int    ret;
 
-    ret = crop_id3v1_tag(file, NOT_SET);
+    ret = trim_id3v1_tag(file, NOT_SET);
 
     if (ret == -ENOENT)
         return ret;

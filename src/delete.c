@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h> /* ftruncate() */
-#include "crop.h"
+#include "trim.h"
 #include "file.h"
 #include "output.h"
 #include "params.h" /* NOT_SET */
@@ -20,7 +20,7 @@ int delete_tags(const char *filename)
     /* the order makes sense */
     if (g_config.ver.major == 1 || g_config.ver.major == NOT_SET)
     {
-        ret = crop_id3v1_tag(file, g_config.ver.minor);
+        ret = trim_id3v1_tag(file, g_config.ver.minor);
 
         if (ret < 0 && ret != -ENOENT)
         {
@@ -31,7 +31,7 @@ int delete_tags(const char *filename)
 
     if (g_config.ver.major == 2 || g_config.ver.major == NOT_SET)
     {
-        ret = crop_id3v2_tag(file, g_config.ver.minor);
+        ret = trim_id3v2_tag(file, g_config.ver.minor);
 
         if (ret < 0 && ret != -ENOENT)
         {

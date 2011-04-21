@@ -10,7 +10,7 @@ endif
 bin_PROGRAMS = id321
 
 id321_SOURCES = main.c print.c delete.c modify.c sync.c copy.c \
-                get.c write.c crop.c \
+                get.c write.c trim.c \
                 file.c init.c dump.c opts.c \
                 framelist.c frames.c \
                 textframe.c frm_comm.c frm_tcon.c frm_trck.c \
