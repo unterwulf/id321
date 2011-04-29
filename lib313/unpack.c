@@ -9,6 +9,7 @@
 #include <string.h>
 #include "lib313.h"
 #include "lib313int.h"
+#include "compat.h"
 
 #define PARSE(fld, outtag, tag, src) \
     parse(LIB313_TAG_##fld(outtag), \

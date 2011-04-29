@@ -1,6 +1,5 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include
-
-id321_LDADD = @LIBICONV@
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/compat
+id321_LDADD = @LIBICONV@ $(top_srcdir)/compat/libcompat.a
 
 bin_PROGRAMS = id321
 

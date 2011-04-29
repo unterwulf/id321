@@ -5,7 +5,8 @@
 
 #ifndef HAVE_STRNLEN
 #include <string.h>
-size_t strnlen(const char *s, size_t maxlen);
+#define strnlen id321_strnlen
+size_t id321_strnlen(const char *s, size_t maxlen);
 #endif
 
 #endif /* COMPAT_H */

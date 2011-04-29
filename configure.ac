@@ -3,6 +3,8 @@ AC_INIT([id321],[0.0.2],[vs@kp4.ru])
 AC_CONFIG_AUX_DIR([build])
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_LIBOBJ_DIR([compat])
+AC_CONFIG_MACRO_DIR([acinclude])
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
@@ -22,6 +24,7 @@ then
 fi
 
 AM_ICONV
+ID321_ICONV_UCS2_WITH_BOM
 
 AC_ARG_WITH([lib313],
             [AS_HELP_STRING([--without-lib313],
@@ -46,8 +49,5 @@ fi
 
 AM_CONDITIONAL([STATIC_LIB313], [test "x$lib313" = xno])
 
-AC_DEFINE([UCS2_WORKAROUND], [1],
-          [Define it 0 if your iconv() uses BOM in UCS-2 encoding.])
-
-AC_CONFIG_FILES([Makefile src/Makefile lib313/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile lib313/Makefile compat/Makefile])
 AC_OUTPUT
