@@ -2,11 +2,6 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 
 id321_LDADD = @LIBICONV@
 
-if STATIC_LIB313
-AM_CPPFLAGS += -I$(top_srcdir)/lib313/include
-id321_LDADD += $(top_srcdir)/lib313/src/lib313.a
-endif
-
 bin_PROGRAMS = id321
 
 id321_SOURCES = main.c print.c delete.c modify.c sync.c copy.c \
@@ -19,3 +14,8 @@ id321_SOURCES = main.c print.c delete.c modify.c sync.c copy.c \
                 synchsafe.c common.c alias.c \
                 langcodes.c \
                 help.c
+
+if STATIC_LIB313
+AM_CPPFLAGS += -I$(top_srcdir)/lib313/
+id321_LDADD += $(top_srcdir)/lib313/lib313.a
+endif

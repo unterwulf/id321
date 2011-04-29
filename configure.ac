@@ -7,6 +7,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 AC_PROG_INSTALL
+AC_PROG_RANLIB
 
 AC_HEADER_STDC
 
@@ -46,7 +47,6 @@ AM_CONDITIONAL([STATIC_LIB313], [test "x$lib313" = xno])
 
 AC_DEFINE([UCS2_WORKAROUND], [1],
           [Define it 0 if your iconv() uses BOM in UCS-2 encoding.])
-AC_CONFIG_SUBDIRS([lib313])
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile lib313/Makefile])
 AC_OUTPUT

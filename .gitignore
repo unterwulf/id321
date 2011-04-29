@@ -1,4 +1,4 @@
-*.o
+*.[oa]
 *.mp3
 tags
 cscope.out
