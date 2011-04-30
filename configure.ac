@@ -17,7 +17,8 @@ AC_FUNC_STRNLEN
 
 if test "x$ac_cv_func_strnlen_working" = xyes
 then
-  AC_CHECK_FUNCS(strnlen, [], [])
+  AC_DEFINE([HAVE_STRNLEN], [1],
+            [Define to 1 if you have the strnlen() function and it works.])
 fi
 
 AM_ICONV
