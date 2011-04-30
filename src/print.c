@@ -24,13 +24,7 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
                              struct print_fmt *pfmt)
 {
     size_t size;
-    const struct alias *al = get_alias(alias);
-    const void *buf;
-
-    if (!al)
-        return;
-
-    buf = alias_to_v1_data(al, tag, &size);
+    const void *buf = get_v1_data_by_alias(alias, tag, &size);
 
     if (size == 1)
     {
@@ -220,8 +214,6 @@ static void print_tag(const struct id3v1_tag *tag1,
 
             case st_spec:
             {
-                const struct alias *al;
-
                 if (*pos == 'n')
                 {
                     char trackno_str[] = "###";
@@ -242,12 +234,12 @@ static void print_tag(const struct id3v1_tag *tag1,
 
                     printfmt(&pfmt, trackno_str);
                 }
-                else if ((al = get_alias(*pos)))
+                else if (is_valid_alias(*pos))
                 {
                     if (tag2)
                     {
                         const char *frame_id =
-                            alias_to_frame_id(al, tag2->header.version);
+                            get_frame_id_by_alias(*pos, tag2->header.version);
                         frame = peek_frame(&tag2->frame_head, frame_id);
                     }
 

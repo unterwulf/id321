@@ -29,16 +29,12 @@ static int modify_v1_tag(struct id3v1_tag *tag)
 
     for (field_alias = fields; *field_alias != '\0'; field_alias++)
     {
-        const struct alias *al = get_alias(*field_alias);
-        const char *new_value;
-
-        assert(al);
-        new_value = alias_to_config_data(al);
+        const char *new_value = get_config_data_by_alias(*field_alias);
 
         if (new_value)
         {
             size_t field_size;
-            char *field = alias_to_v1_data(al, tag, &field_size);
+            char *field = get_v1_data_by_alias(*field_alias, tag, &field_size);
 
             memset(field, '\0', field_size);
             iconvordie(g_config.enc_v1, locale_encoding(),
@@ -155,21 +151,13 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
 
     for (frame_alias = frames; *frame_alias != '\0'; frame_alias++)
     {
-        const struct alias *al = get_alias(*frame_alias);
-        const char *data;
-
-        assert(al);
-        data = alias_to_config_data(al);
+        const char *data = get_config_data_by_alias(*frame_alias);
 
         if (data)
         {
-            const char *frame_id;
             size_t data_size = strlen(data);
-
-            frame_id = alias_to_frame_id(al, tag->header.version);
-
-            if (!frame_id)
-                return -EINVAL;
+            const char *frame_id = get_frame_id_by_alias(*frame_alias,
+                                                         tag->header.version);
 
             if (data_size == 0)
             {
@@ -254,17 +242,8 @@ err_comm:
     /* modify genre */
     if (g_config.options & ID321_OPT_RM_GENRE_FRAME)
     {
-        const struct alias *al = get_alias('g');
-        const char *frame_id;
-        struct id3v2_frame *frame;
-
-        assert(al);
-        frame_id = alias_to_frame_id(al, tag->header.version);
-
-        if (!frame_id)
-            return -EINVAL;
-
-        frame = peek_frame(&tag->frame_head, frame_id);
+        const char *frame_id = get_frame_id_by_alias('g', tag->header.version);
+        struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
 
         /* delete frame if it exists */
         if (frame)

@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include "alias.h"        /* get_alias(), alias_to_frame_id() */
+#include "alias.h"
 #include "common.h"
 #include "id3v1_genres.h" /* ID3V1_UNKNOWN_GENRE */
 #include "id3v2.h"
@@ -78,8 +78,7 @@ int get_id3v2_tag_genre(const struct id3v2_tag *tag, u32_char **genre_u32_str)
 int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
                         u32_char *genre_u32_str)
 {
-    const struct alias *al = get_alias('g');
-    const char *frame_id;
+    const char *frame_id = get_frame_id_by_alias('g', tag->header.version);
     u32_char   *u32_data;
     int         u32_size;
     u32_char    u32_empty_str[] = { U32_CHAR('\0') };
@@ -88,9 +87,6 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
     char        frame_enc_byte;
     const char *frame_enc_name;
     int         ret;
-
-    assert(al);
-    frame_id = alias_to_frame_id(al, tag->header.version);
 
     if (genre_id != ID3V1_UNKNOWN_GENRE)
     {

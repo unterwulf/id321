@@ -1,5 +1,6 @@
+#include <assert.h>
 #include <stddef.h>  /* NULL, size_t, offsetof() */
-#include "alias.h"   /* struct alias {...} */
+#include "alias.h"
 #include "id3v1.h"   /* struct id3v1_tag {...} */
 #include "common.h"  /* for_each() */
 #include "params.h"  /* g_config */
@@ -10,7 +11,18 @@
 #define CONF(field) &g_config.field
 #define OFF1SIZ1CONF(field) OFF1SIZ1(field), CONF(field)
 
-const struct alias *get_alias(char alias)
+struct alias
+{
+    char         alias;
+    const char  *v22;
+    const char  *v23;
+    const char  *v24;
+    size_t       v1offset;
+    size_t       v1size;
+    const char **conf;
+};
+
+static const struct alias *find_alias(char alias)
 {
     size_t i;
     static const struct alias map[] =
@@ -32,31 +44,47 @@ const struct alias *get_alias(char alias)
     return NULL;
 }
 
-const char *alias_to_frame_id(const struct alias *alias, unsigned version)
+int is_valid_alias(char alias)
 {
+    return (find_alias(alias) != NULL);
+}
+
+static const struct alias *get_alias(char alias)
+{
+    const struct alias *al = find_alias(alias);
+    assert(al != NULL);
+    return al;
+}
+
+/**
+ * The following functions do not report errors. It is a caller
+ * responsibility to call these functions with only right parameters.
+ */
+
+const char *get_frame_id_by_alias(char alias, unsigned version)
+{
+    const struct alias *al = get_alias(alias);
     switch (version)
     {
-        case 0: return &alias->alias;
-        case 2: return alias->v22;
-        case 3: return alias->v23;
-        case 4: return alias->v24;
-        default: return NULL;
+        case 2: return al->v22;
+        case 3: return al->v23;
+        case 4: return al->v24;
+        default: assert(0);
     }
 }
 
-void *alias_to_v1_data(const struct alias *alias,
-                       const struct id3v1_tag *tag, size_t *size)
+void *get_v1_data_by_alias(char alias, const struct id3v1_tag *tag,
+                           size_t *size)
 {
+    const struct alias *al = get_alias(alias);
     if (size)
-        *size = alias->v1size;
-
-    return (char *)tag + alias->v1offset;
+        *size = al->v1size;
+    return (char *)tag + al->v1offset;
 }
 
-const char *alias_to_config_data(const struct alias *alias)
+const char *get_config_data_by_alias(char alias)
 {
-    if (alias->conf)
-        return *alias->conf;
-    else
-        return NULL;
+    const struct alias *al = get_alias(alias);
+    assert(al->conf != NULL);
+    return *al->conf;
 }

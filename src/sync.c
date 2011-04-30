@@ -23,20 +23,13 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
     const char fields[] = "taly";
     const char *field_alias;
     const char *frame_id;
-    const struct alias *al;
     struct id3v2_frame *frame;
     int ret;
 
     /* sync pure text fields */
     for (field_alias = fields; *field_alias != '\0'; field_alias++)
     {
-        al = get_alias(*field_alias);
-        assert(al);
-        frame_id = alias_to_frame_id(al, tag2->header.version);
-
-        if (!frame_id)
-            return -EINVAL;
-
+        frame_id = get_frame_id_by_alias(*field_alias, tag2->header.version);
         frame = peek_frame(&tag2->frame_head, frame_id);
 
         if (frame && frame->size > 1)
@@ -47,7 +40,8 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
             if (frame_enc_name)
             {
                 size_t field_size;
-                char *field = alias_to_v1_data(al, tag1, &field_size);
+                char *field = get_v1_data_by_alias(*field_alias, tag1,
+                                                   &field_size);
 
                 memset(field, '\0', field_size);
                 iconvordie(g_config.enc_v1, frame_enc_name,
@@ -59,13 +53,7 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 
     /* sync comment - use a first comment frame */
     {
-        al = get_alias('c');
-        assert(al);
-        frame_id = alias_to_frame_id(al, tag2->header.version);
-
-        if (!frame_id)
-            return -EINVAL;
-
+        frame_id = get_frame_id_by_alias('c', tag2->header.version);
         frame = peek_frame(&tag2->frame_head, frame_id);
 
         if (frame)
@@ -192,28 +180,23 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
         size_t      data_size;
         const char *frame_id;
         const char *field_data;
-        const struct alias *al = get_alias(*field_alias);
 
         field_data = (*field_alias == 'n')
                      ? trackno
-                     : alias_to_v1_data(al, tag1, NULL);
+                     : get_v1_data_by_alias(*field_alias, tag1, NULL);
 
         data_size = strlen(field_data);
 
         if (data_size == 0)
             continue;
 
-        assert(al);
-        frame_id = alias_to_frame_id(al, tag2->header.version);
-
-        if (!frame_id)
-            return -EINVAL;
-
         ret = iconv_alloc(frame_enc_name, g_config.enc_v1,
                           field_data, data_size,
                           &buf, &bufsize);
         if (ret != 0)
             return ret;
+
+        frame_id = get_frame_id_by_alias(*field_alias, tag2->header.version);
 
         ret = update_id3v2_tag_text_frame(tag2, frame_id, frame_enc_byte,
                                           buf, bufsize);

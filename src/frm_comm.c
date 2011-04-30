@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>        /* snprintf() */
@@ -110,13 +109,9 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
                              struct id3v2_frame **frame,
                              struct id3v2_frm_comm *comm, uint8_t flags)
 {
-    const struct alias *al = get_alias('c');
-    const char *frame_id;
+    const char *frame_id = get_frame_id_by_alias('c', tag->header.version);
     struct id3v2_frm_comm *tmp_comm;
     int ret;
-
-    assert(al);
-    frame_id = alias_to_frame_id(al, tag->header.version);
 
     while ((*frame = peek_next_frame(&tag->frame_head, frame_id, *frame)))
     {
@@ -164,8 +159,7 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
                                struct id3v2_frame **frame,
                                unsigned minor)
 {
-    const struct alias *al = get_alias('c');
-    const char *frame_id;
+    const char *frame_id = get_frame_id_by_alias('c', minor);
     char frame_enc_byte;
     const char *frame_enc_name;
     char *desc;
@@ -174,9 +168,6 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
     size_t text_size = 0;
     struct id3v2_frame *new_frame;
     int ret;
-
-    assert(al);
-    frame_id = alias_to_frame_id(al, minor);
 
     frame_enc_byte = g_config.v2_def_encs[minor];
     frame_enc_name = get_id3v2_tag_encoding_name(minor, frame_enc_byte);

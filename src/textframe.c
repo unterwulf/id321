@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include "alias.h"        /* get_alias(), alias_to_frame_id() */
+#include "alias.h"
 #include "common.h"
 #include "framelist.h"
 #include "id3v2.h"
@@ -154,15 +154,10 @@ int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
                                  u32_char **data, size_t *datasize)
 {
-    const char *frame_id;
-    struct id3v2_frame *frame;
+    const char *frame_id = get_frame_id_by_alias(alias, tag->header.version);
+    struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
     const char *frame_enc_name;
-    const struct alias *al = get_alias(alias);
     int ret;
-
-    assert(al);
-    frame_id = alias_to_frame_id(al, tag->header.version);
-    frame = peek_frame(&tag->frame_head, frame_id);
 
     if (!frame)
         return -ENOENT;
