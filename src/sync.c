@@ -219,10 +219,10 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
         ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                           tag1->comment, strlen(tag1->comment),
                           (void *)&comm->text, NULL);
-        if (ret != 0)
-            return ret;
 
-        ret = update_id3v2_frm_comm(tag2, comm, 0);
+        if (ret == 0)
+            ret = update_id3v2_frm_comm(tag2, comm, 0);
+
         free_id3v2_frm_comm(comm);
 
         if (ret != 0)
