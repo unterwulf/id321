@@ -293,8 +293,7 @@ int sync_tags(const char *filename)
 
                 if (tag1)
                 {
-                    tag1->version = (g_config.ver.minor != NOT_SET)
-                                    ? g_config.ver.minor : 3;
+                    tag1->version = 3;
                     tag1->genre_id = ID3V1_UNKNOWN_GENRE;
                 }
                 else
@@ -303,6 +302,9 @@ int sync_tags(const char *filename)
 
             if (ret == 0)
             {
+                if (g_config.ver.minor != NOT_SET)
+                    tag1->version = g_config.ver.minor;
+
                 ret = sync_v1_with_v2(tag1, tag2);
 
                 if (ret == 0)
