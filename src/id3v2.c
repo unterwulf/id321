@@ -334,7 +334,7 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
         {
             if (((uint8_t)buf[pos] == 0xFF && (pos == 3 || pos == 4))
                     || (((uint8_t)buf[pos] & 0x80) && pos >= 6 && pos <= 9))
-                return -EILSEQ;
+                return -ENOENT;
         }
 
         unpack_id3v2_header(buf, hdr);
@@ -342,13 +342,13 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
         if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
         {
             print(OS_ERROR, "i don't know ID3v2.%d", hdr->version);
-            return -EILSEQ;
+            return -ENOENT;
         }
 
         return 0;
     }
 
-    return -EILSEQ;
+    return -ENOENT;
 }
 
 int read_id3v2_header(int fd, struct id3v2_header *hdr)
@@ -364,7 +364,7 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr)
     {
         print(OS_WARN, "appended tag is not allowed for ID3v2.%d",
                        hdr->version);
-        return -EILSEQ;
+        return -ENOENT;
     }
 
     return ret;
