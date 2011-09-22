@@ -184,7 +184,7 @@ size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf)
     else if (tag->version == 2)
     {
         size = ID3V12_TAG_SIZE;
-        strcpy(pos, ID3V12_HEADER);
+        memcpy(pos, ID3V12_HEADER, ID3V12_HEADER_SIZE);
         pack_id3v12_field(tag, title,   TIT, pos);
         pack_id3v12_field(tag, artist,  ART, pos);
         pack_id3v12_field(tag, album,   ALB, pos);
@@ -195,7 +195,7 @@ size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf)
     else if (tag->version == ID3V1E_MINOR)
     {
         size = ID3V1E_TAG_SIZE;
-        strcpy(pos, ID3V1E_HEADER);
+        memcpy(pos, ID3V1E_HEADER, ID3V1E_HEADER_SIZE);
         pack_id3v1e_field(tag, title,   TIT, pos);
         pack_id3v1e_field(tag, artist,  ART, pos);
         pack_id3v1e_field(tag, album,   ALB, pos);
@@ -209,7 +209,7 @@ size_t pack_id3v1_tag(const struct id3v1_tag *tag, char *buf)
     /* all versions but 3rd have the same format for the last 128 bytes */
     if (tag->version != 3)
     {
-        strcpy(pos, ID3V1_HEADER);
+        memcpy(pos, ID3V1_HEADER, ID3V1_HEADER_SIZE);
         pack_id3v1_field(tag, title,   TIT, pos);
         pack_id3v1_field(tag, artist,  ART, pos);
         pack_id3v1_field(tag, album,   ALB, pos);
