@@ -55,6 +55,8 @@ id321_SOURCES = \
   textframe.h \
   trim.c \
   trim.h \
+  u16_char.c \
+  u16_char.h \
   u32_char.c \
   u32_char.h \
   write.c

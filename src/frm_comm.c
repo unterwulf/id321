@@ -11,6 +11,7 @@
 #include "frm_comm.h"
 #include "framelist.h"
 #include "textframe.h"    /* get_id3v2_tag_encoding_name() */
+#include "u16_char.h"
 #include "u32_char.h"
 
 struct id3v2_frm_comm *new_id3v2_frm_comm()
@@ -45,9 +46,10 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
 {
     const char *from_enc;
     struct id3v2_frm_comm *tmp_comm = NULL;
-    u32_char *u32_data;
-    size_t u32_data_len;
-    size_t u32_desc_len;
+    char *desc_ptr;
+    char *text_ptr;
+    size_t desc_sz;
+    size_t text_sz = 0;
     int ret;
 
     if (frame->size < ID3V2_FRM_COMM_HDR_SIZE + 1)
@@ -62,46 +64,67 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
         return -EILSEQ;
     }
 
-    ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
-                      frame->data + ID3V2_FRM_COMM_HDR_SIZE,
-                      frame->size - ID3V2_FRM_COMM_HDR_SIZE,
-                      (void *)&u32_data, &u32_data_len);
+    desc_ptr = frame->data + ID3V2_FRM_COMM_HDR_SIZE;
+    desc_sz = frame->size - ID3V2_FRM_COMM_HDR_SIZE;
 
-    if (ret != 0)
-        return -ENOMEM;
+    /* find description/text NULL-separator */
+    switch (frame->data[0])
+    {
+        case ID3V24_STR_UTF16: /* ID3V22_STR_UCS2, ID3V23_STR_UCS2 as well */
+        case ID3V24_STR_UTF16BE:
+            text_ptr = u16_memchr(desc_ptr, U16_CHAR('\0'),
+                                  desc_sz / sizeof(u16_char));
+            if (text_ptr)
+            {
+                desc_sz = text_ptr - desc_ptr;
+                text_ptr += sizeof(u16_char);
+            }
+            break;
+        default:
+            text_ptr = memchr(desc_ptr, '\0', desc_sz);
+            if (text_ptr)
+            {
+                desc_sz = text_ptr - desc_ptr;
+                text_ptr++;
+            }
+            break;
+    }
 
-    u32_data_len /= sizeof(u32_char); /* bytes -> u32_chars */
+    if (text_ptr)
+        text_sz = frame->size - ID3V2_FRM_COMM_HDR_SIZE - (text_ptr - desc_ptr);
+
     tmp_comm = new_id3v2_frm_comm();
 
     if (!tmp_comm)
         goto oom;
 
-    memcpy(tmp_comm->lang, frame->data + ID3V2_ENC_HDR_SIZE,
-           ID3V2_LANG_HDR_SIZE);
-
-    tmp_comm->desc = u32_strdup(u32_data);
-
-    if (!tmp_comm->desc)
-        goto oom;
-
-    u32_desc_len = u32_strlen(tmp_comm->desc);
-
-    if (u32_data_len > u32_desc_len + 1)
+    if (desc_sz > 0)
     {
-        tmp_comm->text = u32_strdup(u32_data + u32_desc_len + 1);
-
-        if (!tmp_comm->text)
+        ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
+                          desc_ptr, desc_sz,
+                          (void *)&tmp_comm->desc, NULL);
+        if (ret != 0)
             goto oom;
     }
 
-    free(u32_data);
+    if (text_ptr && text_sz > 0)
+    {
+        ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
+                          text_ptr, text_sz,
+                          (void *)&tmp_comm->text, NULL);
+        if (ret != 0)
+            goto oom;
+    }
+
+    memcpy(tmp_comm->lang, frame->data + ID3V2_ENC_HDR_SIZE,
+           ID3V2_LANG_HDR_SIZE);
+
     *comm = tmp_comm;
     return ret;
 
 oom:
 
     free_id3v2_frm_comm(tmp_comm);
-    free(u32_data);
     return -ENOMEM;
 }
 
