@@ -321,8 +321,12 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
     char         buf[ID3V2_HEADER_LEN];
     size_t       pos;
     const char  *id = footer ? "3DI" : "ID3";
+    int          ret;
 
-    READORDIE(fd, buf, ID3V2_HEADER_LEN, -EFAULT);
+    ret = readordie(fd, buf, ID3V2_HEADER_LEN);
+
+    if (ret != 0)
+        return ret == -ENOENT ? ret : -EFAULT;
 
     if (!memcmp(buf, id, 3))
     {

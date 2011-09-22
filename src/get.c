@@ -126,7 +126,7 @@ static int get_id3v2_tag(struct file *file, unsigned minor,
     free_id3v2_tag(*tag);
     *tag = NULL;
 
-    return ret == 0 || ret == -EILSEQ ? -ENOENT : -EFAULT;
+    return ret == 0 || ret == -EILSEQ || ret == -ENOENT ? -ENOENT : -EFAULT;
 }
 
 int get_tags(const char *filename, struct version ver,
