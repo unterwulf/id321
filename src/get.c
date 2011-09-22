@@ -81,6 +81,43 @@ static int get_id3v1_tag(struct file *file, unsigned minor,
     return (ret == -ENOENT || ret == 0) ? ret : -EFAULT;
 }
 
+static int get_id3v2_tag_prealloc(struct file *file, unsigned minor,
+                                  struct id3v2_tag *tag)
+{
+    int ret;
+
+    assert(tag);
+
+    lseek(file->fd, 0, SEEK_SET);
+
+    /* read ID3v2 tag if available */
+    ret = read_id3v2_header(file->fd, &tag->header);
+
+    if (ret != 0)
+        return ret;
+
+    if (minor == tag->header.version || minor == NOT_SET)
+    {
+        dump_id3_header(&tag->header);
+
+        if (tag->header.flags & ID3V2_FLAG_EXT_HEADER)
+            ret = read_id3v2_ext_header(file->fd, tag);
+
+        ret = read_id3v2_frames(file->fd, tag);
+
+        if (ret != 0)
+            return ret;
+    }
+    else
+    {
+        print(OS_INFO, "file has ID3v2.%d tag, ignore it",
+                       tag->header.version);
+        return -ENOENT;
+    }
+
+    return 0;
+}
+
 static int get_id3v2_tag(struct file *file, unsigned minor,
                          struct id3v2_tag **tag)
 {
@@ -91,42 +128,18 @@ static int get_id3v2_tag(struct file *file, unsigned minor,
     if (!*tag)
         return -ENOMEM;
 
-    lseek(file->fd, 0, SEEK_SET);
+    ret = get_id3v2_tag_prealloc(file, minor, *tag);
 
-    /* read ID3v2 tag if available */
-    ret = read_id3v2_header(file->fd, &(*tag)->header);
-
-    if (ret == 0)
+    if (ret != 0)
     {
-        if (minor == (*tag)->header.version || minor == NOT_SET)
-        {
-            dump_id3_header(&(*tag)->header);
-
-            if ((*tag)->header.flags & ID3V2_FLAG_EXT_HEADER)
-                ret = read_id3v2_ext_header(file->fd, *tag);
-
-            ret = read_id3v2_frames(file->fd, *tag);
-
-            if (ret != 0)
-            {
-                free_id3v2_tag(*tag);
-                return NOMEM_OR_FAULT(ret);
-            }
-
-            return 0;
-        }
-        else
-        {
-            print(OS_INFO, "file has ID3v2.%d tag, ignore it",
-                           (*tag)->header.version);
-        }
+        free_id3v2_tag(*tag);
+        *tag = NULL;
+        return ret;
     }
 
     /* TODO: check presence of an appended ID3v2 tag */
-    free_id3v2_tag(*tag);
-    *tag = NULL;
 
-    return ret == 0 || ret == -ENOENT ? -ENOENT : -EFAULT;
+    return 0;
 }
 
 int get_tags(const char *filename, struct version ver,
