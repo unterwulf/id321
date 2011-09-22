@@ -328,27 +328,25 @@ static int read_id3v2_headfoot(int fd, struct id3v2_header *hdr, int footer)
     if (ret != 0)
         return ret == -ENOENT ? ret : -EFAULT;
 
-    if (!memcmp(buf, id, 3))
+    if (memcmp(buf, id, 3))
+        return -ENOENT;
+
+    for (pos = 3; pos < ID3V2_HEADER_LEN; pos++)
     {
-        for (pos = 3; pos < ID3V2_HEADER_LEN; pos++)
-        {
-            if (((uint8_t)buf[pos] == 0xFF && (pos == 3 || pos == 4))
-                    || (((uint8_t)buf[pos] & 0x80) && pos >= 6 && pos <= 9))
-                return -ENOENT;
-        }
-
-        unpack_id3v2_header(buf, hdr);
-
-        if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
-        {
-            print(OS_ERROR, "i don't know ID3v2.%d", hdr->version);
+        if (((uint8_t)buf[pos] == 0xFF && (pos == 3 || pos == 4))
+            || (((uint8_t)buf[pos] & 0x80) && pos >= 6 && pos <= 9))
             return -ENOENT;
-        }
-
-        return 0;
     }
 
-    return -ENOENT;
+    unpack_id3v2_header(buf, hdr);
+
+    if (hdr->version != 2 && hdr->version != 3 && hdr->version != 4)
+    {
+        print(OS_ERROR, "i don't know ID3v2.%d", hdr->version);
+        return -ENOENT;
+    }
+
+    return 0;
 }
 
 int read_id3v2_header(int fd, struct id3v2_header *hdr)
