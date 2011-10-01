@@ -19,8 +19,8 @@ int get_id3v2_tag_trackno(const struct id3v2_tag *tag)
     trackno = u32_strtol(u32_data, NULL, 10);
     free(u32_data);
 
-    if (errno == 0 && trackno >= 0 && trackno <= 255)
-        return (int)trackno;
+    if (errno != 0 || trackno < 0 || trackno > 255)
+        return -EILSEQ;
 
-    return -EILSEQ;
+    return (int)trackno;
 }
