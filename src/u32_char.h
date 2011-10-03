@@ -19,7 +19,7 @@ typedef uint32_t u32_char;
 int32_t u32_strcmp(const u32_char *s1, const u32_char *s2);
 u32_char *u32_strcpy(u32_char *dst, const u32_char *src);
 u32_char *u32_strncpy(u32_char *dst, const u32_char *src, size_t size);
-u32_char *u32_strdup(const u32_char *str);
+u32_char *u32_xstrdup(const u32_char *str);
 size_t u32_strlen(const u32_char *str);
 size_t u32_strnlen(const u32_char *str, size_t maxlen);
 long u32_strtol(const u32_char *str, u32_char **endptr, int base);

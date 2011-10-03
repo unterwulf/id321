@@ -8,6 +8,7 @@
 #include "id3v2.h"
 #include "params.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 /***
  * get_id3v2_tag_encoding - gets v2 tag frame encoding name by encoding byte
@@ -99,56 +100,31 @@ char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name)
     return ID3V2_UNSUPPORTED_ENCODING;
 }
 
-int update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
-                                        char frame_enc_byte,
-                                        char *data, size_t size)
+void update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
+                                         char frame_enc_byte,
+                                         const char *data, size_t size)
 {
-    size_t frame_size = size + 1;
-    char *frame_data = malloc(frame_size);
-
-    if (!frame_data)
-        return -ENOMEM;
-
-    frame_data[0] = frame_enc_byte;
-    memcpy(frame_data + 1, data, frame_size - 1);
     free(frame->data);
-    frame->size = frame_size;
-    frame->data = frame_data;
-
-    return 0;
+    frame->size = size + 1;
+    frame->data = xmalloc(frame->size);
+    frame->data[0] = frame_enc_byte;
+    memcpy(frame->data + 1, data, size);
 }
 
-int update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
-                                char frame_enc_byte, char *data, size_t size)
+void update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
+                                 char frame_enc_byte,
+                                 const char *data, size_t size)
 {
     struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
-    int ret = 0;
 
-    if (frame)
+    if (!frame)
     {
-        ret = update_id3v2_tag_text_frame_payload(
-                  frame, frame_enc_byte, data, size);
-    }
-    else
-    {
-        frame = calloc(1, sizeof(struct id3v2_frame));
-
-        if (!frame)
-            return -ENOMEM;
-
-        ret = update_id3v2_tag_text_frame_payload(
-                  frame, frame_enc_byte, data, size);
-
-        if (ret == 0)
-        {
-            strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
-            append_frame(&tag->frame_head, frame);
-        }
-        else
-            free_frame(frame);
+        frame = xcalloc(1, sizeof(struct id3v2_frame));
+        strncpy(frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
+        append_frame(&tag->frame_head, frame);
     }
 
-    return ret;
+    update_id3v2_tag_text_frame_payload(frame, frame_enc_byte, data, size);
 }
 
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
@@ -157,7 +133,6 @@ int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
     const char *frame_id = get_frame_id_by_alias(alias, tag->header.version);
     struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
     const char *frame_enc_name;
-    int ret;
 
     if (!frame)
         return -ENOENT;
@@ -171,12 +146,12 @@ int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
     if (!frame_enc_name)
         return -EILSEQ;
 
-    ret = iconv_alloc(U32_CHAR_CODESET, frame_enc_name,
-                      frame->data + 1, frame->size - 1,
-                      (void *)data, datasize);
+    iconv_alloc(U32_CHAR_CODESET, frame_enc_name,
+                frame->data + 1, frame->size - 1,
+                (void *)data, datasize);
 
     if (datasize)
         *datasize /= sizeof(u32_char);
 
-    return ret;
+    return 0;
 }

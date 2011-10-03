@@ -15,6 +15,7 @@
 #include "output.h"
 #include "params.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 #define OPT_SPEED      1
 #define OPT_START_TIME 2
@@ -303,25 +304,16 @@ static inline int parse_frame_optarg(char *arg)
         {
             size_t bufsize = BLOCK_SIZE;
             size_t datasize = 0;
-            char *buf = malloc(bufsize);
+            char *buf = xmalloc(bufsize);
             char *ptr = buf;
-
-            if (!buf)
-                return -ENOMEM;
 
             do {
                 datasize += fread(ptr, 1, bufsize - datasize, stdin);
 
                 if (datasize == bufsize && !feof(stdin))
                 {
-                    char *newbuf = realloc(buf, bufsize*2);
-                    if (!newbuf)
-                    {
-                        free(buf);
-                        return -ENOMEM;
-                    }
-                    ptr = newbuf + bufsize;
-                    buf = newbuf;
+                    buf = xrealloc(buf, bufsize*2);
+                    ptr = buf + bufsize;
                     bufsize *= 2;
                 }
             } while (!feof(stdin));
@@ -561,7 +553,6 @@ int init_config(int *argc, char ***argv)
             case 'y': g_config.year = opt_arg; break;
             case 'F':
                 ret = parse_frame_optarg(opt_arg);
-                FATAL(ret == -ENOMEM, "out of memory");
                 FATAL(ret != 0, "invalid frame spec specified");
                 break;
 

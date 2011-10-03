@@ -59,16 +59,13 @@ static void printfmt_gen(const struct print_fmt *pf, void *str, int is_u32)
     {
         char *buf;
         size_t size;
-        int ret = iconv_alloc(locale_encoding(), U32_CHAR_CODESET,
-                              (const char *)str, len * sizeof(u32_char),
-                              &buf, &size);
-        if (ret != 0)
-            printf("%.*s", len, "[ENOMEM]");
-        else
-        {
-            printf("%.*s", size, buf);
-            free(buf);
-        }
+
+        iconv_alloc(locale_encoding(), U32_CHAR_CODESET,
+                    (const char *)str, len * sizeof(u32_char),
+                    &buf, &size);
+
+        printf("%.*s", size, buf);
+        free(buf);
     }
 
     if (pf->width > actlen && (pf->flags & FL_LEFT))

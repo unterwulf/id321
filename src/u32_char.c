@@ -5,8 +5,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include "common.h"
 #include "printfmt.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 int32_t u32_strcmp(const u32_char *s1, const u32_char *s2)
 {
@@ -37,17 +39,10 @@ u32_char *u32_strncpy(u32_char *dst, const u32_char *src, size_t size)
     return dst;
 }
 
-u32_char *u32_strdup(const u32_char *str)
+u32_char *u32_xstrdup(const u32_char *str)
 {
     size_t len = u32_strlen(str);
-    u32_char *dup = malloc((len + 1)*sizeof(u32_char));
-
-    if (!dup)
-    {
-        errno = ENOMEM;
-        return NULL;
-    }
-
+    u32_char *dup = xmalloc((len + 1)*sizeof(u32_char));
     return u32_strcpy(dup, str);
 }
 

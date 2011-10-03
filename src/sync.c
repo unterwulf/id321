@@ -17,6 +17,7 @@
 #include "params.h"
 #include "textframe.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 {
@@ -24,7 +25,6 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
     const char *field_alias;
     const char *frame_id;
     struct id3v2_frame *frame;
-    int ret;
 
     /* sync pure text fields */
     for (field_alias = fields; *field_alias != '\0'; field_alias++)
@@ -58,6 +58,7 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 
         if (frame)
         {
+            int ret;
             struct id3v2_frm_comm *comm;
 
             ret = unpack_id3v2_frm_comm(frame, tag2->header.version, &comm);
@@ -82,15 +83,14 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
     {
         int trackno = get_id3v2_tag_trackno(tag2);
 
-        if (trackno >= 0)
+        if (trackno >= 0 && trackno <= 255)
             tag1->track = trackno;
-        else if (trackno == -ENOENT)
-            ; /* nothing to sync with */
+        else if (trackno > 255)
+            print(OS_WARN, "track number '%i' is too big to be stored "
+                           "in ID3v1, has not been synced", trackno);
         else if (trackno == -EILSEQ)
             print(OS_WARN, "track number frame has invalid format, "
                            "has not been synced");
-        else
-            return trackno; /* something bad happened */
     }
 
     /* sync genre_id and genre_str */
@@ -112,13 +112,9 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
                 free(genre_u32_str);
             }
         }
-        else if (genre_id == -ENOENT)
-            ; /* nothing to sync with */
         else if (genre_id == -EILSEQ)
             print(OS_WARN, "genre frame has invalid format, "
                            "has not been synced");
-        else
-            return genre_id; /* something bad happened */
     }
 
     return 0;
@@ -157,7 +153,6 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     const char *frame_enc_name;
     const char  fields[] = "talyn";
     const char *field_alias;
-    int         ret = 0;
 
     if (tag1->track)
         snprintf(trackno, sizeof(trackno), "%u", tag1->track);
@@ -190,39 +185,30 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
         if (data_size == 0)
             continue;
 
-        ret = iconv_alloc(frame_enc_name, g_config.enc_v1,
-                          field_data, data_size,
-                          &buf, &bufsize);
-        if (ret != 0)
-            return ret;
+        iconv_alloc(frame_enc_name, g_config.enc_v1,
+                    field_data, data_size,
+                    &buf, &bufsize);
 
         frame_id = get_frame_id_by_alias(*field_alias, tag2->header.version);
 
-        ret = update_id3v2_tag_text_frame(tag2, frame_id, frame_enc_byte,
-                                          buf, bufsize);
+        update_id3v2_tag_text_frame(tag2, frame_id, frame_enc_byte,
+                                    buf, bufsize);
 
         free(buf);
-
-        if (ret != 0)
-            return ret;
     }
 
     /* sync comment */
 
     if (tag1->comment[0] != '\0')
     {
+        int ret;
         struct id3v2_frm_comm *comm = new_id3v2_frm_comm();
 
-        if (!comm)
-            return -ENOMEM;
+        iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
+                    tag1->comment, strlen(tag1->comment),
+                    (void *)&comm->text, NULL);
 
-        ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
-                          tag1->comment, strlen(tag1->comment),
-                          (void *)&comm->text, NULL);
-
-        if (ret == 0)
-            ret = update_id3v2_frm_comm(tag2, comm, 0);
-
+        ret = update_id3v2_frm_comm(tag2, comm, 0);
         free_id3v2_frm_comm(comm);
 
         if (ret != 0)
@@ -230,25 +216,18 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     }
 
     /* sync genre */
-
-    if (tag1->genre_id != ID3V1_UNKNOWN_GENRE || tag1->genre_str[0] != '\0')
     {
         u32_char *genre_u32_str = NULL;
 
-        if (tag1->genre_str[0] != '\0')
+        if (!IS_EMPTY_STR(tag1->genre_str))
         {
-            ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
-                              tag1->genre_str, strlen(tag1->genre_str),
-                              (void *)&genre_u32_str, NULL);
-            if (ret != 0)
-                return ret;
+            iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
+                        tag1->genre_str, strlen(tag1->genre_str),
+                        (void *)&genre_u32_str, NULL);
         }
 
-        ret = set_id3v2_tag_genre(tag2, tag1->genre_id, genre_u32_str);
+        set_id3v2_tag_genre(tag2, tag1->genre_id, genre_u32_str);
         free(genre_u32_str);
-
-        if (ret != 0)
-            return ret;
     }
 
     /* TODO: sync starttime and endtime */
@@ -275,7 +254,7 @@ int sync_tags(const char *filename)
     ret = get_tags(filename, ver, &tag1, &tag2);
 
     if (ret != 0)
-        return NOMEM_OR_FAULT(ret);
+        return -EFAULT;
 
     if (g_config.ver.major == 1)
     {
@@ -289,27 +268,18 @@ int sync_tags(const char *filename)
         {
             if (!tag1)
             {
-                tag1 = calloc(1, sizeof(struct id3v1_tag));
-
-                if (tag1)
-                {
-                    tag1->version = 3;
-                    tag1->genre_id = ID3V1_UNKNOWN_GENRE;
-                }
-                else
-                    ret = -ENOMEM;
+                tag1 = xcalloc(1, sizeof(struct id3v1_tag));
+                tag1->version = 3;
+                tag1->genre_id = ID3V1_UNKNOWN_GENRE;
             }
+
+            if (g_config.ver.minor != NOT_SET)
+                tag1->version = g_config.ver.minor;
+
+            ret = sync_v1_with_v2(tag1, tag2);
 
             if (ret == 0)
-            {
-                if (g_config.ver.minor != NOT_SET)
-                    tag1->version = g_config.ver.minor;
-
-                ret = sync_v1_with_v2(tag1, tag2);
-
-                if (ret == 0)
-                    ret = write_tags(filename, tag1, NULL);
-            }
+                ret = write_tags(filename, tag1, NULL);
         }
     }
     else if (g_config.ver.major == 2)
@@ -325,12 +295,8 @@ int sync_tags(const char *filename)
             if (!tag2)
             {
                 tag2 = new_id3v2_tag();
-
-                if (tag2)
-                    tag2->header.version = (g_config.ver.minor != NOT_SET)
-                                           ? g_config.ver.minor : 4;
-                else
-                    ret = -ENOMEM;
+                tag2->header.version = (g_config.ver.minor != NOT_SET)
+                                       ? g_config.ver.minor : 4;
             }
             else if (g_config.ver.minor != tag2->header.version &&
                      g_config.ver.minor != NOT_SET)
@@ -356,5 +322,5 @@ int sync_tags(const char *filename)
 
     free(tag1);
     free_id3v2_tag(tag2);
-    return SUCC_NOMEM_OR_FAULT(ret);
+    return SUCC_OR_FAULT(ret);
 }

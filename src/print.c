@@ -16,6 +16,7 @@
 #include "frm_trck.h"     /* get_id3v2_tag_trackno() */
 #include "framelist.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 extern void printfmt(const struct print_fmt *pf, char *str);
 extern void u32_printfmt(const struct print_fmt *pf, u32_char *str);
@@ -37,13 +38,9 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
     else
     {
         u32_char *u32_str;
-        int ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
-                              buf, strlen(buf),
-                              (void *)&u32_str, NULL);
-
-        if (ret != 0)
-            return;
-
+        iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
+                    buf, strlen(buf),
+                    (void *)&u32_str, NULL);
         u32_printfmt(pfmt, u32_str);
         free(u32_str);
     }
@@ -52,20 +49,15 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
 static void print_id3v1_tag_field(const char *name, const char *value)
 {
     u32_char *u32_str = NULL;
-    int ret = iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
-                          value, strlen(value),
-                          (void *)&u32_str, NULL);
+
+    iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
+                value, strlen(value),
+                (void *)&u32_str, NULL);
 
     printf("%s: ", name);
-
-    if (ret == 0)
-    {
-        u32_printfmt(NULL, u32_str);
-        free(u32_str);
-        putchar('\n');
-    }
-    else
-        puts("[ENOMEM]");
+    u32_printfmt(NULL, u32_str);
+    free(u32_str);
+    putchar('\n');
 }
 
 static void print_id3v1_tag(const struct id3v1_tag *tag)
@@ -108,17 +100,12 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
 
         if (len > 0)
         {
-            u32_char *u32_str = malloc(sizeof(u32_str)*(len+1));
-            if (u32_str)
-            {
-                get_frame_data(tag, frame, u32_str, len);
-                u32_str[len] = U32_CHAR('\0');
-                u32_printfmt(NULL, u32_str);
-                putchar('\n');
-                free(u32_str);
-            }
-            else
-                puts("[ENOMEM]");
+            u32_char *u32_str = xmalloc(sizeof(u32_str)*(len+1));
+            get_frame_data(tag, frame, u32_str, len);
+            u32_str[len] = U32_CHAR('\0');
+            u32_printfmt(NULL, u32_str);
+            putchar('\n');
+            free(u32_str);
         }
         else if (len == 0)
             putchar('\n');
@@ -269,17 +256,11 @@ static void print_tag(const struct id3v1_tag *tag1,
 
                     if (len > 0)
                     {
-                        u32_char *u32_str = malloc(sizeof(u32_char)*(len+1));
-
-                        if (u32_str)
-                        {
-                            get_frame_data(tag2, frame, u32_str, len);
-                            u32_str[len] = U32_CHAR('\0');
-                            u32_printfmt(&pfmt, u32_str);
-                            free(u32_str);
-                        }
-                        else
-                            printfmt(&pfmt, "ENOMEM");
+                        u32_char *u32_str = xmalloc(sizeof(u32_char)*(len+1));
+                        get_frame_data(tag2, frame, u32_str, len);
+                        u32_str[len] = U32_CHAR('\0');
+                        u32_printfmt(&pfmt, u32_str);
+                        free(u32_str);
                     }
 
                     frame = NULL;
@@ -309,7 +290,7 @@ int print_tags(const char *filename)
     ret = get_tags(filename, g_config.ver, &tag1, &tag2);
 
     if (ret != 0)
-        return NOMEM_OR_FAULT(ret);
+        return -EFAULT;
 
     if (!tag1 && !tag2)
     {

@@ -15,6 +15,7 @@
 #include "params.h"
 #include "textframe.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 static int modify_v1_tag(struct id3v1_tag *tag)
 {
@@ -54,11 +55,9 @@ static int modify_v1_tag(struct id3v1_tag *tag)
     return 0;
 }
 
-static int modify_arbitrary_frame(struct id3v2_tag *tag,
-                                  struct id3v2_frame **frame)
+static void modify_arbitrary_frame(struct id3v2_tag *tag,
+                                   struct id3v2_frame **frame)
 {
-    int ret;
-
     if (g_config.options & ID321_OPT_RM_FRAME)
     {
         struct id3v2_frame *prev = (*frame)->prev;
@@ -73,14 +72,9 @@ static int modify_arbitrary_frame(struct id3v2_tag *tag,
     }
     else if (g_config.options & ID321_OPT_BIN_FRAME)
     {
-        char *frame_data = malloc(g_config.frame_size);
-
-        if (g_config.frame_size != 0 && !frame_data)
-            return -ENOMEM;
-
-        memcpy(frame_data, g_config.frame_data, g_config.frame_size);
         free((*frame)->data);
-        (*frame)->data = frame_data;
+        (*frame)->data = xmalloc(g_config.frame_size);
+        memcpy((*frame)->data, g_config.frame_data, g_config.frame_size);
         (*frame)->size = g_config.frame_size;
     }
     else
@@ -100,7 +94,7 @@ static int modify_arbitrary_frame(struct id3v2_tag *tag,
                 print(OS_WARN,
                         "ID3v2.%d tag has no support of encoding '%s'",
                         tag->header.version, g_config.frame_enc);
-                return -EFAULT;
+                return;
             }
 
             frame_enc_name = g_config.frame_enc;
@@ -112,29 +106,23 @@ static int modify_arbitrary_frame(struct id3v2_tag *tag,
                     tag->header.version, frame_enc_byte);
         }
 
-        ret = iconv_alloc(frame_enc_name, locale_encoding(),
-                          g_config.frame_data, g_config.frame_size,
-                          &buf, &bufsize);
-        if (ret != 0)
-            return ret;
+        iconv_alloc(frame_enc_name, locale_encoding(),
+                    g_config.frame_data, g_config.frame_size,
+                    &buf, &bufsize);
 
-        ret = update_id3v2_tag_text_frame_payload(
+        update_id3v2_tag_text_frame_payload(
                 *frame, frame_enc_byte, buf, bufsize);
 
         free(buf);
-
-        if (ret != 0)
-            return ret;
     }
 
-    return 0;
+    return;
 }
 
 static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
 {
     char        frame_enc_byte;
     const char *frame_enc_name;
-    int         ret;
     const char  frames[] = "talyn";
     const char *frame_alias;
 
@@ -176,20 +164,14 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
                 char *buf;
                 size_t bufsize;
 
-                ret = iconv_alloc(frame_enc_name, locale_encoding(),
-                                  data, data_size,
-                                  &buf, &bufsize);
+                iconv_alloc(frame_enc_name, locale_encoding(),
+                            data, data_size,
+                            &buf, &bufsize);
 
-                if (ret != 0)
-                    return ret;
-
-                ret = update_id3v2_tag_text_frame(tag, frame_id, frame_enc_byte,
-                                                  buf, bufsize);
+                update_id3v2_tag_text_frame(tag, frame_id, frame_enc_byte,
+                                            buf, bufsize);
 
                 free(buf);
-
-                if (ret != 0)
-                    return ret;
             }
         }
     }
@@ -197,30 +179,24 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
     /* modify comment */
     if (g_config.comment)
     {
+        int ret;
         struct id3v2_frm_comm *comm = new_id3v2_frm_comm();
-
-        if (!comm)
-            return -ENOMEM;
 
         if (g_config.comment_lang)
             memcpy(comm->lang, g_config.comment_lang, ID3V2_LANG_HDR_SIZE);
 
         if (!IS_EMPTY_STR(g_config.comment))
         {
-            ret = iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
-                              g_config.comment, strlen(g_config.comment),
-                              (void *)&comm->text, NULL);
-            if (ret != 0)
-                goto err_comm;
+            iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
+                        g_config.comment, strlen(g_config.comment),
+                        (void *)&comm->text, NULL);
         }
 
         if (!IS_EMPTY_STR(g_config.comment_desc))
         {
-            ret = iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
-                          g_config.comment_desc, strlen(g_config.comment_desc),
-                          (void *)&comm->desc, NULL);
-            if (ret != 0)
-                goto err_comm;
+            iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
+                    g_config.comment_desc, strlen(g_config.comment_desc),
+                    (void *)&comm->desc, NULL);
         }
 
         ret = update_id3v2_frm_comm(tag, comm, g_config.options &
@@ -231,8 +207,6 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
             print(OS_WARN, "%s: no matching comment frame", filename);
             ret = 0;
         }
-
-err_comm:
 
         free_id3v2_frm_comm(comm);
         if (ret != 0)
@@ -260,22 +234,13 @@ err_comm:
 
         if (!IS_EMPTY_STR(g_config.genre_str))
         {
-            ret = iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
-                              g_config.genre_str, strlen(g_config.genre_str),
-                              (void *)&genre_u32_str, NULL);
-            if (ret != 0)
-                return ret;
+            iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
+                        g_config.genre_str, strlen(g_config.genre_str),
+                        (void *)&genre_u32_str, NULL);
         }
 
-        if (genre_id != ID3V1_UNKNOWN_GENRE || genre_u32_str)
-        {
-            ret = set_id3v2_tag_genre(tag, genre_id, genre_u32_str);
-
-            free(genre_u32_str);
-
-            if (ret != 0)
-                return ret;
-        }
+        set_id3v2_tag_genre(tag, genre_id, genre_u32_str);
+        free(genre_u32_str);
     }
 
     /* modify arbitrary frame */
@@ -287,24 +252,17 @@ err_comm:
              && !(g_config.options & ID321_OPT_RM_FRAME))
             || g_config.options & ID321_OPT_CREATE_FRAME)
         {
-            if (g_config.options &ID321_OPT_CREATE_FRAME_IF_NOT_EXISTS)
+            if (g_config.options & ID321_OPT_CREATE_FRAME_IF_NOT_EXISTS)
                 frame = peek_frame(&tag->frame_head, g_config.frame_id);
 
             if (!frame)
             {
-                frame = calloc(1, sizeof(struct id3v2_frame));
-
-                if (!frame)
-                    return -ENOMEM;
-
+                frame = xcalloc(1, sizeof(struct id3v2_frame));
                 strncpy(frame->id, g_config.frame_id, ID3V2_FRAME_ID_MAX_SIZE);
                 append_frame(&tag->frame_head, frame);
             }
 
-            ret = modify_arbitrary_frame(tag, &frame);
-
-            if (ret != 0)
-                return NOMEM_OR_FAULT(ret);
+            modify_arbitrary_frame(tag, &frame);
         }
         else
         {
@@ -318,12 +276,7 @@ err_comm:
             {
                 if ((g_config.options & ID321_OPT_ALL_FRAMES)
                     || frame_no == g_config.frame_no)
-                {
-                    ret = modify_arbitrary_frame(tag, &frame);
-
-                    if (ret != 0)
-                        return NOMEM_OR_FAULT(ret);
-                }
+                    modify_arbitrary_frame(tag, &frame);
                 else
                     ; /* iterate through the matching frames until
                        * frame_no is reached */
@@ -351,15 +304,11 @@ int modify_tags(const char *filename)
     ret = get_tags(filename, ver, &tag1, &tag2);
 
     if (ret != 0)
-        return NOMEM_OR_FAULT(ret);
+        return -EFAULT;
 
     if (g_config.ver.major == 1 && !tag1)
     {
-        tag1 = calloc(1, sizeof(struct id3v1_tag));
-
-        if (!tag1)
-            goto oom;
-
+        tag1 = xcalloc(1, sizeof(struct id3v1_tag));
         tag1->version =
             (g_config.ver.minor != NOT_SET) ? g_config.ver.minor : 3;
         tag1->genre_id = ID3V1_UNKNOWN_GENRE;
@@ -380,10 +329,6 @@ int modify_tags(const char *filename)
               || (g_config.ver.major == NOT_SET && !tag1)) && !tag2)
     {
         tag2 = new_id3v2_tag();
-
-        if (!tag2)
-            goto oom;
-
         tag2->header.version =
             (g_config.ver.minor != NOT_SET) ? g_config.ver.minor : 4;
     }
@@ -397,14 +342,7 @@ int modify_tags(const char *filename)
     if (ret == 0)
         ret = write_tags(filename, tag1, tag2);
 
-exit:
-
     free(tag1);
     free_id3v2_tag(tag2);
-    return SUCC_NOMEM_OR_FAULT(ret);
-
-oom:
-
-    ret = -ENOMEM;
-    goto exit;
+    return SUCC_OR_FAULT(ret);
 }

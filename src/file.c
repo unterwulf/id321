@@ -7,15 +7,13 @@
 #include "common.h"   /* BLOCK_SIZE */
 #include "output.h"
 #include "file.h"
+#include "xalloc.h"
 
 struct file *open_file(const char *filename, mode_t mode)
 {
     struct stat st;
-    struct file *file = malloc(sizeof(struct file));
+    struct file *file = xmalloc(sizeof(struct file));
     int ret;
-
-    if (!file)
-        return NULL;
 
     ret = stat(filename, &st);
 

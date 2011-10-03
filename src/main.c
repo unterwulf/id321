@@ -46,9 +46,6 @@ int main(int argc, char **argv)
     if (g_config.action == ID3_COPY)
     {
         ret = copy_tags(argc, argv);
-
-        if (ret == -ENOMEM)
-            print(OS_ERROR, "out of memory");
     }
     else
     {
@@ -59,12 +56,7 @@ int main(int argc, char **argv)
                 break;
 
         for (; argc > 0; argc--, argv++)
-        {
             ret = actions[i].func(*argv);
-
-            if (ret == -ENOMEM)
-                print(OS_ERROR, "%s: out of memory", *argv);
-        }
     }
 
     return ret == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

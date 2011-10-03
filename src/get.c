@@ -11,6 +11,7 @@
 #include "trim.h"
 #include "file.h"
 #include "dump.h"
+#include "xalloc.h"
 
 /***
  * get_id3v1_tag - get ID3v1 tag from file
@@ -23,8 +24,8 @@
  * The routine finds ID3v1 tag specified by @minor in @file. If the tag has
  * been found, struct id3v1_tag is allocated and filled with parsed tag values.
  *
- * Returns 0 on success, -ENOENT if no matching ID3v1 tag was found, -ENOMEM
- * if struct id3v2_tag cannot be allocated and -EFAULT on other errors.
+ * Returns 0 on success, -ENOENT if no matching ID3v1 tag was found and
+ * -EFAULT on other errors.
  */
 
 static int get_id3v1_tag(struct file *file, unsigned minor,
@@ -48,10 +49,7 @@ static int get_id3v1_tag(struct file *file, unsigned minor,
     if (readordie(file->fd, buf, size) != 0)
         return -EFAULT;
 
-    *tag = malloc(sizeof(struct id3v1_tag));
-
-    if (!*tag)
-        return -ENOMEM;
+    *tag = xmalloc(sizeof(struct id3v1_tag));
 
     ret = -ENOENT;
 
@@ -124,10 +122,6 @@ static int get_id3v2_tag(struct file *file, unsigned minor,
     int ret;
 
     *tag = new_id3v2_tag();
-
-    if (!*tag)
-        return -ENOMEM;
-
     ret = get_id3v2_tag_prealloc(file, minor, *tag);
 
     if (ret != 0)
@@ -192,5 +186,5 @@ int get_tags(const char *filename, struct version ver,
 
     close_file(file);
 
-    return SUCC_NOMEM_OR_FAULT(ret);
+    return SUCC_OR_FAULT(ret);
 }

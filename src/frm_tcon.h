@@ -7,8 +7,8 @@
 
 int get_id3v2_tag_genre(const struct id3v2_tag *tag, u32_char **genre_u32_str);
 
-int set_id3v2_tag_genre(struct id3v2_tag *tag,
-                        uint8_t genre_id,
-                        u32_char *genre_u32_str);
+void set_id3v2_tag_genre(struct id3v2_tag *tag,
+                         uint8_t genre_id,
+                         u32_char *genre_u32_str);
 
 #endif /* FRM_TCON_H */

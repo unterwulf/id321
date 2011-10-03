@@ -59,7 +59,9 @@ id321_SOURCES = \
   u16_char.h \
   u32_char.c \
   u32_char.h \
-  write.c
+  write.c \
+  xalloc.c \
+  xalloc.h
 
 if STATIC_LIB313
 AM_CPPFLAGS += -I$(top_srcdir)/lib313/

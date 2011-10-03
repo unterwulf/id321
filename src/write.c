@@ -58,7 +58,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
                     print(OS_ERROR, "%s: frame too big", filename);
                     break;
             }
-            return NOMEM_OR_FAULT(tag2_size);
+            return -EFAULT;
         }
     }
 

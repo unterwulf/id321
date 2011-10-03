@@ -13,13 +13,11 @@
 #include "textframe.h"    /* get_id3v2_tag_encoding_name() */
 #include "u16_char.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 struct id3v2_frm_comm *new_id3v2_frm_comm()
 {
-    struct id3v2_frm_comm *comm = calloc(1, sizeof(struct id3v2_frm_comm));
-
-    if (!comm)
-        return NULL;
+    struct id3v2_frm_comm *comm = xcalloc(1, sizeof(struct id3v2_frm_comm));
 
     /* ID3v2.4 specification says: If the language is not known the string
      * "XXX" should be used.
@@ -50,7 +48,6 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
     char *text_ptr;
     size_t desc_sz;
     size_t text_sz = 0;
-    int ret;
 
     if (frame->size < ID3V2_FRM_COMM_HDR_SIZE + 1)
         return -EILSEQ;
@@ -95,37 +92,26 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
 
     tmp_comm = new_id3v2_frm_comm();
 
-    if (!tmp_comm)
-        goto oom;
-
     if (desc_sz > 0)
     {
-        ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
-                          desc_ptr, desc_sz,
-                          (void *)&tmp_comm->desc, NULL);
-        if (ret != 0)
-            goto oom;
+        iconv_alloc(U32_CHAR_CODESET, from_enc,
+                    desc_ptr, desc_sz,
+                    (void *)&tmp_comm->desc, NULL);
     }
 
     if (text_ptr && text_sz > 0)
     {
-        ret = iconv_alloc(U32_CHAR_CODESET, from_enc,
-                          text_ptr, text_sz,
-                          (void *)&tmp_comm->text, NULL);
-        if (ret != 0)
-            goto oom;
+        iconv_alloc(U32_CHAR_CODESET, from_enc,
+                    text_ptr, text_sz,
+                    (void *)&tmp_comm->text, NULL);
     }
 
     memcpy(tmp_comm->lang, frame->data + ID3V2_ENC_HDR_SIZE,
            ID3V2_LANG_HDR_SIZE);
 
     *comm = tmp_comm;
-    return ret;
 
-oom:
-
-    free_id3v2_frm_comm(tmp_comm);
-    return -ENOMEM;
+    return 0;
 }
 
 int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
@@ -152,11 +138,7 @@ int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
         {
             free(comm->desc);
             if (tmp_comm->desc)
-            {
-                comm->desc = u32_strdup(tmp_comm->desc);
-                if (!comm->desc)
-                    return -ENOMEM;
-            }
+                comm->desc = u32_xstrdup(tmp_comm->desc);
             else
                 comm->desc = NULL;
         }
@@ -190,7 +172,6 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
     size_t desc_size;
     size_t text_size = 0;
     struct id3v2_frame *new_frame;
-    int ret;
 
     frame_enc_byte = g_config.v2_def_encs[minor];
     frame_enc_name = get_id3v2_tag_encoding_name(minor, frame_enc_byte);
@@ -198,10 +179,7 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
     if (!frame_enc_name)
         return -EINVAL;
 
-    new_frame = calloc(1, sizeof(struct id3v2_frame));
-
-    if (!new_frame)
-        return -ENOMEM;
+    new_frame = xcalloc(1, sizeof(struct id3v2_frame));
 
     /* convert comment description */
     {
@@ -209,46 +187,25 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
         u32_char *u32_desc = (comm->desc) ? comm->desc : u32_empty_str;
 
         /* desc shall include null-terminator */
-        ret = iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                          (char *)u32_desc,
-                          (u32_strlen(u32_desc) + 1)*sizeof(u32_char),
-                          &desc, &desc_size);
-
-        if (ret != 0)
-        {
-            free(new_frame);
-            return -ENOMEM;
-        }
+        iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
+                    (char *)u32_desc,
+                    (u32_strlen(u32_desc) + 1)*sizeof(u32_char),
+                    &desc, &desc_size);
     }
 
     /* convert comment text */
     if (comm->text)
     {
         /* text shall not include null-terminator */
-        ret = iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                          (char *)comm->text,
-                          u32_strlen(comm->text)*sizeof(u32_char),
-                          &text, &text_size);
-
-        if (ret != 0)
-        {
-            free(new_frame);
-            free(desc);
-            return -ENOMEM;
-        }
+        iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
+                    (char *)comm->text,
+                    u32_strlen(comm->text)*sizeof(u32_char),
+                    &text, &text_size);
     }
 
     new_frame->size =
         ID3V2_ENC_HDR_SIZE + ID3V2_LANG_HDR_SIZE + desc_size + text_size;
-    new_frame->data = malloc(new_frame->size);
-
-    if (!new_frame->data)
-    {
-        free(new_frame);
-        free(desc);
-        free(text);
-        return -ENOMEM;
-    }
+    new_frame->data = xmalloc(new_frame->size);
 
     strncpy(new_frame->id, frame_id, ID3V2_FRAME_ID_MAX_SIZE);
     new_frame->data[0] = frame_enc_byte;

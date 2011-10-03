@@ -12,6 +12,7 @@
 #include "id3v2.h"
 #include "output.h"
 #include "synchsafe.h"
+#include "xalloc.h"
 
 #define READORDIE(fd, buf, size, ret) \
     if (readordie(fd, buf, size) != 0) \
@@ -22,11 +23,8 @@
 
 struct id3v2_tag *new_id3v2_tag()
 {
-    struct id3v2_tag *tag = calloc(1, sizeof(struct id3v2_tag));
-
-    if (tag)
-        init_frame_list(&tag->frame_head);
-
+    struct id3v2_tag *tag = xcalloc(1, sizeof(struct id3v2_tag));
+    init_frame_list(&tag->frame_head);
     return tag;
 }
 
@@ -145,11 +143,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
 
         bytes_left -= bytes_read;
 
-        frame = calloc(1, sizeof(struct id3v2_frame));
-
-        if (!frame)
-            return -ENOMEM;
-
+        frame = xcalloc(1, sizeof(struct id3v2_frame));
         unpack_id3v2_frame_header(buf, tag->header.version, frame);
 
         if (frame->size > bytes_left)
@@ -160,13 +154,7 @@ int read_id3v2_frames(int fd, struct id3v2_tag *tag)
             return -EFAULT;
         }
 
-        frame->data = malloc(frame->size);
-
-        if (!frame->data)
-        {
-            free(frame);
-            return -ENOMEM;
-        }
+        frame->data = xmalloc(frame->size);
 
         if (IS_WHOLE_TAG_UNSYNC(tag->header))
         {
@@ -473,10 +461,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     size_t frame_size;
     size_t newsize;
 
-    *buf = malloc(bufsize);
-
-    if (!*buf)
-        return -ENOMEM;
+    *buf = xmalloc(bufsize);
 
     if (header.version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
         header.flags |= ID3V2_FLAG_UNSYNC;
@@ -514,19 +499,12 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         }
         else if (frame_size > bufsize - pos)
         {
-            char *newbuf;
-            size_t newbufsize = 2*bufsize;
+            bufsize *= 2;
 
-            while (newbufsize < pos + frame_size)
-                newbufsize *= 2;
+            while (bufsize < pos + frame_size)
+                bufsize *= 2;
 
-            newbuf = realloc(*buf, newbufsize);
-
-            if (!newbuf)
-                goto oom; /* *buf will be freed there */
-
-            bufsize = newbufsize;
-            *buf = newbuf;
+            *buf = xrealloc(*buf, bufsize);
             continue;
         }
 
@@ -545,10 +523,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         if (reqbufsize != pos)
         {
             size_t newbufsize = reqbufsize;
-            char *newbuf = malloc(newbufsize);
-
-            if (!newbuf)
-                goto oom;
+            char *newbuf = xmalloc(newbufsize);
 
             (void)unsync_buf(newbuf + ID3V2_HEADER_LEN,
                              reqbufsize - ID3V2_HEADER_LEN,
@@ -582,12 +557,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         {
             /* damn, the current buffer is not large enough; need to
              * enlarge it */
-            char *tmp = realloc(*buf, newsize);
-
-            if (!tmp)
-               goto oom; /* *buf will be freed there */
-
-            *buf = tmp;
+            *buf = xrealloc(*buf, newsize);
         }
 
         memset(*buf + pos, '\0', newsize - pos);
@@ -607,10 +577,4 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     pack_id3v2_header(&header, *buf);
 
     return pos;
-
-oom:
-
-    free(*buf);
-    *buf = NULL;
-    return -ENOMEM;
 }

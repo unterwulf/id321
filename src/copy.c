@@ -20,8 +20,8 @@ int copy_tags(int argc, char **argv)
 
     ret = get_tags(argv[0], g_config.ver, &tag1, &tag2);
 
-    if (ret < 0)
-        return NOMEM_OR_FAULT(ret);
+    if (ret != 0)
+        return -EFAULT;
 
     if (!tag1 && !tag2)
     {
@@ -33,5 +33,5 @@ int copy_tags(int argc, char **argv)
 
     free(tag1);
     free_id3v2_tag(tag2);
-    return SUCC_NOMEM_OR_FAULT(ret);
+    return SUCC_OR_FAULT(ret);
 }

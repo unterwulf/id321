@@ -8,6 +8,7 @@
 #include "iconv_wrap.h"
 #include "output.h"
 #include "u32_char.h"
+#include "xalloc.h"
 
 /***
  * readordie
@@ -109,16 +110,12 @@ int str_to_long(const char *nptr, long *ret)
     return (*nptr != '\0' && *endptr == '\0') ? 0 : -1;
 }
 
-id321_iconv_t xiconv_open(const char *tocode, const char *fromcode)
+static id321_iconv_t xiconv_open(const char *tocode, const char *fromcode)
 {
     id321_iconv_t cd = id321_iconv_open(tocode, fromcode);
 
     if (cd == (id321_iconv_t)-1)
-    {
-        print(OS_ERROR, "unable to convert string from '%s' to '%s'",
-                        fromcode, tocode);
-        exit(EXIT_FAILURE);
-    }
+        fatal("unable to convert string from '%s' to '%s'", fromcode, tocode);
 
     return cd;
 }
@@ -230,18 +227,14 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
  * even if @src is not.
  *
  * *@dst must be freed with free() after use.
- *
- * Returns 0 on success, or
- *        -ENOMEM on out of memory error.
  */
 
-int iconv_alloc(const char *tocode, const char *fromcode,
-                const char *src, size_t srcsize,
-                char **dst, size_t *dstsize)
+void iconv_alloc(const char *tocode, const char *fromcode,
+                 const char *src, size_t srcsize,
+                 char **dst, size_t *dstsize)
 {
     id321_iconv_t cd;
     char *buf;
-    char *tmp;
     char *out;
     size_t tmppos;
     size_t outsize = srcsize;
@@ -250,11 +243,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
     int is_from_u32 = (!strcmp(fromcode, U32_CHAR_CODESET)) ? 1 : 0;
 
     cd = xiconv_open(tocode, fromcode);
-
-    buf = malloc(outsize);
-    if (!buf)
-        goto oom;
-
+    buf = xmalloc(outsize);
     out = buf;
     outbytesleft = outsize;
 
@@ -297,13 +286,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
 
                 case E2BIG:
                     tmppos = out - buf;
-                    tmp = realloc(buf, outsize*2);
-                    if (!tmp)
-                    {
-                        free(buf);
-                        goto oom;
-                    }
-                    buf = tmp;
+                    buf = xrealloc(buf, outsize*2);
                     out = buf + tmppos;
                     outbytesleft += outsize;
                     outsize *= 2;
@@ -323,13 +306,7 @@ int iconv_alloc(const char *tocode, const char *fromcode,
         if (outbytesleft < sizeof(u32_char))
         {
             tmppos = out - buf;
-            tmp = realloc(buf, outsize + sizeof(u32_char) - outbytesleft);
-            if (!tmp)
-            {
-                free(buf);
-                goto oom;
-            }
-            buf = tmp;
+            buf = realloc(buf, outsize + sizeof(u32_char) - outbytesleft);
             out = buf + tmppos;
         }
 
@@ -340,12 +317,6 @@ int iconv_alloc(const char *tocode, const char *fromcode,
     *dst = buf;
     if (dstsize)
         *dstsize = out - buf;
-    return 0;
-
-oom:
-
-    id321_iconv_close(cd);
-    return -ENOMEM;
 }
 
 int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...)
@@ -355,9 +326,7 @@ int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...)
     int       ret;
     va_list   args;
 
-    u32_data = malloc(u32_size*sizeof(u32_char));
-    if (!u32_data)
-        return -ENOMEM;
+    u32_data = xmalloc(u32_size*sizeof(u32_char));
 
     do {
         va_start(args, fmt);
@@ -371,22 +340,21 @@ int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...)
         }
         else if ((size_t)ret == u32_size)
         {
-            u32_char *tmp;
-
             u32_size *= 2;
-            tmp = realloc(u32_data, u32_size);
-
-            if (!tmp)
-            {
-                free(u32_data);
-                return -ENOMEM;
-            }
-
-            u32_data = tmp;
+            u32_data = xrealloc(u32_data, u32_size);
         }
     } while ((size_t)ret == u32_size);
 
     *u32_str = u32_data;
 
     return ret;
+}
+
+void fatal(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    printf(fmt, args);
+    va_end(args);
+    exit(EXIT_FAILURE);
 }
