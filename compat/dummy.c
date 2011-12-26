@@ -1,4 +1,4 @@
-static void compat_dummy()
+static void compat_dummy(void)
 {
     return;
 }

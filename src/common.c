@@ -81,7 +81,7 @@ int writeordie(int fd, const void *buf, size_t len)
     return 0;
 }
 
-const char *locale_encoding()
+const char *locale_encoding(void)
 {
     static const char *enc = NULL;
 

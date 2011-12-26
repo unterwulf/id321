@@ -119,7 +119,7 @@ typedef struct id3_frame_handler_table_t
     const char          *desc;
 } id3_frame_handler_table_t;
 
-struct id3v2_tag *new_id3v2_tag();
+struct id3v2_tag *new_id3v2_tag(void);
 void free_id3v2_tag(struct id3v2_tag *tag);
 
 int is_valid_frame_id_str(const char *str, size_t len);

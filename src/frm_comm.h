@@ -12,7 +12,7 @@ struct id3v2_frm_comm
     u32_char *text;
 };
 
-struct id3v2_frm_comm *new_id3v2_frm_comm();
+struct id3v2_frm_comm *new_id3v2_frm_comm(void);
 
 void free_id3v2_frm_comm(struct id3v2_frm_comm *comm);
 

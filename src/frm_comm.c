@@ -15,7 +15,7 @@
 #include "u32_char.h"
 #include "xalloc.h"
 
-struct id3v2_frm_comm *new_id3v2_frm_comm()
+struct id3v2_frm_comm *new_id3v2_frm_comm(void)
 {
     struct id3v2_frm_comm *comm = xcalloc(1, sizeof(struct id3v2_frm_comm));
 

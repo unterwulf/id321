@@ -21,7 +21,7 @@
 #define IS_WHOLE_TAG_UNSYNC(hdr) \
     ((hdr.version == 2 || hdr.version == 3) && hdr.flags & ID3V2_FLAG_UNSYNC)
 
-struct id3v2_tag *new_id3v2_tag()
+struct id3v2_tag *new_id3v2_tag(void)
 {
     struct id3v2_tag *tag = xcalloc(1, sizeof(struct id3v2_tag));
     init_frame_list(&tag->frame_head);

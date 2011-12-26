@@ -1,7 +1,7 @@
 #include <config.h>
 #include <stdio.h>
 
-void help()
+void help(void)
 {
     puts(
 "id321 " VERSION " Copyright (c) 2010 Vitaly Sinilin\n"

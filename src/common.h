@@ -30,7 +30,7 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
 
 int readordie(int fd, void *buf, size_t len);
 int writeordie(int fd, const void *buf, size_t len);
-const char *locale_encoding();
+const char *locale_encoding(void);
 int str_to_long(const char *nptr, long *ret);
 
 ssize_t iconvordie(const char *tocode, const char *fromcode,

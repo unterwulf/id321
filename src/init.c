@@ -22,7 +22,7 @@
 #define OPT_END_TIME   3
 #define OPT_NO_UNSYNC  4
 
-extern void help();
+extern void help(void);
 
 /***
  * split_colon_separated_list
