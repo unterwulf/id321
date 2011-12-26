@@ -44,21 +44,29 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
             return -EFAULT;
         }
 
-        tag2_size = pack_id3v2_tag(tag2, &tag2_buf);
-
-        if (tag2_size < 0)
+        if (tag2->frame_head.next == &tag2->frame_head)
         {
-            close_file(file);
-            switch (tag2_size)
+            /* ID3v2.x standards: "A tag MUST contain at least one frame." */
+            print(OS_WARN, "%s: no frames, ID3v2 tag omitted", filename);
+        }
+        else
+        {
+            tag2_size = pack_id3v2_tag(tag2, &tag2_buf);
+
+            if (tag2_size < 0)
             {
-                case -E2BIG:
-                    print(OS_ERROR, "%s: tag too big", filename);
-                    break;
-                case -EINVAL:
-                    print(OS_ERROR, "%s: frame too big", filename);
-                    break;
+                close_file(file);
+                switch (tag2_size)
+                {
+                    case -E2BIG:
+                        print(OS_ERROR, "%s: tag too big", filename);
+                        break;
+                    case -EINVAL:
+                        print(OS_ERROR, "%s: frame too big", filename);
+                        break;
+                }
+                return -EFAULT;
             }
-            return -EFAULT;
         }
     }
 
