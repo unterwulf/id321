@@ -346,7 +346,7 @@ static inline int parse_genre_optarg(char *arg)
 #define GENRE_OPT_ARG_CNT 2
 
     size_t argc;
-    char *argv[FRAME_OPT_ARG_CNT];
+    char *argv[GENRE_OPT_ARG_CNT];
     int ret;
     long long_val;
 
