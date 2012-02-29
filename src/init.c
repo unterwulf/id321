@@ -136,8 +136,8 @@ static inline int setup_encodings(char *enc_str)
         for (i = 0; i < argc; i++)
             unescape_chars(argv[i], ":\\", '\\');
 
-        /* if the last arument is an empty string, propagate the value of
-         * the argument before last to all futher arguments */
+        /* If the last argument is an empty string, propagate the value of
+         * the argument before last to all further arguments. */
         if (argc > 1 && argv[argc-1][0] == '\0')
             for (i = argc - 1; i < ENC_OPT_ARG_CNT; i++)
                 argv[i] = argv[argc-2];
