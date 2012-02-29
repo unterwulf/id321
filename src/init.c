@@ -147,7 +147,7 @@ static inline int setup_encodings(char *enc_str)
 
     for (i = 0; i < ENC_OPT_ARG_CNT; i++)
     {
-        if (argv[i])
+        if (argv[i] && *argv[i])
             *(enc[i].name) = argv[i];
 
         print(OS_INFO, "   %s=%s", enc[i].desc, *(enc[i].name));
