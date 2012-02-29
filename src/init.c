@@ -36,7 +36,7 @@ extern void help(void);
  * Returns number of @array elements filled.
  */
 
-size_t split_colon_separated_list(char *list, char **array, size_t size)
+static size_t split_colon_separated_list(char *list, char **array, size_t size)
 {
     int escaped;
     size_t origsize = size;
@@ -47,21 +47,24 @@ size_t split_colon_separated_list(char *list, char **array, size_t size)
     *array++ = list;
     size--;
 
-    if (size > 0)
-        for (; *list; list++)
-        {
-            for (escaped = 0; *list == '\\'; list++)
-                escaped = !escaped;
+    while (list = strpbrk(list, ":\\"))
+    {
+        for (escaped = 0; *list == '\\'; list++)
+            escaped = !escaped;
 
-            if (*list == ':' && !escaped)
+        if (*list == ':')
+        {
+            if (!escaped)
             {
                 *list = '\0';
-                *array++ = list + 1;
-                size--;
                 if (size == 0)
                     break;
+                *array++ = list + 1;
+                size--;
             }
+            list++;
         }
+    }
 
     return origsize - size;
 }
