@@ -177,7 +177,7 @@ static inline int setup_encodings(char *enc_str)
  *
  * where lang and desc can have special value '*' that means any value.
  * Because of the format, colons and asterisks within lang, desc and
- * test shall be escaped with '\' not to have their special meaning.
+ * text shall be escaped with '\' not to have their special meaning.
  */
 
 static inline int parse_comment_optarg(char *arg)
