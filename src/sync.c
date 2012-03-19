@@ -295,8 +295,9 @@ int sync_tags(const char *filename)
             if (!tag2)
             {
                 tag2 = new_id3v2_tag();
-                tag2->header.version = (g_config.ver.minor != NOT_SET)
-                                       ? g_config.ver.minor : 4;
+
+                if (g_config.ver.minor != NOT_SET)
+                    tag2->header.version = g_config.ver.minor;
             }
             else if (g_config.ver.minor != tag2->header.version &&
                      g_config.ver.minor != NOT_SET)

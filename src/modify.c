@@ -329,8 +329,9 @@ int modify_tags(const char *filename)
               || (g_config.ver.major == NOT_SET && !tag1)) && !tag2)
     {
         tag2 = new_id3v2_tag();
-        tag2->header.version =
-            (g_config.ver.minor != NOT_SET) ? g_config.ver.minor : 4;
+
+        if (g_config.ver.minor != NOT_SET)
+            tag2->header.version = g_config.ver.minor;
     }
 
     if (tag1)

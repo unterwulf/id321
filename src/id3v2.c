@@ -25,6 +25,7 @@ struct id3v2_tag *new_id3v2_tag(void)
 {
     struct id3v2_tag *tag = xcalloc(1, sizeof(struct id3v2_tag));
     init_frame_list(&tag->frame_head);
+    tag->header.version = 4;
     return tag;
 }
 
