@@ -111,9 +111,10 @@ void update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
     memcpy(frame->data + 1, data, size);
 }
 
-void update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
-                                 char frame_enc_byte,
-                                 const char *data, size_t size)
+static void update_id3v2_tag_text_frame_raw(struct id3v2_tag *tag,
+                                            const char *frame_id,
+                                            char frame_enc_byte,
+                                            const char *data, size_t size)
 {
     struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
 
@@ -125,6 +126,28 @@ void update_id3v2_tag_text_frame(struct id3v2_tag *tag, const char *frame_id,
     }
 
     update_id3v2_tag_text_frame_payload(frame, frame_enc_byte, data, size);
+}
+
+void update_id3v2_tag_text_frame(struct id3v2_tag *tag,
+                                 const char *frame_id,
+                                 const char *encoding,
+                                 const char *data, size_t size)
+{
+    char frame_enc_byte = g_config.v2_def_encs[tag->header.version];
+    const char *frame_enc_name =
+        get_id3v2_tag_encoding_name(tag->header.version, frame_enc_byte);
+
+    char *frame_data;
+    size_t frame_data_sz;
+
+    iconv_alloc(frame_enc_name, encoding,
+                data, size,
+                &frame_data, &frame_data_sz);
+
+    update_id3v2_tag_text_frame_raw(tag, frame_id, frame_enc_byte,
+                                    frame_data, frame_data_sz);
+
+    free(frame_data);
 }
 
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,

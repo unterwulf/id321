@@ -149,8 +149,6 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 {
     char        trackno[4] = "\0"; /* as maximum byte value is 255 */
     int32_t     time;
-    char        frame_enc_byte;
-    const char *frame_enc_name;
     const char  fields[] = "talyn";
     const char *field_alias;
 
@@ -161,40 +159,26 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
            tag2->header.version == 3 ||
            tag2->header.version == 4);
 
-    frame_enc_byte = g_config.v2_def_encs[tag2->header.version];
-    frame_enc_name = get_id3v2_tag_encoding_name(tag2->header.version,
-                                                 frame_enc_byte);
-
-    if (!frame_enc_name)
-        return -EINVAL;
-
     for (field_alias = fields; *field_alias != '\0'; field_alias++)
     {
-        char       *buf;
-        size_t      bufsize;
-        size_t      data_size;
         const char *frame_id;
         const char *field_data;
+        size_t      field_data_sz;
 
         field_data = (*field_alias == 'n')
                      ? trackno
                      : get_v1_data_by_alias(*field_alias, tag1, NULL);
 
-        data_size = strlen(field_data);
+        field_data_sz = strlen(field_data);
 
-        if (data_size == 0)
+        if (field_data_sz == 0)
             continue;
-
-        iconv_alloc(frame_enc_name, g_config.enc_v1,
-                    field_data, data_size,
-                    &buf, &bufsize);
 
         frame_id = get_frame_id_by_alias(*field_alias, tag2->header.version);
 
-        update_id3v2_tag_text_frame(tag2, frame_id, frame_enc_byte,
-                                    buf, bufsize);
-
-        free(buf);
+        update_id3v2_tag_text_frame(
+                tag2, frame_id, g_config.enc_v1,
+                field_data, field_data_sz);
     }
 
     /* sync comment */

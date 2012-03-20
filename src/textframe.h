@@ -16,7 +16,7 @@ void update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
 
 void update_id3v2_tag_text_frame(struct id3v2_tag *tag,
                                  const char *frame_id,
-                                 char frame_enc_byte,
+                                 const char *encoding,
                                  const char *data, size_t size);
 
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,

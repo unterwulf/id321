@@ -121,8 +121,6 @@ static void modify_arbitrary_frame(struct id3v2_tag *tag,
 
 static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
 {
-    char        frame_enc_byte;
-    const char *frame_enc_name;
     const char  frames[] = "talyn";
     const char *frame_alias;
 
@@ -130,24 +128,17 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
            tag->header.version == 3 ||
            tag->header.version == 4);
 
-    frame_enc_byte = g_config.v2_def_encs[tag->header.version];
-    frame_enc_name = get_id3v2_tag_encoding_name(tag->header.version,
-                                                 frame_enc_byte);
-
-    if (!frame_enc_name)
-        return -EINVAL;
-
     for (frame_alias = frames; *frame_alias != '\0'; frame_alias++)
     {
         const char *data = get_config_data_by_alias(*frame_alias);
 
         if (data)
         {
-            size_t data_size = strlen(data);
+            size_t data_sz = strlen(data);
             const char *frame_id = get_frame_id_by_alias(*frame_alias,
                                                          tag->header.version);
 
-            if (data_size == 0)
+            if (data_sz == 0)
             {
                 /* delete frame if it exists */
                 struct id3v2_frame *frame =
@@ -161,17 +152,9 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
             }
             else
             {
-                char *buf;
-                size_t bufsize;
-
-                iconv_alloc(frame_enc_name, locale_encoding(),
-                            data, data_size,
-                            &buf, &bufsize);
-
-                update_id3v2_tag_text_frame(tag, frame_id, frame_enc_byte,
-                                            buf, bufsize);
-
-                free(buf);
+                update_id3v2_tag_text_frame(
+                        tag, frame_id, locale_encoding(),
+                        data, data_sz);
             }
         }
     }
