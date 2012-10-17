@@ -77,7 +77,7 @@ void printfmt(const struct print_fmt *pf, char *str)
     printfmt_gen(pf, str, 0);
 }
 
-void u32_printfmt(const struct print_fmt *pf, u32_char *u32_str)
+void u32_printfmt(const struct print_fmt *pf, u32_char *ustr)
 {
-    printfmt_gen(pf, u32_str, 1);
+    printfmt_gen(pf, ustr, 1);
 }

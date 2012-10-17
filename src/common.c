@@ -333,33 +333,33 @@ u32_char *locale_to_u32_alloc(const char *str)
     return ustr;
 }
 
-int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...)
+int u32_snprintf_alloc(u32_char **ustr, const char *fmt, ...)
 {
-    u32_char *u32_data;
-    size_t    u32_size = 4096;
+    u32_char *udata;
+    size_t    usize = 4096;
     int       ret;
     va_list   args;
 
-    u32_data = xmalloc(u32_size*sizeof(u32_char));
+    udata = xmalloc(usize * sizeof(u32_char));
 
     do {
         va_start(args, fmt);
-        ret = u32_vsnprintf(u32_data, u32_size, fmt, args);
+        ret = u32_vsnprintf(udata, usize, fmt, args);
         va_end(args);
 
         if (ret == -1)
         {
-            free(u32_data);
+            free(udata);
             return -EFAULT;
         }
-        else if ((size_t)ret == u32_size)
+        else if ((size_t)ret == usize)
         {
-            u32_size *= 2;
-            u32_data = xrealloc(u32_data, u32_size);
+            usize *= 2;
+            udata = xrealloc(udata, usize);
         }
-    } while ((size_t)ret == u32_size);
+    } while ((size_t)ret == usize);
 
-    *u32_str = u32_data;
+    *ustr = udata;
 
     return ret;
 }

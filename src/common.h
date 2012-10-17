@@ -42,6 +42,6 @@ void iconv_alloc(const char *tocode, const char *fromcode,
                  char **dst, size_t *dstsize);
 
 u32_char *locale_to_u32_alloc(const char *str);
-int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...);
+int u32_snprintf_alloc(u32_char **ustr, const char *fmt, ...);
 
 #endif /* COMMON_H */

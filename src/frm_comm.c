@@ -33,8 +33,8 @@ void free_id3v2_frm_comm(struct id3v2_frm_comm *comm)
 {
     if (comm)
     {
-        free(comm->desc);
-        free(comm->text);
+        free(comm->udesc);
+        free(comm->utext);
         free(comm);
     }
 }
@@ -96,14 +96,14 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
     {
         iconv_alloc(U32_CHAR_CODESET, from_enc,
                     desc_ptr, desc_sz,
-                    (void *)&tmp_comm->desc, NULL);
+                    (void *)&tmp_comm->udesc, NULL);
     }
 
     if (text_ptr && text_sz > 0)
     {
         iconv_alloc(U32_CHAR_CODESET, from_enc,
                     text_ptr, text_sz,
-                    (void *)&tmp_comm->text, NULL);
+                    (void *)&tmp_comm->utext, NULL);
     }
 
     memcpy(tmp_comm->lang, frame->data + ID3V2_ENC_HDR_SIZE,
@@ -134,8 +134,8 @@ static struct id3v2_frm_comm *query_next_frm_comm(
 
         if ((lang == NULL || !memcmp(comm->lang, lang, ID3V2_LANG_HDR_SIZE)) &&
             (udesc == NULL ||
-             (IS_EMPTY_STR(comm->desc) && IS_EMPTY_STR(udesc)) ||
-             !u32_strcmp(comm->desc, udesc)))
+             (IS_EMPTY_STR(comm->udesc) && IS_EMPTY_STR(udesc)) ||
+             !u32_strcmp(comm->udesc, udesc)))
         {
             /* a matching frame found */
             return comm;
@@ -170,22 +170,22 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
 
     /* convert comment description */
     {
-        const u32_char *u32_desc = (comm->desc) ? comm->desc : U32_EMPTY_STR;
+        const u32_char *udesc = (comm->udesc) ? comm->udesc : U32_EMPTY_STR;
 
         /* desc shall include null-terminator */
         iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                    (const char *)u32_desc,
-                    (u32_strlen(u32_desc) + 1)*sizeof(u32_char),
+                    (const char *)udesc,
+                    (u32_strlen(udesc) + 1) * sizeof(u32_char),
                     &desc, &desc_size);
     }
 
     /* convert comment text */
-    if (comm->text)
+    if (comm->utext)
     {
         /* text shall not include null-terminator */
         iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                    (char *)comm->text,
-                    u32_strlen(comm->text)*sizeof(u32_char),
+                    (char *)comm->utext,
+                    u32_strlen(comm->utext) * sizeof(u32_char),
                     &text, &text_size);
     }
 
@@ -236,7 +236,7 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, const char *lang,
     {
         do
         {
-            u32_xstrupd(&comm->text, utext);
+            u32_xstrupd(&comm->utext, utext);
             ret = pack_id3v2_frm_comm(comm, &tmp_frame,
                                       tag->header.version);
 
@@ -260,8 +260,8 @@ int update_id3v2_frm_comm(struct id3v2_tag *tag, const char *lang,
         struct id3v2_frm_comm new_comm;
 
         memcpy(new_comm.lang, lang, ID3V2_LANG_HDR_SIZE);
-        new_comm.desc = (u32_char *)udesc;
-        new_comm.text = (u32_char *)utext;
+        new_comm.udesc = (u32_char *)udesc;
+        new_comm.utext = (u32_char *)utext;
 
         ret = pack_id3v2_frm_comm(&new_comm, &tmp_frame, tag->header.version);
 

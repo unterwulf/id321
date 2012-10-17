@@ -20,6 +20,6 @@ void update_id3v2_tag_text_frame(struct id3v2_tag *tag,
                                  const char *data, size_t size);
 
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
-                                 u32_char **data, size_t *datasize);
+                                 u32_char **udata, size_t *udatasize);
 
 #endif /* TEXTFRAME_H */

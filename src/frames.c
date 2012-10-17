@@ -13,9 +13,9 @@
 #include "u32_char.h"
 
 static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
-                          u32_char *buf, size_t size)
+                          u32_char *ubuf, size_t usize)
 {
-    size_t reqsize;
+    size_t ureqsize;
     struct id3v2_frm_comm *comm;
     int ret;
 
@@ -24,51 +24,51 @@ static int get_comm_frame(unsigned minor, const struct id3v2_frame *frame,
     if (ret != 0)
         return ret;
 
-    /* reserve six extra chars for " []: " and null-terminator */
-    reqsize = (comm->desc ? u32_strlen(comm->desc) : 0)
-              + (comm->text ? u32_strlen(comm->text) : 0)
-              + ID3V2_LANG_HDR_SIZE + 6;
+    /* Reserve six extra u32_chars for " []: " and nul-terminator. */
+    ureqsize = (comm->udesc ? u32_strlen(comm->udesc) : 0)
+               + (comm->utext ? u32_strlen(comm->utext) : 0)
+               + ID3V2_LANG_HDR_SIZE + 6;
 
-    if (reqsize <= size)
+    if (ureqsize <= usize)
     {
-        u32_char u32_lang[ID3V2_LANG_HDR_SIZE] = { };
-        u32_char u32_space_str[] = { U32_CHAR(' '), U32_CHAR('\0') };
+        u32_char ulang[ID3V2_LANG_HDR_SIZE] = { };
+        u32_char uspace[] = { U32_CHAR(' '), U32_CHAR('\0') };
 
         iconvordie(U32_CHAR_CODESET, ISO_8859_1_CODESET,
                    comm->lang, ID3V2_LANG_HDR_SIZE,
-                   (char *)u32_lang, sizeof(u32_lang));
+                   (char *)ulang, sizeof(ulang));
 
-        u32_snprintf(buf, size, "%ls%ls[%.*ls]: %ls",
-                     comm->desc ? comm->desc : U32_EMPTY_STR,
-                     comm->desc && comm->desc[0] ? u32_space_str : U32_EMPTY_STR,
-                     ID3V2_LANG_HDR_SIZE, u32_lang,
-                     comm->text ? comm->text : U32_EMPTY_STR);
+        u32_snprintf(ubuf, usize, "%ls%ls[%.*ls]: %ls",
+                     comm->udesc ? comm->udesc : U32_EMPTY_STR,
+                     comm->udesc && comm->udesc[0] ? uspace : U32_EMPTY_STR,
+                     ID3V2_LANG_HDR_SIZE, ulang,
+                     comm->utext ? comm->utext : U32_EMPTY_STR);
     }
 
     free_id3v2_frm_comm(comm);
-    return reqsize;
+    return ureqsize;
 }
 
 static int get_v22_comm_frame(const struct id3v2_frame *frame,
-                              u32_char *buf, size_t size)
+                              u32_char *ubuf, size_t usize)
 {
-    return get_comm_frame(2, frame, buf, size);
+    return get_comm_frame(2, frame, ubuf, usize);
 }
 
 static int get_v23_comm_frame(const struct id3v2_frame *frame,
-                              u32_char *buf, size_t size)
+                              u32_char *ubuf, size_t usize)
 {
-    return get_comm_frame(3, frame, buf, size);
+    return get_comm_frame(3, frame, ubuf, usize);
 }
 
 static int get_v24_comm_frame(const struct id3v2_frame *frame,
-                              u32_char *buf, size_t size)
+                              u32_char *ubuf, size_t usize)
 {
-    return get_comm_frame(4, frame, buf, size);
+    return get_comm_frame(4, frame, ubuf, usize);
 }
 
 static int get_str_frame(unsigned minor, const struct id3v2_frame *frame,
-                         u32_char *buf, size_t size)
+                         u32_char *ubuf, size_t usize)
 {
     const char *from_enc;
 
@@ -87,26 +87,27 @@ static int get_str_frame(unsigned minor, const struct id3v2_frame *frame,
     return iconvordie(U32_CHAR_CODESET, from_enc,
                       frame->data + ID3V2_ENC_HDR_SIZE,
                       frame->size - ID3V2_ENC_HDR_SIZE,
-                      (char *)buf, size*sizeof(u32_char))
+                      (char *)ubuf, usize * sizeof(u32_char))
            / sizeof(u32_char);
 }
 
 static int get_v22_str_frame(const struct id3v2_frame *frame,
-                             u32_char *buf, size_t size)
+                             u32_char *ubuf, size_t usize)
 {
-    return get_str_frame(2, frame, buf, size);
+    return get_str_frame(2, frame, ubuf, usize);
 }
 
 static int get_v23_str_frame(const struct id3v2_frame *frame,
-                             u32_char *buf, size_t size)
+                             u32_char *ubuf, size_t usize)
 {
-    return get_str_frame(3, frame, buf, size);
+    return get_str_frame(3, frame, ubuf, usize);
 }
 
 static int get_v24_str_frame(const struct id3v2_frame *frame,
-                             u32_char *buf, size_t size)
+                             u32_char *ubuf, size_t usize)
 {
-    int u32_size = get_str_frame(4, frame, buf, size);
+    int utotalsize = get_str_frame(4, frame, ubuf, usize);
+    size_t i;
 
     /* The ID3v2.4 informal standard says:
      *
@@ -117,34 +118,29 @@ static int get_v24_str_frame(const struct id3v2_frame *frame,
      * To print such lists as plain text we will just replace all termination
      * codes with '/', so they will look just like ID3v2.3 values. */
 
-    if (u32_size > 0)
-    {
-        size_t i;
+    if (utotalsize < usize)
+        usize = utotalsize;
 
-        if (u32_size < size)
-            size = u32_size;
+    for (i = 0; i < usize; i++)
+        if (ubuf[i] == U32_CHAR('\0'))
+            ubuf[i] = U32_CHAR('/');
 
-        for (i = 0; i < size; i++)
-            if (buf[i] == U32_CHAR('\0'))
-                buf[i] = U32_CHAR('/');
-    }
-
-    return u32_size;
+    return utotalsize;
 }
 
 static int get_url_frame(const struct id3v2_frame *frame,
-                         u32_char *buf, size_t size)
+                         u32_char *ubuf, size_t usize)
 {
     size_t slen = strnlen(frame->data, frame->size);
 
     return iconvordie(U32_CHAR_CODESET, g_config.enc_iso8859_1,
                       frame->data, slen,
-                      (char *)buf, size*sizeof(u32_char))
+                      (char *)ubuf, usize * sizeof(u32_char))
            / sizeof(u32_char);
 }
 
 static int get_hex_frame(const struct id3v2_frame *frame,
-                         u32_char *buf, size_t size)
+                         u32_char *ubuf, size_t usize)
 {
     return 0;
 }
@@ -388,8 +384,8 @@ id3_frame_handler_table_t v24_frames[] = {
  *
  * @tag - tag which frame belongs to
  * @frame - frame
- * @buf - output buffer
- * @size - output buffer size
+ * @ubuf - output buffer
+ * @usize - output buffer size in u32_chars
  *
  * Returns -EINVAL if the tag has unsupported version,
  *         -ENOSYS if parser for the frame is not implemented,
@@ -398,8 +394,9 @@ id3_frame_handler_table_t v24_frames[] = {
  *         if @buf was large enough.
  */
 
-int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
-                   u32_char *buf, size_t size)
+int get_frame_data(const struct id3v2_tag *tag,
+                   const struct id3v2_frame *frame,
+                   u32_char *ubuf, size_t usize)
 {
     id3_frame_handler_table_t *table = NULL;
     size_t idlen = tag->header.version == 2 ? 3 : 4;
@@ -417,7 +414,7 @@ int get_frame_data(const struct id3v2_tag *tag, const struct id3v2_frame *frame,
         if (!memcmp(table->id, frame->id, idlen))
         {
             if (table->get_data)
-                return table->get_data(frame, buf, size);
+                return table->get_data(frame, ubuf, usize);
             else
                 return -ENOSYS;
         }

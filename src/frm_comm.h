@@ -8,8 +8,8 @@
 struct id3v2_frm_comm
 {
     char lang[ID3V2_LANG_HDR_SIZE];
-    u32_char *desc;
-    u32_char *text;
+    u32_char *udesc;
+    u32_char *utext;
 };
 
 struct id3v2_frm_comm *new_id3v2_frm_comm(void);

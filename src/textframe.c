@@ -151,7 +151,7 @@ void update_id3v2_tag_text_frame(struct id3v2_tag *tag,
 }
 
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
-                                 u32_char **data, size_t *datasize)
+                                 u32_char **udata, size_t *udatasize)
 {
     const char *frame_id = get_frame_id_by_alias(alias, tag->header.version);
     struct id3v2_frame *frame = peek_frame(&tag->frame_head, frame_id);
@@ -171,10 +171,10 @@ int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,
 
     iconv_alloc(U32_CHAR_CODESET, frame_enc_name,
                 frame->data + 1, frame->size - 1,
-                (void *)data, datasize);
+                (void *)udata, udatasize);
 
-    if (datasize)
-        *datasize /= sizeof(u32_char);
+    if (udatasize)
+        *udatasize /= sizeof(u32_char);
 
     return 0;
 }

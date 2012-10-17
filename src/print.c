@@ -19,7 +19,7 @@
 #include "xalloc.h"
 
 extern void printfmt(const struct print_fmt *pf, char *str);
-extern void u32_printfmt(const struct print_fmt *pf, u32_char *str);
+extern void u32_printfmt(const struct print_fmt *pf, u32_char *ustr);
 
 static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
                              struct print_fmt *pfmt)
@@ -37,27 +37,27 @@ static void print_id3v1_data(char alias, const struct id3v1_tag *tag,
     }
     else
     {
-        u32_char *u32_str;
+        u32_char *ustr;
         iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                     buf, strlen(buf),
-                    (void *)&u32_str, NULL);
-        u32_printfmt(pfmt, u32_str);
-        free(u32_str);
+                    (void *)&ustr, NULL);
+        u32_printfmt(pfmt, ustr);
+        free(ustr);
     }
 }
 
 static void print_id3v1_tag_field(const char *name, const char *value)
 {
-    u32_char *u32_str = NULL;
+    u32_char *ustr = NULL;
 
     iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                 value, strlen(value),
-                (void *)&u32_str, NULL);
+                (void *)&ustr, NULL);
 
     printf("%s: ", name);
-    u32_printfmt(NULL, u32_str);
-    free(u32_str);
+    u32_printfmt(NULL, ustr);
     putchar('\n');
+    free(ustr);
 }
 
 static void print_id3v1_tag(const struct id3v1_tag *tag)
@@ -100,12 +100,12 @@ static void print_id3v2_tag(const struct id3v2_tag *tag)
 
         if (len > 0)
         {
-            u32_char *u32_str = xmalloc(sizeof(u32_str)*(len+1));
-            get_frame_data(tag, frame, u32_str, len);
-            u32_str[len] = U32_CHAR('\0');
-            u32_printfmt(NULL, u32_str);
+            u32_char *ustr = xmalloc(sizeof(u32_char) * (len + 1));
+            get_frame_data(tag, frame, ustr, len);
+            ustr[len] = U32_CHAR('\0');
+            u32_printfmt(NULL, ustr);
             putchar('\n');
-            free(u32_str);
+            free(ustr);
         }
         else if (len == 0)
             putchar('\n');
@@ -256,11 +256,11 @@ static void print_tag(const struct id3v1_tag *tag1,
 
                     if (len > 0)
                     {
-                        u32_char *u32_str = xmalloc(sizeof(u32_char)*(len+1));
-                        get_frame_data(tag2, frame, u32_str, len);
-                        u32_str[len] = U32_CHAR('\0');
-                        u32_printfmt(&pfmt, u32_str);
-                        free(u32_str);
+                        u32_char *ustr = xmalloc(sizeof(u32_char) * (len + 1));
+                        get_frame_data(tag2, frame, ustr, len);
+                        ustr[len] = U32_CHAR('\0');
+                        u32_printfmt(&pfmt, ustr);
+                        free(ustr);
                     }
 
                     frame = NULL;

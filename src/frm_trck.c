@@ -6,18 +6,18 @@
 
 int get_id3v2_tag_trackno(const struct id3v2_tag *tag)
 {
-    u32_char *u32_data;
+    u32_char *udata;
     long trackno;
     int ret;
 
-    ret = get_text_frame_data_by_alias(tag, 'n', &u32_data, NULL);
+    ret = get_text_frame_data_by_alias(tag, 'n', &udata, NULL);
 
     if (ret != 0)
         return ret;
 
     errno = 0;
-    trackno = u32_strtol(u32_data, NULL, 10);
-    free(u32_data);
+    trackno = u32_strtol(udata, NULL, 10);
+    free(udata);
 
     if (errno != 0 || trackno < 0)
         return -EILSEQ;

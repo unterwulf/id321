@@ -65,12 +65,12 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 
             if (ret == 0)
             {
-                if (comm->text)
+                if (comm->utext)
                 {
                     memset(tag1->comment, '\0', sizeof(tag1->comment));
                     iconvordie(g_config.enc_v1, U32_CHAR_CODESET,
-                               (char *)comm->text,
-                               u32_strlen(comm->text)*sizeof(u32_char),
+                               (char *)comm->utext,
+                               u32_strlen(comm->utext) * sizeof(u32_char),
                                tag1->comment, sizeof(tag1->comment) - 1);
                 }
 
@@ -95,21 +95,21 @@ static int sync_v1_with_v2(struct id3v1_tag *tag1, const struct id3v2_tag *tag2)
 
     /* sync genre_id and genre_str */
     {
-        u32_char *genre_u32_str = NULL;
-        int genre_id = get_id3v2_tag_genre(tag2, &genre_u32_str);
+        u32_char *genre_ustr = NULL;
+        int genre_id = get_id3v2_tag_genre(tag2, &genre_ustr);
 
         if (genre_id >= 0)
         {
             tag1->genre_id = genre_id;
 
-            if (genre_u32_str)
+            if (genre_ustr)
             {
                 memset(tag1->genre_str, '\0', sizeof(tag1->genre_str));
                 iconvordie(g_config.enc_v1, U32_CHAR_CODESET,
-                           (char *)genre_u32_str,
-                           u32_strlen(genre_u32_str)*sizeof(u32_char),
+                           (char *)genre_ustr,
+                           u32_strlen(genre_ustr)*sizeof(u32_char),
                            tag1->genre_str, sizeof(tag1->genre_str) - 1);
-                free(genre_u32_str);
+                free(genre_ustr);
             }
         }
         else if (genre_id == -EILSEQ)
@@ -201,17 +201,17 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
     /* sync genre */
     {
-        u32_char *genre_u32_str = NULL;
+        u32_char *genre_ustr = NULL;
 
         if (!IS_EMPTY_STR(tag1->genre_str))
         {
             iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                         tag1->genre_str, strlen(tag1->genre_str),
-                        (void *)&genre_u32_str, NULL);
+                        (void *)&genre_ustr, NULL);
         }
 
-        set_id3v2_tag_genre(tag2, tag1->genre_id, genre_u32_str);
-        free(genre_u32_str);
+        set_id3v2_tag_genre(tag2, tag1->genre_id, genre_ustr);
+        free(genre_ustr);
     }
 
     /* TODO: sync starttime and endtime */

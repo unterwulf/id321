@@ -7,6 +7,6 @@
 
 int get_frame_data(const struct id3v2_tag *tag,
                    const struct id3v2_frame *frame,
-                   u32_char *buf, size_t size);
+                   u32_char *ubuf, size_t usize);
 
 #endif /* FRAMES_H */

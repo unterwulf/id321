@@ -196,7 +196,7 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
     }
     else
     {
-        u32_char *genre_u32_str = NULL;
+        u32_char *genre_ustr = NULL;
         uint8_t genre_id = (g_config.options & ID321_OPT_SET_GENRE_ID)
                            ? g_config.genre_id : ID3V1_UNKNOWN_GENRE;
 
@@ -204,11 +204,11 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
         {
             iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
                         g_config.genre_str, strlen(g_config.genre_str),
-                        (void *)&genre_u32_str, NULL);
+                        (void *)&genre_ustr, NULL);
         }
 
-        set_id3v2_tag_genre(tag, genre_id, genre_u32_str);
-        free(genre_u32_str);
+        set_id3v2_tag_genre(tag, genre_id, genre_ustr);
+        free(genre_ustr);
     }
 
     /* modify arbitrary frame */
