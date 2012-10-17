@@ -10,6 +10,8 @@
 #include "u32_char.h"
 #include "xalloc.h"
 
+const u32_char g_u32_empty_str[] = { U32_CHAR('\0') };
+
 int32_t u32_strcmp(const u32_char *s1, const u32_char *s2)
 {
     for (; *s1 != U32_CHAR('\0') && *s1 == *s2; s1++, s2++)
@@ -44,6 +46,14 @@ u32_char *u32_xstrdup(const u32_char *str)
     size_t len = u32_strlen(str);
     u32_char *dup = xmalloc((len + 1)*sizeof(u32_char));
     return u32_strcpy(dup, str);
+}
+
+void u32_xstrupd(u32_char **dst, const u32_char *src)
+{
+    if (*dst == NULL)
+        free(*dst);
+
+    *dst = u32_xstrdup(src);
 }
 
 size_t u32_strlen(const u32_char *str)

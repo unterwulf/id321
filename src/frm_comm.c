@@ -114,50 +114,37 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame, unsigned minor,
     return 0;
 }
 
-int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
-                             struct id3v2_frame **frame,
-                             struct id3v2_frm_comm *comm, uint8_t flags)
+static struct id3v2_frm_comm *query_next_frm_comm(
+                                    const struct id3v2_tag *tag,
+                                    struct id3v2_frame **frame,
+                                    const char *lang,
+                                    const u32_char *udesc)
 {
     const char *frame_id = get_frame_id_by_alias('c', tag->header.version);
-    struct id3v2_frm_comm *tmp_comm;
-    int ret;
 
     while ((*frame = peek_next_frame(&tag->frame_head, frame_id, *frame)))
     {
-        ret = unpack_id3v2_frm_comm(*frame, tag->header.version, &tmp_comm);
+        struct id3v2_frm_comm *comm;
+        int ret = unpack_id3v2_frm_comm(*frame, tag->header.version, &comm);
 
         if (ret == -EILSEQ)
             continue; /* just skip malformed frame */
         else if (ret != 0)
-            return ret; /* something bad happend */
+            return NULL; /* something bad happend */
 
-        if (flags & ID321_OPT_ANY_COMM_LANG)
-            memcpy(comm->lang, tmp_comm->lang, ID3V2_LANG_HDR_SIZE);
-
-        if (flags & ID321_OPT_ANY_COMM_DESC)
+        if ((lang == NULL || !memcmp(comm->lang, lang, ID3V2_LANG_HDR_SIZE)) &&
+            (udesc == NULL ||
+             (IS_EMPTY_STR(comm->desc) && IS_EMPTY_STR(udesc)) ||
+             !u32_strcmp(comm->desc, udesc)))
         {
-            free(comm->desc);
-            if (tmp_comm->desc)
-                comm->desc = u32_xstrdup(tmp_comm->desc);
-            else
-                comm->desc = NULL;
-        }
-
-        if (!memcmp(tmp_comm->lang, comm->lang, ID3V2_LANG_HDR_SIZE)
-            && ((IS_EMPTY_STR(tmp_comm->desc)
-                 && IS_EMPTY_STR(comm->desc))
-                || (tmp_comm->desc && comm->desc
-                        && !u32_strcmp(tmp_comm->desc, comm->desc))))
-        {
-            free_id3v2_frm_comm(tmp_comm);
             /* a matching frame found */
-            return 0;
+            return comm;
         }
 
-        free_id3v2_frm_comm(tmp_comm);
+        free_id3v2_frm_comm(comm);
     }
 
-    return -ENOENT;
+    return NULL;
 }
 
 static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
@@ -225,49 +212,68 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
     return 0;
 }
 
-int update_id3v2_frm_comm(struct id3v2_tag *tag, struct id3v2_frm_comm *comm,
-                          uint8_t flags)
+int update_id3v2_frm_comm(struct id3v2_tag *tag, const char *lang,
+                          const u32_char *udesc, const u32_char *utext)
 {
-    struct id3v2_frame *old_frame = &tag->frame_head;
-    struct id3v2_frame *new_frame;
-    int ret;
+    struct id3v2_frame *next_frame = &tag->frame_head;
+    struct id3v2_frame *tmp_frame;
+    struct id3v2_frm_comm *comm;
+    int ret = 0;
 
-    ret = peek_next_id3v2_frm_comm(tag, &old_frame, comm, flags);
-
-    if (ret == -ENOENT && !flags && !IS_EMPTY_STR(comm->text))
+    /* If utext is empty string delete all matching frames. */
+    if (IS_EMPTY_STR(utext))
     {
-        ret = pack_id3v2_frm_comm(comm, &new_frame, tag->header.version);
+        while (comm = query_next_frm_comm(tag, &next_frame, lang, udesc))
+        {
+            tmp_frame = next_frame->prev;
+            unlink_frame(next_frame);
+            free_frame(next_frame);
+            free_id3v2_frm_comm(comm);
+            next_frame = tmp_frame;
+        }
+    }
+    /* If there are matching frames update contents of all of them. */
+    else if (comm = query_next_frm_comm(tag, &next_frame, lang, udesc))
+    {
+        do
+        {
+            u32_xstrupd(&comm->text, utext);
+            ret = pack_id3v2_frm_comm(comm, &tmp_frame,
+                                      tag->header.version);
+
+            if (ret != 0)
+            {
+                free_id3v2_frm_comm(comm);
+                return ret;
+            }
+
+            insert_frame_before(next_frame, tmp_frame);
+            unlink_frame(next_frame);
+            free_frame(next_frame);
+            free_id3v2_frm_comm(comm);
+            next_frame = tmp_frame;
+        } while (comm = query_next_frm_comm(tag, &next_frame, lang, udesc));
+    }
+    /* If no matching frame found and all parameters have been specified
+     * create new frame and append it to the tag. */
+    else if (lang != NULL && udesc != NULL)
+    {
+        struct id3v2_frm_comm new_comm;
+
+        memcpy(new_comm.lang, lang, ID3V2_LANG_HDR_SIZE);
+        new_comm.desc = (u32_char *)udesc;
+        new_comm.text = (u32_char *)utext;
+
+        ret = pack_id3v2_frm_comm(&new_comm, &tmp_frame, tag->header.version);
 
         if (ret != 0)
             return ret;
 
-        append_frame(&tag->frame_head, new_frame);
+        append_frame(&tag->frame_head, tmp_frame);
     }
-    else if (ret == 0)
+    else
     {
-        do
-        {
-            if (!IS_EMPTY_STR(comm->text))
-            {
-                ret = pack_id3v2_frm_comm(comm, &new_frame,
-                                          tag->header.version);
-
-                if (ret != 0)
-                    return ret;
-
-                insert_frame_before(old_frame, new_frame);
-            }
-            else
-                new_frame = old_frame->prev;
-
-            unlink_frame(old_frame);
-            free_frame(old_frame);
-            old_frame = new_frame;
-        } while ((ret = peek_next_id3v2_frm_comm(tag, &old_frame, comm, flags))
-                    == 0);
-
-        if (ret == -ENOENT)
-            return 0; /* it is OK if there is no more matching frames */
+        ret = -ENOENT;
     }
 
     return ret;

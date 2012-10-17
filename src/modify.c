@@ -163,27 +163,10 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
     if (g_config.comment)
     {
         int ret;
-        struct id3v2_frm_comm *comm = new_id3v2_frm_comm();
+        u32_char *udesc = locale_to_u32_alloc(g_config.comment_desc);
+        u32_char *utext = locale_to_u32_alloc(g_config.comment);
 
-        if (g_config.comment_lang)
-            memcpy(comm->lang, g_config.comment_lang, ID3V2_LANG_HDR_SIZE);
-
-        if (!IS_EMPTY_STR(g_config.comment))
-        {
-            iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
-                        g_config.comment, strlen(g_config.comment),
-                        (void *)&comm->text, NULL);
-        }
-
-        if (!IS_EMPTY_STR(g_config.comment_desc))
-        {
-            iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
-                    g_config.comment_desc, strlen(g_config.comment_desc),
-                    (void *)&comm->desc, NULL);
-        }
-
-        ret = update_id3v2_frm_comm(tag, comm, g_config.options &
-                 (ID321_OPT_ANY_COMM_LANG | ID321_OPT_ANY_COMM_DESC));
+        ret = update_id3v2_frm_comm(tag, g_config.comment_lang, udesc, utext);
 
         if (ret == -ENOENT)
         {
@@ -191,7 +174,9 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
             ret = 0;
         }
 
-        free_id3v2_frm_comm(comm);
+        free(utext);
+        free(udesc); /* may be null pointer, but it is ok to free(NULL) */
+
         if (ret != 0)
             return ret;
     }

@@ -16,10 +16,15 @@ typedef uint32_t u32_char;
 
 #define U32_CHAR(c) ((u32_char) (c))
 
+#define U32_EMPTY_STR (g_u32_empty_str)
+
+extern const u32_char g_u32_empty_str[];
+
 int32_t u32_strcmp(const u32_char *s1, const u32_char *s2);
 u32_char *u32_strcpy(u32_char *dst, const u32_char *src);
 u32_char *u32_strncpy(u32_char *dst, const u32_char *src, size_t size);
 u32_char *u32_xstrdup(const u32_char *str);
+void u32_xstrupd(u32_char **dst, const u32_char *src);
 size_t u32_strlen(const u32_char *str);
 size_t u32_strnlen(const u32_char *str, size_t maxlen);
 long u32_strtol(const u32_char *str, u32_char **endptr, int base);

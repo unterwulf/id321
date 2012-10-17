@@ -20,13 +20,7 @@ int unpack_id3v2_frm_comm(const struct id3v2_frame *frame,
                           unsigned minor,
                           struct id3v2_frm_comm **comm);
 
-int peek_next_id3v2_frm_comm(const struct id3v2_tag *tag,
-                             struct id3v2_frame **frame,
-                             struct id3v2_frm_comm *comm,
-                             uint8_t flags);
-
-int update_id3v2_frm_comm(struct id3v2_tag *tag,
-                          struct id3v2_frm_comm *comm,
-                          uint8_t flags);
+int update_id3v2_frm_comm(struct id3v2_tag *tag, const char *lang,
+                          const u32_char *udesc, const u32_char *utext);
 
 #endif /* FRM_COMM_H */

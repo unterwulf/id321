@@ -9,8 +9,6 @@
 #define ID321_OPT_CHANGE_SIZE                0x8
 #define ID321_OPT_EXPERT                     0x10
 #define ID321_OPT_NO_UNSYNC                  0x20
-#define ID321_OPT_ANY_COMM_LANG              0x40
-#define ID321_OPT_ANY_COMM_DESC              0x80
 #define ID321_OPT_RM_FRAME                   0x100
 #define ID321_OPT_BIN_FRAME                  0x200
 #define ID321_OPT_CREATE_FRAME               0x400

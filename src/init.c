@@ -187,17 +187,16 @@ static inline int parse_comment_optarg(char *arg)
     size_t argc;
     size_t i;
     char *stack[COM_OPT_ARG_CNT];
-    struct
+    const char **conf[COM_OPT_ARG_CNT] =
     {
-        const char **value;
-        unsigned int flag;
-    }
-    conf[COM_OPT_ARG_CNT] =
-    {
-        { &g_config.comment,      0 },
-        { &g_config.comment_desc, ID321_OPT_ANY_COMM_DESC },
-        { &g_config.comment_lang, ID321_OPT_ANY_COMM_LANG }
+        &g_config.comment,
+        &g_config.comment_desc,
+        &g_config.comment_lang
     };
+
+    /* default values */
+    g_config.comment_desc = "";
+    g_config.comment_lang = "XXX";
 
     /* at first, fill stack with all values available */
     argc = split_colon_separated_list(arg, stack, COM_OPT_ARG_CNT);
@@ -205,12 +204,12 @@ static inline int parse_comment_optarg(char *arg)
     /* then, propagate the collected values to the proper fields */
     for (i = 0; argc > 0; argc--, i++)
     {
-        if (!strcmp(stack[argc-1], "*") && conf[i].flag)
-            g_config.options |= conf[i].flag;
+        if (!strcmp(stack[argc-1], "*") && conf[i] != &g_config.comment)
+            *conf[i] = NULL;
         else
         {
             unescape_chars(stack[argc-1], ":*\\", '\\');
-            *conf[i].value = stack[argc-1];
+            *conf[i] = stack[argc-1];
         }
     }
 

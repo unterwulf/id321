@@ -319,6 +319,20 @@ void iconv_alloc(const char *tocode, const char *fromcode,
         *dstsize = out - buf;
 }
 
+u32_char *locale_to_u32_alloc(const char *str)
+{
+    u32_char *ustr = NULL;
+
+    if (str)
+    {
+        iconv_alloc(U32_CHAR_CODESET, locale_encoding(),
+                str, strlen(str),
+                (void *)&ustr, NULL);
+    }
+
+    return ustr;
+}
+
 int u32_snprintf_alloc(u32_char **u32_str, const char *fmt, ...)
 {
     u32_char *u32_data;

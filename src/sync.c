@@ -186,14 +186,14 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
     if (tag1->comment[0] != '\0')
     {
         int ret;
-        struct id3v2_frm_comm *comm = new_id3v2_frm_comm();
+        u32_char *utext;
 
         iconv_alloc(U32_CHAR_CODESET, g_config.enc_v1,
                     tag1->comment, strlen(tag1->comment),
-                    (void *)&comm->text, NULL);
+                    (void *)&utext, NULL);
 
-        ret = update_id3v2_frm_comm(tag2, comm, 0);
-        free_id3v2_frm_comm(comm);
+        ret = update_id3v2_frm_comm(tag2, "XXX", U32_EMPTY_STR, utext);
+        free(utext);
 
         if (ret != 0)
             return ret;
