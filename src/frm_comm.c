@@ -170,12 +170,11 @@ static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
 
     /* convert comment description */
     {
-        u32_char u32_empty_str[] = { U32_CHAR('\0') };
-        u32_char *u32_desc = (comm->desc) ? comm->desc : u32_empty_str;
+        const u32_char *u32_desc = (comm->desc) ? comm->desc : U32_EMPTY_STR;
 
         /* desc shall include null-terminator */
         iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                    (char *)u32_desc,
+                    (const char *)u32_desc,
                     (u32_strlen(u32_desc) + 1)*sizeof(u32_char),
                     &desc, &desc_size);
     }

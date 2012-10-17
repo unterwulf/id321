@@ -74,12 +74,11 @@ void set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
     const char *frame_id = get_frame_id_by_alias('g', tag->header.version);
     u32_char   *u32_data;
     int         u32_size;
-    u32_char    u32_empty_str[] = { U32_CHAR('\0') };
 
     if (genre_id != ID3V1_UNKNOWN_GENRE)
     {
         if (!genre_u32_str)
-            genre_u32_str = u32_empty_str;
+            genre_u32_str = U32_EMPTY_STR;
 
         switch (tag->header.version)
         {
