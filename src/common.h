@@ -8,6 +8,7 @@
 #include "params.h"
 #include "u32_char.h"
 
+#define ASCII_CODESET "ASCII"
 /* both GNU and Solaris iconv() understand this codeset name */
 #define ISO_8859_1_CODESET "ISO8859-1"
 
@@ -37,9 +38,9 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
                    const char *src, size_t srcsize,
                    char *dst, size_t dstsize);
 
-void iconv_alloc(const char *tocode, const char *fromcode,
-                 const char *src, size_t srcsize,
-                 char **dst, size_t *dstsize);
+int iconv_alloc(const char *tocode, const char *fromcode,
+                const char *src, size_t srcsize,
+                char **dst, size_t *dstsize);
 
 u32_char *locale_to_u32_alloc(const char *str);
 int u32_snprintf_alloc(u32_char **ustr, const char *fmt, ...);

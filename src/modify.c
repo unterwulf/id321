@@ -79,36 +79,41 @@ static void modify_arbitrary_frame(struct id3v2_tag *tag,
     }
     else
     {
-        const char *frame_enc_name;
-        char frame_enc_byte;
         char *buf;
         size_t bufsize;
+        char frame_enc_byte = 0; /* all minor versions use 0 for ISO-8859-1 */
+        const char *frame_encoding = g_config.frame_enc;
 
-        if (g_config.frame_enc)
+        if (!frame_encoding)
         {
-            frame_enc_byte = get_id3v2_tag_encoding_byte(
-                    tag->header.version, g_config.frame_enc);
+            int nr_errors = iconv_alloc(ASCII_CODESET, locale_encoding(),
+                                        g_config.frame_data,
+                                        g_config.frame_size,
+                                        &buf, &bufsize);
+
+            if (nr_errors != 0)
+            {
+                free(buf);
+                frame_encoding = g_config.default_v2_enc;
+            }
+        }
+
+        if (frame_encoding)
+        {
+            /* Either explicit encoding was specified or data contains
+             * characters outside ASCII range. */
+            const char *tgt_encoding;
+            char frame_enc_byte = get_id3v2_frame_encoding(tag->header.version,
+                                                           frame_encoding,
+                                                           &tgt_encoding);
 
             if (frame_enc_byte == ID3V2_UNSUPPORTED_ENCODING)
-            {
-                print(OS_WARN,
-                        "ID3v2.%d tag has no support of encoding '%s'",
-                        tag->header.version, g_config.frame_enc);
                 return;
-            }
 
-            frame_enc_name = g_config.frame_enc;
+            iconv_alloc(tgt_encoding, locale_encoding(),
+                        g_config.frame_data, g_config.frame_size,
+                        &buf, &bufsize);
         }
-        else
-        {
-            frame_enc_byte = g_config.v2_def_encs[tag->header.version];
-            frame_enc_name = get_id3v2_tag_encoding_name(
-                    tag->header.version, frame_enc_byte);
-        }
-
-        iconv_alloc(frame_enc_name, locale_encoding(),
-                    g_config.frame_data, g_config.frame_size,
-                    &buf, &bufsize);
 
         update_id3v2_tag_text_frame_payload(
                 *frame, frame_enc_byte, buf, bufsize);
@@ -152,9 +157,12 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
             }
             else
             {
-                update_id3v2_tag_text_frame(
+                int ret = update_id3v2_tag_text_frame(
                         tag, frame_id, locale_encoding(),
                         data, data_sz);
+
+                if (ret != 0)
+                    return ret;
             }
         }
     }
@@ -207,8 +215,11 @@ static int modify_v2_tag(const char *filename, struct id3v2_tag *tag)
                         (void *)&genre_ustr, NULL);
         }
 
-        set_id3v2_tag_genre(tag, genre_id, genre_ustr);
+        int ret = set_id3v2_tag_genre(tag, genre_id, genre_ustr);
         free(genre_ustr);
+
+        if (ret != 0)
+            return ret;
     }
 
     /* modify arbitrary frame */

@@ -6,6 +6,7 @@
 #include "common.h"
 #include "framelist.h"
 #include "id3v2.h"
+#include "output.h"
 #include "params.h"
 #include "u32_char.h"
 #include "xalloc.h"
@@ -58,7 +59,7 @@ const char *get_id3v2_tag_encoding_name(unsigned minor, char enc)
 
 char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name)
 {
-    if (!strcasecmp(enc_name, g_config.enc_iso8859_1))
+    if (!strcasecmp(enc_name, "ISO-8859-1"))
     {
         switch (minor)
         {
@@ -67,7 +68,7 @@ char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name)
             case 4: return ID3V24_STR_ISO88591;
         }
     }
-    else if (!strcasecmp(enc_name, g_config.enc_ucs2))
+    else if (!strcasecmp(enc_name, "UCS-2"))
     {
         switch (minor)
         {
@@ -75,21 +76,21 @@ char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name)
             case 3: return ID3V23_STR_UCS2;
         }
     }
-    else if (!strcasecmp(enc_name, g_config.enc_utf16))
+    else if (!strcasecmp(enc_name, "UTF-16"))
     {
         switch (minor)
         {
             case 4: return ID3V24_STR_UTF16;
         }
     }
-    else if (!strcasecmp(enc_name, g_config.enc_utf16be))
+    else if (!strcasecmp(enc_name, "UTF-16BE"))
     {
         switch (minor)
         {
             case 4: return ID3V24_STR_UTF16BE;
         }
     }
-    else if (!strcasecmp(enc_name, g_config.enc_utf8))
+    else if (!strcasecmp(enc_name, "UTF-8"))
     {
         switch (minor)
         {
@@ -98,6 +99,27 @@ char get_id3v2_tag_encoding_byte(unsigned minor, const char *enc_name)
     }
 
     return ID3V2_UNSUPPORTED_ENCODING;
+}
+
+char get_id3v2_frame_encoding(uint8_t minor, const char *standard_encoding,
+                              const char **actual_encoding)
+{
+    if (!standard_encoding)
+        standard_encoding = (minor == 4) ? "UTF-8" : "UCS-2";
+
+    char frame_enc_byte = get_id3v2_tag_encoding_byte(minor, standard_encoding);
+
+    if (frame_enc_byte == ID3V2_UNSUPPORTED_ENCODING)
+    {
+        print(OS_WARN, "ID3v2.%d tag has no support of encoding '%s'",
+              minor, standard_encoding);
+    }
+    else
+    {
+        *actual_encoding = get_id3v2_tag_encoding_name(minor, frame_enc_byte);
+    }
+
+    return frame_enc_byte;
 }
 
 void update_id3v2_tag_text_frame_payload(struct id3v2_frame *frame,
@@ -128,26 +150,41 @@ static void update_id3v2_tag_text_frame_raw(struct id3v2_tag *tag,
     update_id3v2_tag_text_frame_payload(frame, frame_enc_byte, data, size);
 }
 
-void update_id3v2_tag_text_frame(struct id3v2_tag *tag,
-                                 const char *frame_id,
-                                 const char *encoding,
-                                 const char *data, size_t size)
+int update_id3v2_tag_text_frame(struct id3v2_tag *tag,
+                                const char *frame_id,
+                                const char *encoding,
+                                const char *data, size_t size)
 {
-    char frame_enc_byte = g_config.v2_def_encs[tag->header.version];
-    const char *frame_enc_name =
-        get_id3v2_tag_encoding_name(tag->header.version, frame_enc_byte);
-
     char *frame_data;
     size_t frame_data_sz;
+    char frame_enc_byte = 0; /* all minor versions use 0 for ISO-8859-1 */
 
-    iconv_alloc(frame_enc_name, encoding,
-                data, size,
-                &frame_data, &frame_data_sz);
+    int nr_errors = iconv_alloc(ASCII_CODESET, encoding,
+                                data, size,
+                                &frame_data, &frame_data_sz);
+
+    if (nr_errors != 0)
+    {
+        /* Data contains characters outside ASCII range. */
+        free(frame_data);
+        const char *tgt_encoding;
+        frame_enc_byte = get_id3v2_frame_encoding(tag->header.version,
+                                                  g_config.default_v2_enc,
+                                                  &tgt_encoding);
+
+        if (frame_enc_byte == ID3V2_UNSUPPORTED_ENCODING)
+            return -EINVAL;
+
+        iconv_alloc(tgt_encoding, encoding,
+                    data, size,
+                    &frame_data, &frame_data_sz);
+    }
 
     update_id3v2_tag_text_frame_raw(tag, frame_id, frame_enc_byte,
                                     frame_data, frame_data_sz);
 
     free(frame_data);
+    return 0;
 }
 
 int get_text_frame_data_by_alias(const struct id3v2_tag *tag, char alias,

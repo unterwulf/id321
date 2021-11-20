@@ -38,7 +38,7 @@ struct id321_config
     uint32_t        options;
     uint32_t        size;
     struct version  ver;
-    const char     *v2_def_encs;
+    const char     *default_v2_enc;
     const char     *fmtstr;
     const char     *enc_v1;
     const char     *enc_iso8859_1;

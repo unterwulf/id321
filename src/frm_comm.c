@@ -147,48 +147,69 @@ static struct id3v2_frm_comm *query_next_frm_comm(
     return NULL;
 }
 
-static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
-                               struct id3v2_frame **frame,
-                               unsigned minor)
+static int convert_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
+                                  const char *encoding,
+                                  char **desc, size_t *desc_size,
+                                  char **text, size_t *text_size)
 {
-    const char *frame_id = get_frame_id_by_alias('c', minor);
-    char frame_enc_byte;
-    const char *frame_enc_name;
-    char *desc;
-    char *text = NULL;
-    size_t desc_size;
-    size_t text_size = 0;
-    struct id3v2_frame *new_frame;
-
-    frame_enc_byte = g_config.v2_def_encs[minor];
-    frame_enc_name = get_id3v2_tag_encoding_name(minor, frame_enc_byte);
-
-    if (!frame_enc_name)
-        return -EINVAL;
-
-    new_frame = xcalloc(1, sizeof(struct id3v2_frame));
+    int nr_errors = 0;
 
     /* convert comment description */
-    {
-        const u32_char *udesc = (comm->udesc) ? comm->udesc : U32_EMPTY_STR;
+    const u32_char *udesc = (comm->udesc) ? comm->udesc : U32_EMPTY_STR;
 
-        /* desc shall include null-terminator */
-        iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                    (const char *)udesc,
-                    (u32_strlen(udesc) + 1) * sizeof(u32_char),
-                    &desc, &desc_size);
-    }
+    /* desc shall include null-terminator */
+    nr_errors += iconv_alloc(encoding, U32_CHAR_CODESET,
+                             (const char *)udesc,
+                             (u32_strlen(udesc) + 1) * sizeof(u32_char),
+                             desc, desc_size);
 
     /* convert comment text */
     if (comm->utext)
     {
         /* text shall not include null-terminator */
-        iconv_alloc(frame_enc_name, U32_CHAR_CODESET,
-                    (char *)comm->utext,
-                    u32_strlen(comm->utext) * sizeof(u32_char),
-                    &text, &text_size);
+        nr_errors += iconv_alloc(encoding, U32_CHAR_CODESET,
+                                 (char *)comm->utext,
+                                 u32_strlen(comm->utext) * sizeof(u32_char),
+                                 text, text_size);
     }
 
+    return nr_errors;
+}
+
+static int pack_id3v2_frm_comm(const struct id3v2_frm_comm *comm,
+                               struct id3v2_frame **frame,
+                               unsigned minor)
+{
+    const char *frame_id = get_frame_id_by_alias('c', minor);
+    char *desc;
+    char *text = NULL;
+    size_t desc_size;
+    size_t text_size = 0;
+    struct id3v2_frame *new_frame;
+    char frame_enc_byte = 0; /* all minor versions use 0 for ISO-8859-1 */
+
+    int nr_errors = convert_id3v2_frm_comm(comm, ASCII_CODESET,
+                                           &desc, &desc_size,
+                                           &text, &text_size);
+
+    if (nr_errors != 0)
+    {
+        /* Frame data contains characters outside ASCII range. */
+        free(desc);
+        free(text);
+        const char *tgt_encoding;
+        frame_enc_byte = get_id3v2_frame_encoding(minor,
+                                                  g_config.default_v2_enc,
+                                                  &tgt_encoding);
+
+        if (frame_enc_byte == ID3V2_UNSUPPORTED_ENCODING)
+            return -EINVAL;
+
+        convert_id3v2_frm_comm(comm, tgt_encoding, &desc, &desc_size,
+                               &text, &text_size);
+    }
+
+    new_frame = xcalloc(1, sizeof(struct id3v2_frame));
     new_frame->size =
         ID3V2_ENC_HDR_SIZE + ID3V2_LANG_HDR_SIZE + desc_size + text_size;
     new_frame->data = xmalloc(new_frame->size);

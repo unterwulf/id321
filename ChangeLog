@@ -1,3 +1,8 @@
+0.0.3   unreleased
+
+* configurable default encoding of ID3v2 textual frames
+* ASCII-only data is always stored as ISO-8859-1
+
 0.0.2   2010-06-16
 
 * bug fix: bus error on Solaris

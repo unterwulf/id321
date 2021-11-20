@@ -14,6 +14,7 @@
 #include "opts.h"
 #include "output.h"
 #include "params.h"
+#include "textframe.h"
 #include "u32_char.h"
 #include "xalloc.h"
 
@@ -398,20 +399,14 @@ int init_config(int *argc, char ***argv)
 #define ID3_GRP_WRITE ( ID3_MODIFY | ID3_SYNC | ID3_COPY )
 #define ID3_GRP_ALL ( ID3_GRP_WRITE | ID3_PRINT | ID3_DELETE )
 
-    static char v2_def_encs[] =
-    {
-        [2] = ID3V22_STR_UCS2,
-        [3] = ID3V23_STR_UCS2,
-        [4] = ID3V24_STR_UTF8,
-    };
-
     static const struct opt optlist[] =
     {
         { NULL,         '1',            OPT_OPT_ARG, ID3_GRP_ALL },
         { NULL,         '2',            OPT_OPT_ARG, ID3_GRP_ALL },
         { NULL,         'e',            OPT_OPT_ARG, ID3_GRP_ALL },
+        { NULL,         'E',            OPT_REQ_ARG, ID3_GRP_WRITE },
         { "fmt",        'f',            OPT_REQ_ARG, ID3_MODIFY | ID3_PRINT },
-        { "expert",     'E',            OPT_NO_ARG,  ID3_MODIFY | ID3_DELETE },
+        { "expert",     'x',            OPT_NO_ARG,  ID3_MODIFY | ID3_DELETE },
         { "frame",      'F',            OPT_REQ_ARG, ID3_MODIFY | ID3_PRINT },
         { "help",       'h',            OPT_NO_ARG,  ID3_GRP_ALL },
         { "verbose",    'v',            OPT_NO_ARG,  ID3_GRP_ALL },
@@ -456,7 +451,7 @@ int init_config(int *argc, char ***argv)
     g_config.enc_utf16be = "UTF-16BE";
     g_config.enc_utf8 = "UTF-8";
 
-    g_config.v2_def_encs = v2_def_encs;
+    g_config.default_v2_enc = NULL;
 
     /* determine action if specified, by default print tags */
     if (*argc > 1 && (*argv)[1][0] != '-')
@@ -569,9 +564,13 @@ int init_config(int *argc, char ***argv)
                     enc_str = opt_arg;
                 break;
 
+            case 'E':
+                g_config.default_v2_enc = opt_arg;
+                break;
+
             case 'v': debug_mask = (debug_mask << 1) | 1; break;
             case 'f': g_config.fmtstr = opt_arg; break;
-            case 'E': g_config.options |= ID321_OPT_EXPERT; break;
+            case 'x': g_config.options |= ID321_OPT_EXPERT; break;
             case OPT_NO_UNSYNC: g_config.options |= ID321_OPT_NO_UNSYNC; break;
 
             case OPT_SPEED:
@@ -591,6 +590,20 @@ int init_config(int *argc, char ***argv)
         }
     }
 
+    if (g_config.default_v2_enc)
+    {
+        FATAL(g_config.ver.major != 2,
+              "default encoding is only configurable for ID3v2 tags; "
+              "if you want to write an ID3v1 tag with non-standard "
+              "encoding, use option -e instead");
+
+        FATAL(get_id3v2_tag_encoding_byte(
+                    g_config.ver.minor,
+                    g_config.default_v2_enc) == ID3V2_UNSUPPORTED_ENCODING,
+              "ID3v2.%d tag has no support of encoding '%s'",
+              g_config.ver.minor, g_config.default_v2_enc);
+    }
+
     /* no debug output before this line is possible (i.e. only errors) */
     init_output(debug_mask);
 
@@ -608,33 +621,33 @@ int init_config(int *argc, char ***argv)
                   || g_config.ver.minor == 3),
               "removing of namely ID3v1.%u tag may lead to "
               "a garbage at the end of the file in case there is an "
-              "ID3v1.2 or ID3v1 enhanced tag; if you are sure use -E "
+              "ID3v1.2 or ID3v1 enhanced tag; if you are sure use -x "
               "to do so",
               g_config.ver.minor);
 
         FATAL((g_config.options & ID321_OPT_SET_SPEED)
               && !(is_valid_id3v1e_speed_id(g_config.speed)),
               "non standard speed value '%u' specified; "
-              "if you are sure what you are doing use -E to force this",
+              "if you are sure what you are doing use -x to force this",
               g_config.speed);
 
         FATAL((g_config.options & ID321_OPT_SET_GENRE_ID)
               && g_config.genre_id > ID3V1_GENRE_ID_MAX
               && g_config.genre_id != ID3V1_UNKNOWN_GENRE,
               "non standard genre id '%u' specified; "
-              "if you are sure what you are doing use -E to force this",
+              "if you are sure what you are doing use -x to force this",
               g_config.genre_id);
 
         FATAL(g_config.comment_lang
               && !is_valid_langcode(g_config.comment_lang),
               "non standard language code '%s' specified; "
-              "if you are sure what you are doing use -E to force this",
+              "if you are sure what you are doing use -x to force this",
               g_config.comment_lang);
 
         FATAL(g_config.action == ID3_MODIFY && g_config.frame_id
               && !is_valid_frame_id(g_config.frame_id),
               "invalid frame ID '%s' specified; "
-              "if you are sure what you are doing use -E to force this",
+              "if you are sure what you are doing use -x to force this",
               g_config.frame_id);
     }
 

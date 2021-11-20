@@ -4,12 +4,12 @@
 void help(void)
 {
     puts(
-"id321 " VERSION " Copyright (c) 2010 Vitaly Sinilin\n"
+"id321 " VERSION " Copyright (c) 2010, 2021 Vitaly Sinilin\n"
 "\n"
 "usage: id321 [pr[int]] [VEROPT] [-eENC] [-f FMT|-F FRAME] FILE...\n"
-"       id321 mo[dify] [VEROPT] [-eENC] [-E] [-s SIZE] MODOPT... FILE...\n"
-"       id321 {rm|delete} [VEROPT] [-E] FILE...\n"
-"       id321 sy[nc] VEROPT [-eENC] [-s SIZE] FILE...\n"
+"       id321 mo[dify] [VEROPT] [-eENC] [-EENC] [-x] [-s SIZE] MODOPT... FILE...\n"
+"       id321 {rm|delete} [VEROPT] [-x] FILE...\n"
+"       id321 sy[nc] VEROPT [-eENC] [-EENC] [-s SIZE] FILE...\n"
 "       id321 {cp|copy} [VEROPT] FILE1 FILE2\n"
 "\n"
 "VEROPT is one of the following:\n"

@@ -227,9 +227,11 @@ ssize_t iconvordie(const char *tocode, const char *fromcode,
  * even if @src is not.
  *
  * *@dst must be freed with free() after use.
+ *
+ * Returns the number of conversion errors.
  */
 
-void iconv_alloc(const char *tocode, const char *fromcode,
+int iconv_alloc(const char *tocode, const char *fromcode,
                  const char *src, size_t srcsize,
                  char **dst, size_t *dstsize)
 {
@@ -241,6 +243,7 @@ void iconv_alloc(const char *tocode, const char *fromcode,
     size_t outbytesleft;
     size_t ret;
     int is_from_u32 = (!strcmp(fromcode, U32_CHAR_CODESET)) ? 1 : 0;
+    int nr_errors = 0;
 
     cd = xiconv_open(tocode, fromcode);
     buf = xmalloc(outsize);
@@ -259,6 +262,7 @@ void iconv_alloc(const char *tocode, const char *fromcode,
                 case EILSEQ:
                 case EINVAL:
                 {
+                    nr_errors++;
                     ssize_t chsize = iconvordie(tocode, ISO_8859_1_CODESET,
                                                 "?", 1, out, outbytesleft);
 
@@ -317,6 +321,8 @@ void iconv_alloc(const char *tocode, const char *fromcode,
     *dst = buf;
     if (dstsize)
         *dstsize = out - buf;
+
+    return nr_errors;
 }
 
 u32_char *locale_to_u32_alloc(const char *str)

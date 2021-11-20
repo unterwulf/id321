@@ -176,9 +176,12 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
 
         frame_id = get_frame_id_by_alias(*field_alias, tag2->header.version);
 
-        update_id3v2_tag_text_frame(
+        int ret = update_id3v2_tag_text_frame(
                 tag2, frame_id, g_config.enc_v1,
                 field_data, field_data_sz);
+
+        if (ret != 0)
+            return ret;
     }
 
     /* sync comment */
@@ -210,8 +213,11 @@ static int sync_v2_with_v1(struct id3v2_tag *tag2, const struct id3v1_tag *tag1)
                         (void *)&genre_ustr, NULL);
         }
 
-        set_id3v2_tag_genre(tag2, tag1->genre_id, genre_ustr);
+        int ret = set_id3v2_tag_genre(tag2, tag1->genre_id, genre_ustr);
         free(genre_ustr);
+
+        if (ret != 0)
+            return ret;
     }
 
     /* TODO: sync starttime and endtime */

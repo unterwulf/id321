@@ -68,8 +68,8 @@ int get_id3v2_tag_genre(const struct id3v2_tag *tag, u32_char **genre_ustr)
     return genre_id;
 }
 
-void set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
-                         u32_char *genre_ustr)
+int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
+                        u32_char *genre_ustr)
 {
     const char *frame_id = get_frame_id_by_alias('g', tag->header.version);
     u32_char   *udata;
@@ -104,14 +104,14 @@ void set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
         usize = u32_strlen(genre_ustr);
     }
     else
-        return; /* senseless input parameters => do nothing */
+        return 0; /* senseless input parameters => do nothing */
 
-    update_id3v2_tag_text_frame(
+    int ret = update_id3v2_tag_text_frame(
             tag, frame_id, U32_CHAR_CODESET,
             (char *)udata, usize * sizeof(u32_char));
 
     if (udata != genre_ustr)
         free(udata);
 
-    return;
+    return ret;
 }

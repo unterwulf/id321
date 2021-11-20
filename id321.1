@@ -1,7 +1,7 @@
 .\"
-.\" Copyright (c) 2009\-2011 Vitaly Sinilin <vs@kp4.ru>
+.\" Copyright (c) 2009\-2011, 2021 Vitaly Sinilin <vs@kp4.ru>
 .\"
-.TH id321 1 "26 December 2011" id321
+.TH id321 1 "20 November 2021" id321
 .SH NAME
 id321 \- ID3 tags manipulation tool
 .SH SYNOPSIS
@@ -76,7 +76,7 @@ If the minor version is not specified, the scope of the action is any v1 tag.
 Perform the action on v2 tags only. The optional parameter is a minor version.
 If the minor version is not specified, the scope of the action is any v2 tag.
 .TP
-.BI \-E
+.BI \-x
 Expert mode. Some dangerous actions are allowed in this mode.
 .TP
 .BI \-e "ENCODING
@@ -176,6 +176,26 @@ with other versions of tags.
 The following options are applicable for all actions which write tags,
 namely
 .BR modify ", " sync " and " copy .
+.TP
+\fB\-E\fR {\fBISO-8859-1\fR|\fBUCS-2\fR|\fBUTF-16\fR|\fBUTF-16BE\fR|\fBUTF-8\fR}
+.RS
+ID3v2.x standards allow several types of encoding for textual frames.
+This option specifies which one to use when text contains characters outside
+ASCII range.
+.B UCS-2
+is only available for ID3v2.2 and ID3v2.3.
+.BR UTF-16 ", " UTF-16BE ", and " UTF-8
+are all ID3v2.4 specific.
+Although this option affects how type of encoding is stored in the tag, actual
+encoding used for each type can be overriden using the option
+.BR -e .
+.P
+The default is
+.B UCS-2
+for ID3v2.2 and ID3v2.3 and
+.B UTF-8
+for ID3v2.4.
+.RE
 .TP
 .B \-\-no\-unsync
 Do not unsynchronise v2 tags when writing. By default, v2 tags are being
