@@ -393,7 +393,7 @@ static size_t pack_id3v2_frame(const struct id3v2_frame *frame,
 
     buf += hdr_size;
 
-    if (hdr->version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
+    if (hdr->version == 4 && (g_config.options & ID321_OPT_UNSYNC))
     {
         payload_size = unsync_buf(buf, size - hdr_size,
                                   frame->data, frame->size, post);
@@ -464,7 +464,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
 
     *buf = xmalloc(bufsize);
 
-    if (header.version == 4 && !(g_config.options & ID321_OPT_NO_UNSYNC))
+    if (header.version == 4 && (g_config.options & ID321_OPT_UNSYNC))
         header.flags |= ID3V2_FLAG_UNSYNC;
     else
         header.flags &= ~ID3V2_FLAG_UNSYNC;
@@ -514,7 +514,7 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
     }
 
     if ((header.version == 2 || header.version == 3)
-        && !(g_config.options & ID321_OPT_NO_UNSYNC))
+        && (g_config.options & ID321_OPT_UNSYNC))
     {
         size_t reqbufsize = ID3V2_HEADER_LEN +
                             unsync_buf(NULL, 0, *buf + ID3V2_HEADER_LEN,

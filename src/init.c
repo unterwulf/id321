@@ -419,6 +419,7 @@ int init_config(int *argc, char ***argv)
         { "genre",      'g',            OPT_REQ_ARG, ID3_MODIFY },
         { "track",      'n',            OPT_REQ_ARG, ID3_MODIFY },
         { "size",       's',            OPT_REQ_ARG, ID3_GRP_WRITE },
+        { "unsync",     'u',            OPT_NO_ARG,  ID3_GRP_WRITE },
         { "no-unsync",  OPT_NO_UNSYNC,  OPT_NO_ARG,  ID3_GRP_WRITE },
         { "speed",      OPT_SPEED,      OPT_REQ_ARG, ID3_MODIFY },
         { "start-time", OPT_START_TIME, OPT_REQ_ARG, ID3_MODIFY },
@@ -571,7 +572,8 @@ int init_config(int *argc, char ***argv)
             case 'v': debug_mask = (debug_mask << 1) | 1; break;
             case 'f': g_config.fmtstr = opt_arg; break;
             case 'x': g_config.options |= ID321_OPT_EXPERT; break;
-            case OPT_NO_UNSYNC: g_config.options |= ID321_OPT_NO_UNSYNC; break;
+            case 'u': g_config.options |= ID321_OPT_UNSYNC; break;
+            case OPT_NO_UNSYNC: g_config.options &= ~ID321_OPT_UNSYNC; break;
 
             case OPT_SPEED:
                 g_config.speed = get_id3v1e_speed_id(opt_arg);

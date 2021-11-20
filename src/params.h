@@ -8,7 +8,7 @@
 #define ID321_OPT_SET_SPEED                  0x4
 #define ID321_OPT_CHANGE_SIZE                0x8
 #define ID321_OPT_EXPERT                     0x10
-#define ID321_OPT_NO_UNSYNC                  0x20
+#define ID321_OPT_UNSYNC                     0x20
 #define ID321_OPT_RM_FRAME                   0x100
 #define ID321_OPT_BIN_FRAME                  0x200
 #define ID321_OPT_CREATE_FRAME               0x400
