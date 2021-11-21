@@ -13,6 +13,7 @@ extern int sync_tags(const char *filename);
 extern int copy_tags(int argc, char **argv);
 
 char *program_name;
+struct id321_config g_config;
 
 int main(int argc, char **argv)
 {

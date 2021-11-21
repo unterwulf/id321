@@ -66,6 +66,8 @@ struct id321_config
     const char     *genre_str;
 
     uint8_t         speed;
-} g_config;
+};
+
+extern struct id321_config g_config;
 
 #endif /* PARAMS_H */
