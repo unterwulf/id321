@@ -528,10 +528,18 @@ int init_config(int *argc, char ***argv)
                 break;
 
             case 's':
+                if (opt_arg[0] == '*')
+                {
+                    g_config.options |= ID321_OPT_ALIGN_SIZE;
+                    opt_arg++;
+                }
                 ret = str_to_long(opt_arg, &long_val);
                 FATAL(ret != 0 || long_val < 0, "invalid tag size specified");
                 g_config.size = long_val;
                 g_config.options |= ID321_OPT_CHANGE_SIZE;
+                FATAL((g_config.options & ID321_OPT_ALIGN_SIZE) &&
+                      g_config.size == 0,
+                      "invalid file size multiplier specified");
                 break;
 
             case 'g':

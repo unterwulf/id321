@@ -205,9 +205,13 @@ for ID3v2.4.
 Unsynchronise ID3v2 tags when writing. By default, ID3v2 tags are not
 unsynchronised.
 .TP
-\fB\-s\fR, \fB\-\-size \fISIZE
+\fB\-s\fR, \fB\-\-size \fR[\fB*\fR]\fISIZE
 A preferable size of v2 tag to be written. If the specified size is not enough
 to store whole tag, it will be ignored and whole tag will be written.
+If an optional asterisk is specified the size is calculated as the minimal
+size that is sufficient to store the tag while keeping the size of resulting
+file a multiple of
+.IR SIZE .
 .SH EXAMPLES
 Dump all ID3 tags:
 .IP

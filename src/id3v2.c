@@ -453,7 +453,7 @@ static void pack_id3v2_header(const struct id3v2_header *hdr, char *buf)
     memcpy(buf + 6, &net_tag_size, sizeof(uint32_t));
 }
 
-ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
+ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf, off_t filesize)
 {
     struct id3v2_header header = tag->header;
     const struct id3v2_frame *frame;
@@ -544,11 +544,25 @@ ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf)
         }
     }
 
-    /* if new tag size has not been specified, we will try to use old tag
-     * space not changed */
-
-    newsize = g_config.options & ID321_OPT_CHANGE_SIZE
-        ? g_config.size : header.size + ID3V2_HEADER_LEN;
+    if (g_config.options & ID321_OPT_CHANGE_SIZE)
+    {
+        if (g_config.options & ID321_OPT_ALIGN_SIZE)
+        {
+            size_t remainder = (pos + filesize) % g_config.size;
+            size_t padding = (remainder) ? (g_config.size - remainder) : 0;
+            newsize = pos + padding;
+        }
+        else
+        {
+            newsize = g_config.size;
+        }
+    }
+    else
+    {
+        /* if new tag size has not been specified, we will try to use old tag
+         * space not changed */
+        newsize = header.size + ID3V2_HEADER_LEN;
+    }
 
     if (pos <= newsize)
     {

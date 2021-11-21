@@ -14,6 +14,8 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
                const struct id3v2_tag *tag2)
 {
     struct file *file;
+    char tag1_buf[ID3V1E_TAG_SIZE];
+    size_t tag1_size = 0;
     char *tag2_buf;
     ssize_t tag2_size = 0;
     int ret;
@@ -32,6 +34,8 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
             close_file(file);
             return -EFAULT;
         }
+
+        tag1_size = pack_id3v1_tag(tag1, tag1_buf);
     }
 
     if (tag2)
@@ -51,7 +55,8 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
         }
         else
         {
-            tag2_size = pack_id3v2_tag(tag2, &tag2_buf);
+            off_t no_tag2_size = file->crop.end - file->crop.start + tag1_size;
+            tag2_size = pack_id3v2_tag(tag2, &tag2_buf, no_tag2_size);
 
             if (tag2_size < 0)
             {
@@ -83,12 +88,9 @@ int write_tags(const char *filename, const struct id3v1_tag *tag1,
 
     if (tag1)
     {
-        char   buf[ID3V1E_TAG_SIZE];
-        size_t size = pack_id3v1_tag(tag1, buf);
-
         lseek(file->fd, file->crop.end, SEEK_SET);
-        write(file->fd, buf, size);
-        ftruncate(file->fd, file->crop.end + size);
+        write(file->fd, tag1_buf, tag1_size);
+        ftruncate(file->fd, file->crop.end + tag1_size);
         print(OS_INFO, "ID3v1.%u tag written", tag1->version);
     }
     else if (file->crop.end < file->size)

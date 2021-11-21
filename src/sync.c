@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>        /* sscanf() */
 #include <string.h>
@@ -269,7 +270,11 @@ int sync_tags(const char *filename)
             ret = sync_v1_with_v2(tag1, tag2);
 
             if (ret == 0)
-                ret = write_tags(filename, tag1, NULL);
+            {
+                bool refresh_v2_tag = g_config.options &
+                    (ID321_OPT_CHANGE_SIZE | ID321_OPT_UNSYNC);
+                ret = write_tags(filename, tag1, refresh_v2_tag ? tag2 : NULL);
+            }
         }
     }
     else if (g_config.ver.major == 2)

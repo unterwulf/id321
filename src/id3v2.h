@@ -130,7 +130,7 @@ int read_id3v2_footer(int fd, struct id3v2_header *hdr);
 int read_id3v2_ext_header(int fd, struct id3v2_tag *tag);
 int read_id3v2_frames(int fd, struct id3v2_tag *tag);
 
-ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf);
+ssize_t pack_id3v2_tag(const struct id3v2_tag *tag, char **buf, off_t filesize);
 
 const char *map_v22_to_v24(const char *v23frame);
 const char *map_v23_to_v24(const char *v23frame);

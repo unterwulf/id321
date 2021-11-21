@@ -14,6 +14,7 @@
 #define ID321_OPT_CREATE_FRAME               0x400
 #define ID321_OPT_CREATE_FRAME_IF_NOT_EXISTS 0x800
 #define ID321_OPT_ALL_FRAMES                 0x1000
+#define ID321_OPT_ALIGN_SIZE                 0x2000
 
 #define NOT_SET 255
 
