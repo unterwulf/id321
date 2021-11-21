@@ -1,4 +1,4 @@
-0.0.3   unreleased
+0.0.3   2021-11-21
 
 * configurable default encoding of ID3v2 textual frames
 * ASCII-only data is always stored as ISO-8859-1
