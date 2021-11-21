@@ -5,6 +5,6 @@ LIB313DIR = lib313
 endif
 
 SUBDIRS = . compat $(LIB313DIR) src
-EXTRA_DIST = include specs
+EXTRA_DIST = specs
 
 dist_man1_MANS = id321.1
