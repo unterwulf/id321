@@ -68,15 +68,25 @@ int get_id3v2_tag_genre(const struct id3v2_tag *tag, u32_char **genre_ustr)
     return genre_id;
 }
 
-int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
-                        u32_char *genre_ustr)
+static int set_id3v2_tag_genre_raw(struct id3v2_tag *tag, const u32_char *ustr,
+                                   size_t usize)
 {
     const char *frame_id = get_frame_id_by_alias('g', tag->header.version);
-    u32_char   *udata;
-    int         usize;
+    return update_id3v2_tag_text_frame(tag, frame_id, U32_CHAR_CODESET,
+                                       (const char *)ustr,
+                                       usize * sizeof(u32_char));
+}
+
+int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
+                        const u32_char *genre_ustr)
+{
+    int ret = 0;
 
     if (genre_id != ID3V1_UNKNOWN_GENRE)
     {
+        u32_char *udata;
+        int       usize;
+
         if (!genre_ustr)
             genre_ustr = U32_EMPTY_STR;
 
@@ -97,21 +107,14 @@ int set_id3v2_tag_genre(struct id3v2_tag *tag, uint8_t genre_id,
                 usize = u32_snprintf_alloc(&udata, "(%u)%ls",
                                            genre_id, genre_ustr);
         }
+
+        ret = set_id3v2_tag_genre_raw(tag, udata, usize);
+        free(udata);
     }
     else if (!IS_EMPTY_STR(genre_ustr))
     {
-        udata = genre_ustr;
-        usize = u32_strlen(genre_ustr);
+        ret = set_id3v2_tag_genre_raw(tag, genre_ustr, u32_strlen(genre_ustr));
     }
-    else
-        return 0; /* senseless input parameters => do nothing */
-
-    int ret = update_id3v2_tag_text_frame(
-            tag, frame_id, U32_CHAR_CODESET,
-            (char *)udata, usize * sizeof(u32_char));
-
-    if (udata != genre_ustr)
-        free(udata);
 
     return ret;
 }
