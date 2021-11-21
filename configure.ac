@@ -1,6 +1,6 @@
 AC_PREREQ(2.64)
 AC_INIT([id321],[0.0.2],[vs@kp4.ru])
-AC_CONFIG_AUX_DIR([build])
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_LIBOBJ_DIR([compat])

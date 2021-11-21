@@ -1,0 +1,10 @@
+#!/bin/sh -e
+#
+# This script bootstraps id321 source tree. It should be run whenever the
+# source tree is cloned from git.
+#
+
+cd ${0%/*}
+mkdir -p build-aux
+cp /usr/share/gettext/config.rpath build-aux/
+${AUTORECONF:-autoreconf} --verbose --install "$@"
