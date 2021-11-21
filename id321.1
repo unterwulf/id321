@@ -75,6 +75,10 @@ If the minor version is not specified, the scope of the action is any v1 tag.
 .BI \-2 "[2|3|4]
 Perform the action on v2 tags only. The optional parameter is a minor version.
 If the minor version is not specified, the scope of the action is any v2 tag.
+If the action is
+.BR modify " or " sync
+and there is no existing v2 tag and no minor version is specified,
+v2.3 tag is created.
 .TP
 .BI \-x
 Expert mode. Some dangerous actions are allowed in this mode.
@@ -241,7 +245,7 @@ created having the specified minor version or 3 by default.
 .B id321 sync \-1 best.mp3
 .LP
 Synchronise ID3v2 tag data with ID3v1 tag data. The same as above.
-4 is the default minor version for ID3v2.
+3 is the default minor version for ID3v2.
 .IP
 .B id321 sync \-2 best.mp3
 .LP

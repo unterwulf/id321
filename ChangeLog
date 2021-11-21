@@ -3,6 +3,7 @@
 * configurable default encoding of ID3v2 textual frames
 * ASCII-only data is always stored as ISO-8859-1
 * ID3v2 tags are not unsynchronised by default
+* ID3v2.3 is used as default ID3v2 minor version instead of ID3v2.4
 
 0.0.2   2010-06-16
 
